@@ -1,0 +1,29 @@
+# Generated outputs
+outputs/
+renders/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.bmp
+*.exr
+*.mp4
+*.gif
+
+# Local temp
+.tmp/
+temp/
+.cache/
+
+# 3ds Max local files
+*.max
+*.bak
+*.autosave
+
+# Python / Blender later
+__pycache__/
+*.pyc
+.venv/
+venv/
