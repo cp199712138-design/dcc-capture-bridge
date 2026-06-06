@@ -27,7 +27,7 @@ Usage:
 - Output filenames include resolution and timestamp.
 - Thin UI, reusable core API.
 
-## Planned Direction
+## Product Direction
 
 This project starts as a screenshot utility, but the long-term idea is broader:
 
@@ -38,17 +38,28 @@ This project starts as a screenshot utility, but the long-term idea is broader:
 -> AI image, material, and multi-angle variants
 ```
 
+The project should become a **DCC capture bridge**, not a second ComfyUI node editor and not a one-off screenshot script.
+
 ## Roadmap
 
 ```mermaid
 flowchart TD
-    A[3ds Max Capture MVP] --> B[GitHub single-file release]
+    A[3ds Max Capture MVP] --> B[Single-file GitHub release]
     B --> C[ComfyUI health check]
     C --> D[Screenshot to AI img2img]
     D --> E[Depth / normal / mask control passes]
     E --> F[Multi-angle and material variants]
     F --> G[Blender adapter]
 ```
+
+## Design Principles
+
+- Keep the first version small and reliable.
+- Do not put ComfyUI complexity into the DCC UI too early.
+- Keep code/API naming English-first.
+- Add localization only after a safe encoding strategy is tested.
+- Treat screenshots as capture assets, not the final product.
+- Version workflow templates instead of hard-coding ComfyUI node IDs.
 
 ## Language Strategy
 
@@ -57,22 +68,6 @@ English is the primary development language for code, API names, GitHub issues, 
 Chinese UI and documentation are planned and important, but MAXScript encoding can be fragile across Windows and 3ds Max versions. We will add bilingual UI carefully after testing the safest localization approach.
 
 中文说明：这个项目第一阶段是 3ds Max 高清截图工具，后续计划扩展为 3ds Max / Blender 到 ComfyUI 的 AI 出图控制桥。代码和 GitHub 先以英文为主，中文界面会在确认编码方案后加入。
-
-## Repository Name
-
-Current repository name:
-
-```text
-perfect-hd-screenshot-pro
-```
-
-Suggested future name:
-
-```text
-dcc-capture-bridge
-```
-
-The current name is easier for screenshot users to understand. The future name better matches the AI pipeline direction.
 
 ## Status
 
