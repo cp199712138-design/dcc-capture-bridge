@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cp199712138-design/dcc-capture-bridge/schemas/capture-session.schema.json",
+  "title": "DCC Capture Session",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "session_id",
+    "tool",
+    "source",
+    "assets"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1.0"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["dcc", "adapter", "viewport"],
+      "properties": {
+        "dcc": { "type": "string" },
+        "dcc_version": { "type": "string" },
+        "adapter": { "type": "string" },
+        "scene_path": { "type": "string" },
+        "camera": { "type": "string" },
+        "viewport": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "shading_mode": { "type": "string" }
+          }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "path", "width", "height"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["viewport", "beauty", "depth", "normal", "mask", "clay", "wireframe", "metadata"]
+          },
+          "path": { "type": "string" },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "format": { "type": "string" },
+          "color_space": { "type": "string" }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "target": { "type": "string" },
+        "workflow_id": { "type": "string" },
+        "prompt": { "type": "string" }
+      }
+    },
+    "created_at": {
+      "type": "string"
+    }
+  }
+}
