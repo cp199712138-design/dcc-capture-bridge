@@ -23,7 +23,7 @@ struct PHDS_Result
 
 struct PHDS_Request
 (
-    mode = #capture,
+    mode = #pack,
     width = 1920,
     height = 1080,
     folder = "",
@@ -36,7 +36,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.3.0",
+    version = "0.4.0",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -111,6 +111,29 @@ struct PHDS_API
         (getFilenamePath imagePath) + (getFilenameFile imagePath) + ".metadata.txt"
     ),
 
+    fn packMetadataPath sessionPath =
+    (
+        pathConfig.appendPath sessionPath "metadata.txt"
+    ),
+
+    fn createSessionFolder request =
+    (
+        local safePrefix = if request.prefix == undefined or request.prefix == "" then "PHDS" else request.prefix
+        local sessionName = safePrefix + "_session_" + timestamp()
+        local sessionPath = pathConfig.appendPath request.folder sessionName
+        try
+        (
+            makeDir sessionPath all:true
+            makeDir (pathConfig.appendPath sessionPath "capture") all:true
+            makeDir (pathConfig.appendPath sessionPath "ai") all:true
+            success sessionPath
+        )
+        catch
+        (
+            failure ("Could not create session folder: " + sessionPath)
+        )
+    ),
+
     fn writeMetadata imagePath captureType width height =
     (
         local metaPath = metadataPath imagePath
@@ -134,6 +157,35 @@ struct PHDS_API
         (
             try (if f != undefined do close f) catch()
             failure ("Could not write metadata: " + metaPath)
+        )
+    ),
+
+    fn writePackMetadata sessionPath imagePath captureType width height =
+    (
+        local metaPath = packMetadataPath sessionPath
+        local f = undefined
+        try
+        (
+            f = createFile metaPath
+            format "tool=DCC Capture Bridge\n" to:f
+            format "product=Perfect HD Screenshot Pro\n" to:f
+            format "version=%\n" version to:f
+            format "dcc=3ds Max\n" to:f
+            format "capture_type=%\n" captureType to:f
+            format "intent=ai_readable_reference_capture\n" to:f
+            format "session_path=%\n" sessionPath to:f
+            format "image_path=%\n" imagePath to:f
+            format "width=%\n" width to:f
+            format "height=%\n" height to:f
+            format "timestamp=%\n" (timestamp()) to:f
+            format "notes=Viewport pixels are captured from the active viewport. No fake upscale.\n" to:f
+            close f
+            success metaPath
+        )
+        catch
+        (
+            try (if f != undefined do close f) catch()
+            failure ("Could not write pack metadata: " + metaPath)
         )
     ),
 
@@ -200,6 +252,28 @@ struct PHDS_API
         saveBitmap bmp output.value
     ),
 
+    fn capturePack request =
+    (
+        local folder = ensureFolder request.folder
+        if not folder.ok then return folder
+
+        local session = createSessionFolder request
+        if not session.ok then return session
+
+        local bmp = grabViewport alpha:request.alpha gamma:request.gamma
+        if bmp == undefined then return failure "Could not capture active viewport."
+
+        local captureFolder = pathConfig.appendPath session.value "capture"
+        local imagePath = pathConfig.appendPath captureFolder ("viewport" + extensionFor request.format)
+        local saved = saveBitmap bmp imagePath
+        if not saved.ok then return saved
+
+        local meta = writePackMetadata session.value imagePath "ai_capture_pack_viewport" bmp.width bmp.height
+        if not meta.ok do format "Metadata warning: %\n" meta.error
+
+        success imagePath
+    ),
+
     fn renderImage request =
     (
         local folder = ensureFolder request.folder
@@ -224,7 +298,12 @@ struct PHDS_API
 
     fn save request =
     (
-        if request.mode == #render then renderImage request else captureViewport request
+        case request.mode of
+        (
+            #pack: capturePack request
+            #render: renderImage request
+            default: captureViewport request
+        )
     )
 )
 
@@ -234,16 +313,17 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 (
     local detectedSize = [0, 0]
     local lastOutput = ""
+    local lastFolder = ""
 
     label lblTitle "DCC Capture Bridge" align:#left
     label lblSubtitle "Viewport-first capture for reference and AI input" align:#left
 
     group "Capture Source"
     (
-        dropdownlist ddlMode "Type:" items:#("Viewport Snapshot", "Production Render (current renderer)") selection:1 width:260 align:#left
+        dropdownlist ddlMode "Type:" items:#("AI Capture Pack", "Viewport Snapshot", "Production Render (current renderer)") selection:1 width:260 align:#left
         label lblViewport "Active viewport: not detected" width:350 align:#left
         button btnDetect "Detect Viewport" width:130 height:24 align:#left
-        label lblModeHint "Snapshot saves the active viewport's real pixels." width:360 align:#left
+        label lblModeHint "Pack saves viewport image plus metadata for AI workflows." width:360 align:#left
     )
 
     group "Render Size"
@@ -267,7 +347,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
         checkbox chkOpenFolder "Open folder after save" checked:false align:#left
     )
 
-    button btnSave "Save Viewport Snapshot" width:190 height:34 align:#center
+    button btnSave "Save AI Capture Pack" width:190 height:34 align:#center
     group "Result"
     (
         edittext edtLastOutput "Last:" text:"" width:390 align:#left
@@ -278,7 +358,12 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 
     fn isRenderMode =
     (
-        ddlMode.selection == 2
+        ddlMode.selection == 3
+    )
+
+    fn isPackMode =
+    (
+        ddlMode.selection == 1
     )
 
     fn syncModeUI =
@@ -290,11 +375,18 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
         btnRenderSetup.enabled = renderMode
         chkVfb.enabled = renderMode
         chkAlpha.enabled = not renderMode
+        chkMetadata.enabled = not (isPackMode())
+        if isPackMode() do chkMetadata.checked = true
 
         if renderMode then
         (
             lblModeHint.text = "Uses the current 3ds Max Render Setup and renderer."
             btnSave.text = "Run Production Render"
+        )
+        else if isPackMode() then
+        (
+            lblModeHint.text = "Pack saves viewport image plus metadata for AI workflows."
+            btnSave.text = "Save AI Capture Pack"
         )
         else
         (
@@ -341,7 +433,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 
     fn buildRequest =
     (
-        PHDS_Request mode:(if isRenderMode() then #render else #capture) width:spnWidth.value height:spnHeight.value folder:edtFolder.text prefix:edtPrefix.text format:PHDS.formats[ddlFormat.selection] alpha:chkAlpha.checked gamma:chkGamma.checked showVfb:chkVfb.checked
+        PHDS_Request mode:(if isRenderMode() then #render else (if isPackMode() then #pack else #capture)) width:spnWidth.value height:spnHeight.value folder:edtFolder.text prefix:edtPrefix.text format:PHDS.formats[ddlFormat.selection] alpha:chkAlpha.checked gamma:chkGamma.checked showVfb:chkVfb.checked
     )
 
     on ddlMode selected index do
@@ -376,17 +468,18 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
         if result.ok then
         (
             lastOutput = result.value
+            lastFolder = if isPackMode() then (getFilenamePath (getFilenamePath result.value)) else (getFilenamePath result.value)
             edtLastOutput.text = result.value
-            if chkMetadata.checked do
+            if (not isPackMode()) and chkMetadata.checked do
             (
                 local metaWidth = if isRenderMode() then spnWidth.value else detectedSize.x
                 local metaHeight = if isRenderMode() then spnHeight.value else detectedSize.y
-                local metaType = if isRenderMode() then "production_render" else "viewport_snapshot"
+                local metaType = if isRenderMode() then "production_render" else (if isPackMode() then "ai_capture_pack" else "viewport_snapshot")
                 local meta = PHDS.writeMetadata result.value metaType metaWidth metaHeight
                 if not meta.ok do format "Metadata warning: %\n" meta.error
             )
             lblStatus.text = "Saved: " + filenameFromPath result.value
-            if chkOpenFolder.checked do shellLaunch edtFolder.text ""
+            if chkOpenFolder.checked do shellLaunch lastFolder ""
             messageBox ("Saved:\n" + result.value) title:PHDS.appName
         )
         else
@@ -409,7 +502,8 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 
     on btnOpenFolder2 pressed do
     (
-        if edtFolder.text != "" and doesFileExist edtFolder.text then shellLaunch edtFolder.text "" else messageBox "Output folder is not available." title:PHDS.appName
+        local folderToOpen = if lastFolder != "" then lastFolder else edtFolder.text
+        if folderToOpen != "" and doesFileExist folderToOpen then shellLaunch folderToOpen "" else messageBox "Output folder is not available." title:PHDS.appName
     )
 )
 
