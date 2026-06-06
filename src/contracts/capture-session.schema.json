@@ -54,7 +54,22 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["viewport", "beauty", "depth", "normal", "mask", "clay", "wireframe", "metadata"]
+            "enum": [
+              "viewport",
+              "beauty",
+              "depth",
+              "normal",
+              "mask",
+              "clay",
+              "wireframe",
+              "material_reference",
+              "texture_reference",
+              "multi_angle",
+              "animation_frame",
+              "camera_metadata",
+              "scene_metadata",
+              "metadata"
+            ]
           },
           "path": { "type": "string" },
           "width": { "type": "integer", "minimum": 1 },
