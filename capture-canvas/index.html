@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DCC Capture Canvas</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a20;
+      --panel-2: #1e232b;
+      --line: #303641;
+      --text: #f3f5f8;
+      --muted: #9aa4b2;
+      --soft: #c8ced8;
+      --blue: #66a6ff;
+      --green: #6ee7b7;
+      --yellow: #facc15;
+      --red: #fb7185;
+      --radius: 8px;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    button, input, select, textarea { font: inherit; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px minmax(420px, 1fr) 320px;
+      grid-template-rows: 56px minmax(0, 1fr) 118px;
+      height: 100vh;
+      min-width: 1040px;
+    }
+
+    header {
+      grid-column: 1 / 4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: #11141a;
+    }
+
+    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    .brand strong { font-size: 16px; letter-spacing: 0; }
+    .brand span { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+
+    .pill {
+      min-height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .sidebar, .inspector { min-height: 0; overflow: auto; background: var(--panel); }
+    .sidebar { border-right: 1px solid var(--line); padding: 14px; }
+    .inspector { border-left: 1px solid var(--line); padding: 14px; }
+
+    .canvas-wrap {
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+        #10131a;
+      background-size: 28px 28px;
+    }
+
+    .canvas-toolbar {
+      position: absolute;
+      left: 16px;
+      top: 14px;
+      z-index: 2;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      max-width: calc(100% - 32px);
+    }
+
+    .tool {
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      background: rgba(23,26,32,.92);
+      color: var(--soft);
+      cursor: pointer;
+    }
+
+    .tool.active { border-color: var(--blue); color: var(--text); background: rgba(102,166,255,.16); }
+
+    .evidence-board {
+      position: absolute;
+      inset: 70px 22px 22px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--radius);
+      background: rgba(12,14,18,.72);
+      overflow: hidden;
+    }
+
+    canvas { width: 100%; height: 100%; display: block; }
+
+    .drop-hint {
+      position: absolute;
+      left: 24px;
+      bottom: 20px;
+      max-width: 440px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      pointer-events: none;
+    }
+
+    section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 6px; }
+
+    select, input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #101318;
+      color: var(--text);
+      min-height: 34px;
+      padding: 7px 9px;
+      outline: none;
+    }
+
+    textarea { min-height: 92px; resize: vertical; line-height: 1.45; }
+
+    .primary {
+      width: 100%;
+      min-height: 42px;
+      border: 0;
+      border-radius: var(--radius);
+      background: var(--blue);
+      color: #07101f;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .secondary {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .capture-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .chip {
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #11151b;
+      color: var(--soft);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .chip.active { border-color: var(--green); color: var(--text); background: rgba(110,231,183,.13); }
+
+    .task-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #12161d;
+      cursor: pointer;
+    }
+
+    .task-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .task-card span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .task-card.active { border-color: var(--blue); background: rgba(102,166,255,.12); }
+
+    .history {
+      grid-column: 1 / 4;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 320px;
+      border-top: 1px solid var(--line);
+      background: #11141a;
+      min-height: 0;
+    }
+
+    .history-title {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      border-right: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .thumbs { display: flex; gap: 10px; align-items: center; overflow-x: auto; padding: 10px 14px; }
+
+    .thumb {
+      flex: 0 0 118px;
+      height: 78px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: linear-gradient(135deg, #202734, #10131a);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .thumb::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 8px;
+      bottom: 7px;
+      color: var(--soft);
+      font-size: 11px;
+    }
+
+    .status {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 14px;
+      border-left: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status strong { color: var(--text); font-size: 13px; }
+
+    @media (max-width: 1100px) {
+      body { overflow: auto; }
+      .app { min-width: 0; height: auto; min-height: 100vh; grid-template-columns: 1fr; grid-template-rows: auto; }
+      header, .history { grid-column: auto; }
+      .canvas-wrap { min-height: 520px; }
+      .history { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <strong>DCC Capture Canvas</strong>
+        <span>3D evidence board for AI product generation</span>
+      </div>
+      <div class="top-actions">
+        <span class="pill">Local prototype</span>
+        <span class="pill">3ds Max / Blender ready</span>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <section>
+        <h2>Capture Source</h2>
+        <label>DCC</label>
+        <select id="dcc">
+          <option>3ds Max</option>
+          <option>Blender</option>
+          <option>Future DCC</option>
+        </select>
+
+        <label>Source</label>
+        <div class="capture-grid" id="sourceGrid">
+          <button class="chip active">Viewport</button>
+          <button class="chip">Camera</button>
+          <button class="chip">Selected</button>
+          <button class="chip">Animation</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Evidence Types</h2>
+        <div class="capture-grid" id="assetGrid">
+          <button class="chip active">Beauty</button>
+          <button class="chip active">Depth</button>
+          <button class="chip">Normal</button>
+          <button class="chip">Mask</button>
+          <button class="chip">Material</button>
+          <button class="chip">Texture</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Reference Slots</h2>
+        <button class="secondary" id="uploadBtn">Import reference image</button>
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <label>Session folder</label>
+        <input value="PHDS_session_20260606_121743">
+      </section>
+
+      <button class="primary" id="captureBtn">Capture Evidence Pack</button>
+    </aside>
+
+    <main class="canvas-wrap">
+      <div class="canvas-toolbar">
+        <button class="tool active">Evidence Board</button>
+        <button class="tool">Multi-angle</button>
+        <button class="tool">Material Study</button>
+        <button class="tool">Scene Draft</button>
+      </div>
+      <div class="evidence-board">
+        <canvas id="board"></canvas>
+        <div class="drop-hint">Drop a capture or reference image here. This board is the future bridge between 3ds Max / Blender scene evidence and AI generation.</div>
+      </div>
+    </main>
+
+    <aside class="inspector">
+      <section>
+        <h2>AI Task</h2>
+        <div class="task-card active"><strong>Scene generation</strong><span>Use product angle and shape as a fixed reference.</span></div>
+        <div class="task-card"><strong>Render refinement</strong><span>Improve light, detail, and presentation quality.</span></div>
+        <div class="task-card"><strong>Material / texture</strong><span>Generate texture maps or material variations.</span></div>
+        <div class="task-card"><strong>Subject isolation</strong><span>Create clean product masks and object identity.</span></div>
+      </section>
+
+      <section>
+        <h2>Prompt</h2>
+        <textarea id="prompt">Create a clean product scene. Preserve object shape, camera angle, proportions, and material boundaries.</textarea>
+      </section>
+
+      <section>
+        <h2>Controls</h2>
+        <label>AI strength</label>
+        <input type="range" min="0" max="100" value="45">
+        <label>Output ratio</label>
+        <select>
+          <option>16:9 landscape</option>
+          <option>1:1 square</option>
+          <option>4:5 portrait</option>
+        </select>
+      </section>
+
+      <button class="primary" id="generateBtn">Generate Variant</button>
+    </aside>
+
+    <footer class="history">
+      <div class="history-title">Multi-angle / History</div>
+      <div class="thumbs">
+        <div class="thumb" data-label="Front"></div>
+        <div class="thumb" data-label="Side"></div>
+        <div class="thumb" data-label="Back"></div>
+        <div class="thumb" data-label="Detail"></div>
+        <div class="thumb" data-label="AI Variant"></div>
+      </div>
+      <div class="status">
+        <strong id="statusTitle">Ready</strong>
+        <span id="statusText">Waiting for a DCC capture session.</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+    const statusTitle = document.getElementById("statusTitle");
+    const statusText = document.getElementById("statusText");
+    const fileInput = document.getElementById("fileInput");
+
+    function fitCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      drawBoard();
+    }
+
+    function drawBoard(image) {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#151922";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "rgba(255,255,255,.08)";
+      for (let x = 24; x < w; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+      for (let y = 24; y < h; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+      if (image) {
+        const scale = Math.min((w * .74) / image.width, (h * .72) / image.height);
+        const iw = image.width * scale;
+        const ih = image.height * scale;
+        ctx.drawImage(image, (w - iw) / 2, (h - ih) / 2, iw, ih);
+      } else {
+        drawProductMock(w, h);
+      }
+    }
+
+    function drawProductMock(w, h) {
+      const cx = w / 2;
+      const cy = h / 2 + 10;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.fillStyle = "#222b38";
+      ctx.strokeStyle = "#66a6ff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 88, 150, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2f3b4e";
+      ctx.beginPath();
+      ctx.roundRect(-92, -92, 184, 184, 22);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#11141a";
+      ctx.beginPath();
+      ctx.roundRect(-58, -54, 116, 104, 14);
+      ctx.fill();
+      ctx.fillStyle = "#6ee7b7";
+      ctx.beginPath();
+      ctx.arc(-38, -18, 12, 0, Math.PI * 2);
+      ctx.arc(38, -18, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#facc15";
+      ctx.beginPath();
+      ctx.moveTo(-48, 36);
+      ctx.quadraticCurveTo(0, 62, 48, 36);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#f3f5f8";
+      ctx.font = "600 18px Inter, Segoe UI, sans-serif";
+      ctx.fillText("DCC product evidence", 28, 42);
+      ctx.fillStyle = "#9aa4b2";
+      ctx.font = "13px Inter, Segoe UI, sans-serif";
+      ctx.fillText("Viewport, material references, masks, multi-angle frames", 28, 64);
+    }
+
+    CanvasRenderingContext2D.prototype.roundRect ||= function(x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      this.beginPath();
+      this.moveTo(x + r, y);
+      this.arcTo(x + width, y, x + width, y + height, r);
+      this.arcTo(x + width, y + height, x, y + height, r);
+      this.arcTo(x, y + height, x, y, r);
+      this.arcTo(x, y, x + width, y, r);
+      this.closePath();
+      return this;
+    };
+
+    document.querySelectorAll(".chip, .task-card, .tool").forEach((el) => {
+      el.addEventListener("click", () => {
+        if (el.classList.contains("task-card")) document.querySelectorAll(".task-card").forEach((card) => card.classList.remove("active"));
+        if (el.classList.contains("tool")) document.querySelectorAll(".tool").forEach((tool) => tool.classList.remove("active"));
+        el.classList.toggle("active");
+      });
+    });
+
+    document.getElementById("uploadBtn").addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      loadImage(file);
+    });
+
+    document.getElementById("captureBtn").addEventListener("click", () => {
+      statusTitle.textContent = "Evidence pack queued";
+      statusText.textContent = "Future build will read the latest 3ds Max / Blender capture session.";
+    });
+
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      statusTitle.textContent = "Variant request prepared";
+      statusText.textContent = "ComfyUI connection will be added after the capture session format is stable.";
+    });
+
+    function loadImage(file) {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        drawBoard(img);
+        URL.revokeObjectURL(url);
+        statusTitle.textContent = "Reference loaded";
+        statusText.textContent = file.name;
+      };
+      img.src = url;
+    }
+
+    const board = document.querySelector(".evidence-board");
+    board.addEventListener("dragover", (event) => { event.preventDefault(); board.style.borderColor = "#66a6ff"; });
+    board.addEventListener("dragleave", () => { board.style.borderColor = "rgba(255,255,255,.1)"; });
+    board.addEventListener("drop", (event) => {
+      event.preventDefault();
+      board.style.borderColor = "rgba(255,255,255,.1)";
+      const file = event.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) loadImage(file);
+    });
+
+    window.addEventListener("resize", fitCanvas);
+    fitCanvas();
+  </script>
+</body>
+</html>
