@@ -84,3 +84,19 @@ Reason:
 
 - AI workflows need structured control inputs.
 - Review and rerun workflows need metadata.
+
+## ADR-007: Capture-first, Render-second
+
+Decision: the default MVP mode is Viewport Snapshot. Production Render is an optional secondary mode.
+
+Reason:
+
+- The product's real value is fast capture for reference and AI input.
+- If the tool only wraps normal rendering, customers can just render directly.
+- 3ds Max viewport capture APIs return the active viewport's real pixels; they do not provide arbitrary 8K viewport output.
+
+Consequence:
+
+- UI must not present 8K as a fake viewport screenshot feature.
+- Render mode must clearly state it uses current 3ds Max Render Setup.
+- Future AI features should build from capture assets first, not render automation first.
