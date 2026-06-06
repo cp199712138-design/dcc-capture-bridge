@@ -10,6 +10,7 @@
 
 global PHDS
 global PHDS_MainRollout
+global PHDS_HEADLESS_TEST
 
 try (destroyDialog PHDS_MainRollout) catch()
 
@@ -35,7 +36,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.2.0",
+    version = "0.3.0",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -103,6 +104,37 @@ struct PHDS_API
         local safeSuffix = if suffix == undefined or suffix == "" then "" else ("_" + suffix)
         local fileName = safePrefix + safeSuffix + "_" + (w as string) + "x" + (h as string) + "_" + timestamp() + extensionFor request.format
         success (pathConfig.appendPath request.folder fileName)
+    ),
+
+    fn metadataPath imagePath =
+    (
+        (getFilenamePath imagePath) + (getFilenameFile imagePath) + ".metadata.txt"
+    ),
+
+    fn writeMetadata imagePath captureType width height =
+    (
+        local metaPath = metadataPath imagePath
+        local f = undefined
+        try
+        (
+            f = createFile metaPath
+            format "tool=DCC Capture Bridge\n" to:f
+            format "product=Perfect HD Screenshot Pro\n" to:f
+            format "version=%\n" version to:f
+            format "dcc=3ds Max\n" to:f
+            format "capture_type=%\n" captureType to:f
+            format "image_path=%\n" imagePath to:f
+            format "width=%\n" width to:f
+            format "height=%\n" height to:f
+            format "timestamp=%\n" (timestamp()) to:f
+            close f
+            success metaPath
+        )
+        catch
+        (
+            try (if f != undefined do close f) catch()
+            failure ("Could not write metadata: " + metaPath)
+        )
     ),
 
     fn grabViewport alpha:false gamma:true =
@@ -198,9 +230,10 @@ struct PHDS_API
 
 PHDS = PHDS_API()
 
-rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:420 height:430
+rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 (
     local detectedSize = [0, 0]
+    local lastOutput = ""
 
     label lblTitle "DCC Capture Bridge" align:#left
     label lblSubtitle "Viewport-first capture for reference and AI input" align:#left
@@ -230,10 +263,18 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:420 height:430
         checkbox chkAlpha "Alpha for viewport snapshot" checked:false align:#left
         checkbox chkGamma "Gamma Correct" checked:true align:#left
         checkbox chkVfb "Show VFB for render" checked:false align:#left
+        checkbox chkMetadata "AI Ready Pack: write metadata sidecar" checked:true align:#left
+        checkbox chkOpenFolder "Open folder after save" checked:false align:#left
     )
 
     button btnSave "Save Viewport Snapshot" width:190 height:34 align:#center
-    label lblStatus "Ready" width:360 align:#left
+    group "Result"
+    (
+        edittext edtLastOutput "Last:" text:"" width:390 align:#left
+        button btnOpenLast "Open Last Image" width:120 height:24 align:#left
+        button btnOpenFolder2 "Open Folder" width:100 height:24 align:#left
+        label lblStatus "Ready" width:390 align:#left
+    )
 
     fn isRenderMode =
     (
@@ -334,7 +375,18 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:420 height:430
         local result = PHDS.save (buildRequest())
         if result.ok then
         (
+            lastOutput = result.value
+            edtLastOutput.text = result.value
+            if chkMetadata.checked do
+            (
+                local metaWidth = if isRenderMode() then spnWidth.value else detectedSize.x
+                local metaHeight = if isRenderMode() then spnHeight.value else detectedSize.y
+                local metaType = if isRenderMode() then "production_render" else "viewport_snapshot"
+                local meta = PHDS.writeMetadata result.value metaType metaWidth metaHeight
+                if not meta.ok do format "Metadata warning: %\n" meta.error
+            )
             lblStatus.text = "Saved: " + filenameFromPath result.value
+            if chkOpenFolder.checked do shellLaunch edtFolder.text ""
             messageBox ("Saved:\n" + result.value) title:PHDS.appName
         )
         else
@@ -349,6 +401,19 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:420 height:430
         syncModeUI()
         detect()
     )
+
+    on btnOpenLast pressed do
+    (
+        if lastOutput != "" and doesFileExist lastOutput then shellLaunch lastOutput "" else messageBox "No saved image yet." title:PHDS.appName
+    )
+
+    on btnOpenFolder2 pressed do
+    (
+        if edtFolder.text != "" and doesFileExist edtFolder.text then shellLaunch edtFolder.text "" else messageBox "Output folder is not available." title:PHDS.appName
+    )
 )
 
-createDialog PHDS_MainRollout style:#(#style_titlebar, #style_sysmenu, #style_toolwindow)
+if PHDS_HEADLESS_TEST != true do
+(
+    createDialog PHDS_MainRollout style:#(#style_titlebar, #style_sysmenu, #style_toolwindow)
+)
