@@ -36,7 +36,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.5.1",
+    version = "0.6.0",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -315,6 +315,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
     local lastOutput = ""
     local lastFolder = ""
     local language = #cn
+    local canvasUrl = "https://htmlpreview.github.io/?https://github.com/cp199712138-design/dcc-capture-bridge/blob/main/capture-canvas/index.html"
 
     label lblStudio "CAPTURE STUDIO" width:450 align:#left
     label lblTitle "DCC Capture Bridge" width:450 align:#left
@@ -348,6 +349,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
     )
 
     button btnSave "Capture Pack" width:240 height:42 align:#center
+    button btnOpenCanvas "Open Capture Canvas" width:240 height:34 align:#center
     group "04  Result"
     (
         edittext edtLastOutput "Last:" text:"" width:440 align:#left
@@ -418,6 +420,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
             chkOpenFolder.text = "保存后打开目录"
             btnOpenLast.text = "打开图片"
             btnOpenFolder2.text = "打开目录"
+            btnOpenCanvas.text = "打开画布"
             lblStatus.text = "准备就绪"
         )
         else
@@ -431,6 +434,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
             chkOpenFolder.text = "Open folder after save"
             btnOpenLast.text = "Open Image"
             btnOpenFolder2.text = "Open Folder"
+            btnOpenCanvas.text = "Open Capture Canvas"
             lblStatus.text = "Ready"
         )
 
@@ -488,6 +492,11 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
     on ddlLanguage selected index do applyLanguage()
 
     on btnDetect pressed do detect()
+
+    on btnOpenCanvas pressed do
+    (
+        shellLaunch canvasUrl ""
+    )
 
     on ddlPreset selected index do
     (
