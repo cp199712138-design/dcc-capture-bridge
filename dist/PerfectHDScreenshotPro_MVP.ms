@@ -36,7 +36,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.4.0",
+    version = "0.4.1",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -309,51 +309,52 @@ struct PHDS_API
 
 PHDS = PHDS_API()
 
-rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
+rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
 (
     local detectedSize = [0, 0]
     local lastOutput = ""
     local lastFolder = ""
 
-    label lblTitle "DCC Capture Bridge" align:#left
-    label lblSubtitle "Viewport-first capture for reference and AI input" align:#left
+    label lblTitle "DCC Capture Bridge / AI 捕捉桥" width:470 align:#left
+    label lblSubtitle "从 3ds Max 视口导出 AI 可读图包 / AI-ready viewport capture pack" width:470 align:#left
 
-    group "Capture Source"
+    group "1. 捕捉来源 / Capture"
     (
-        dropdownlist ddlMode "Type:" items:#("AI Capture Pack", "Viewport Snapshot", "Production Render (current renderer)") selection:1 width:260 align:#left
-        label lblViewport "Active viewport: not detected" width:350 align:#left
-        button btnDetect "Detect Viewport" width:130 height:24 align:#left
-        label lblModeHint "Pack saves viewport image plus metadata for AI workflows." width:360 align:#left
+        dropdownlist ddlMode "模式 / Mode:" items:#("AI 捕捉包 / AI Capture Pack", "视口快照 / Viewport Snapshot", "当前渲染器 / Production Render") selection:1 width:330 align:#left
+        label lblViewport "视口 / Viewport: 未检测" width:430 align:#left
+        button btnDetect "检测视口 / Detect" width:150 height:26 align:#left
+        label lblModeHint "生成视口图 + metadata，作为后续 AI 输入。" width:450 align:#left
     )
 
-    group "Render Size"
+    group "2. 渲染尺寸 / Render Size"
     (
-        dropdownlist ddlPreset "Preset:" items:#("Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "Custom") selection:2 width:180 align:#left
-        spinner spnWidth "Width:" range:[1,32768,1920] type:#integer fieldwidth:96 align:#left
-        spinner spnHeight "Height:" range:[1,32768,1080] type:#integer fieldwidth:96 align:#left
-        button btnRenderSetup "Open Render Setup" width:140 height:24 align:#left
+        label lblRenderNote "只在 Production Render 模式启用；AI 捕捉包使用真实视口像素。" width:450 align:#left
+        dropdownlist ddlPreset "预设 / Preset:" items:#("当前渲染尺寸 / Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "自定义 / Custom") selection:2 width:260 align:#left
+        spinner spnWidth "宽 / Width:" range:[1,32768,1920] type:#integer fieldwidth:96 align:#left
+        spinner spnHeight "高 / Height:" range:[1,32768,1080] type:#integer fieldwidth:96 align:#left
+        button btnRenderSetup "打开渲染设置 / Render Setup" width:190 height:26 align:#left
     )
 
-    group "Output"
+    group "3. 输出 / Output"
     (
-        dropdownlist ddlFormat "Format:" items:PHDS.formats selection:1 width:120 align:#left
-        edittext edtFolder "Folder:" text:(getDir #image) width:350 align:#left
-        button btnFolder "Pick Folder" width:90 height:24 align:#left
-        edittext edtPrefix "Prefix:" text:"PHDS" width:240 align:#left
-        checkbox chkAlpha "Alpha for viewport snapshot" checked:false align:#left
-        checkbox chkGamma "Gamma Correct" checked:true align:#left
-        checkbox chkVfb "Show VFB for render" checked:false align:#left
-        checkbox chkMetadata "AI Ready Pack: write metadata sidecar" checked:true align:#left
-        checkbox chkOpenFolder "Open folder after save" checked:false align:#left
+        dropdownlist ddlFormat "格式 / Format:" items:PHDS.formats selection:1 width:120 align:#left
+        edittext edtFolder "目录 / Folder:" text:(getDir #image) width:430 align:#left
+        button btnFolder "选择目录 / Pick Folder" width:160 height:26 align:#left
+        edittext edtPrefix "命名 / Prefix:" text:"PHDS" width:260 align:#left
+        checkbox chkAlpha "透明通道 / Alpha" checked:false align:#left
+        checkbox chkGamma "Gamma 校正 / Gamma Correct" checked:true align:#left
+        checkbox chkVfb "显示 VFB / Show VFB" checked:false align:#left
+        checkbox chkMetadata "写入 metadata / Metadata sidecar" checked:true align:#left
+        checkbox chkOpenFolder "保存后打开目录 / Open folder after save" checked:false align:#left
     )
 
-    button btnSave "Save AI Capture Pack" width:190 height:34 align:#center
-    group "Result"
+    button btnSave "保存 AI 捕捉包 / Save Pack" width:230 height:36 align:#center
+    group "4. 结果 / Result"
     (
-        edittext edtLastOutput "Last:" text:"" width:390 align:#left
-        button btnOpenLast "Open Last Image" width:120 height:24 align:#left
-        button btnOpenFolder2 "Open Folder" width:100 height:24 align:#left
-        label lblStatus "Ready" width:390 align:#left
+        edittext edtLastOutput "最近 / Last:" text:"" width:430 align:#left
+        button btnOpenLast "打开图片 / Open Image" width:150 height:26 align:#left
+        button btnOpenFolder2 "打开目录 / Open Folder" width:150 height:26 align:#left
+        label lblStatus "准备就绪 / Ready" width:450 align:#left
     )
 
     fn isRenderMode =
@@ -380,25 +381,25 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 
         if renderMode then
         (
-            lblModeHint.text = "Uses the current 3ds Max Render Setup and renderer."
-            btnSave.text = "Run Production Render"
+            lblModeHint.text = "使用当前 3ds Max 渲染设置和渲染器。"
+            btnSave.text = "执行渲染 / Render"
         )
         else if isPackMode() then
         (
-            lblModeHint.text = "Pack saves viewport image plus metadata for AI workflows."
-            btnSave.text = "Save AI Capture Pack"
+            lblModeHint.text = "生成视口图 + metadata，作为后续 AI 输入。"
+            btnSave.text = "保存 AI 捕捉包 / Save Pack"
         )
         else
         (
-            lblModeHint.text = "Snapshot saves the active viewport's real pixels. No fake 8K upscale."
-            btnSave.text = "Save Viewport Snapshot"
+            lblModeHint.text = "保存当前视口真实像素，不做假的 4K/8K 放大。"
+            btnSave.text = "保存视口快照 / Save Snapshot"
         )
     )
 
     fn setDetected size =
     (
         detectedSize = size
-        lblViewport.text = "Active viewport: " + (size.x as string) + " x " + (size.y as string)
+        lblViewport.text = "视口 / Viewport: " + (size.x as string) + " x " + (size.y as string)
     )
 
     fn detect =
@@ -407,7 +408,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
         if result.ok then
         (
             setDetected result.value
-            lblStatus.text = "Viewport detected. Snapshot output will use this exact size."
+            lblStatus.text = "已检测视口；AI 捕捉包会使用这个真实尺寸。"
         )
         else
         (
@@ -439,7 +440,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
     on ddlMode selected index do
     (
         syncModeUI()
-        lblStatus.text = "Mode changed."
+        lblStatus.text = "模式已切换 / Mode changed."
     )
 
     on btnDetect pressed do detect()
@@ -447,7 +448,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
     on ddlPreset selected index do
     (
         applyPreset()
-        lblStatus.text = "Render size preset applied."
+        lblStatus.text = "渲染尺寸已应用 / Render size applied."
     )
 
     on btnRenderSetup pressed do
@@ -457,13 +458,13 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 
     on btnFolder pressed do
     (
-        local picked = getSavePath caption:"Pick Output Folder" initialDir:edtFolder.text
+        local picked = getSavePath caption:"Pick Output Folder / 选择输出目录" initialDir:edtFolder.text
         if picked != undefined do edtFolder.text = picked
     )
 
     on btnSave pressed do
     (
-        lblStatus.text = "Working..."
+        lblStatus.text = "处理中 / Working..."
         local result = PHDS.save (buildRequest())
         if result.ok then
         (
@@ -478,7 +479,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
                 local meta = PHDS.writeMetadata result.value metaType metaWidth metaHeight
                 if not meta.ok do format "Metadata warning: %\n" meta.error
             )
-            lblStatus.text = "Saved: " + filenameFromPath result.value
+            lblStatus.text = "已保存 / Saved: " + filenameFromPath result.value
             if chkOpenFolder.checked do shellLaunch lastFolder ""
             messageBox ("Saved:\n" + result.value) title:PHDS.appName
         )
@@ -497,13 +498,13 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:440 height:610
 
     on btnOpenLast pressed do
     (
-        if lastOutput != "" and doesFileExist lastOutput then shellLaunch lastOutput "" else messageBox "No saved image yet." title:PHDS.appName
+        if lastOutput != "" and doesFileExist lastOutput then shellLaunch lastOutput "" else messageBox "No saved image yet. / 还没有保存图片。" title:PHDS.appName
     )
 
     on btnOpenFolder2 pressed do
     (
         local folderToOpen = if lastFolder != "" then lastFolder else edtFolder.text
-        if folderToOpen != "" and doesFileExist folderToOpen then shellLaunch folderToOpen "" else messageBox "Output folder is not available." title:PHDS.appName
+        if folderToOpen != "" and doesFileExist folderToOpen then shellLaunch folderToOpen "" else messageBox "Output folder is not available. / 输出目录不可用。" title:PHDS.appName
     )
 )
 
