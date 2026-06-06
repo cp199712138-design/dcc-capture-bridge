@@ -2,34 +2,34 @@
 
 This is the quick brief for the next working session.
 
-## What Changed
+## Current Direction
 
-The repository has been renamed to:
+The repository is:
 
 ```text
 dcc-capture-bridge
 ```
 
-The project direction is now clearer:
+The product direction is:
 
 ```text
-3ds Max screenshot MVP today
-DCC-to-AI capture bridge later
+3ds Max viewport capture MVP today
+AI-readable DCC capture bridge later
 ```
 
-## Files Added / Updated
+## Important Correction
 
-- `README.md`
-- `dist/PerfectHDScreenshotPro_MVP.ms`
-- `docs/start-plan.md`
-- `docs/ui-system.md`
-- `docs/ai-pipeline-plan.md`
-- `docs/competitor-scan.md`
-- `docs/product-vision.md`
-- `docs/architecture-decisions.md`
-- `docs/development-roadmap.md`
-- `docs/validation-matrix.md`
-- `.gitignore`
+The primary value is not replacing 3ds Max rendering.
+
+The primary value is:
+
+```text
+fast viewport capture
+-> clean reference image
+-> future AI input / control asset
+```
+
+Production Render is a secondary convenience mode. It uses the current 3ds Max Render Setup and renderer.
 
 ## Current MVP File
 
@@ -41,15 +41,17 @@ Current behavior:
 
 - Drag into a 3ds Max viewport.
 - Detect active viewport size.
-- Capture viewport image.
-- Render high-resolution image.
-- Save output with timestamped filename.
+- Save a real-pixel viewport snapshot.
+- Optional Production Render using current Render Setup.
+- Open native Render Setup from the panel.
 
-## Important Design Decision
+## New Planning Docs
 
-The MVP UI is English-only for now.
-
-Chinese UI is planned, but MAXScript encoding needs real 3ds Max testing first. The project should avoid shipping bilingual UI until Chinese strings are proven not to corrupt across target Max versions.
+- `docs/reality-first-principles.md`
+- `docs/ai-readable-capture-spec.md`
+- `docs/demo-tutorial-plan.md`
+- updated `docs/validation-matrix.md`
+- updated `docs/development-roadmap.md`
 
 ## Next Best Step
 
@@ -58,19 +60,21 @@ Test the MVP in 3ds Max:
 1. Download `dist/PerfectHDScreenshotPro_MVP.ms`.
 2. Drag it into a 3ds Max viewport.
 3. Test Detect Viewport.
-4. Test Capture Viewport as PNG.
-5. Test High-res Render at 1920x1080.
-6. Paste any MAXScript error text back into the thread.
+4. Test Save Viewport Snapshot as PNG.
+5. Confirm output size equals detected viewport size.
+6. Test Open Render Setup.
+7. Optionally test Production Render.
+8. Paste any MAXScript error text back into the thread.
 
 ## After Runtime Test
 
 If MVP works:
 
-- Add version label.
-- Add aspect-ratio lock.
+- Improve UI spacing and labels.
+- Add metadata file.
+- Add aspect-ratio lock for render mode.
 - Add overwrite protection.
-- Add lightweight log file.
-- Start localization strategy.
+- Create first short tutorial.
 
 If MVP fails:
 
