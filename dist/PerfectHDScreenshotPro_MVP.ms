@@ -36,7 +36,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.4.1",
+    version = "0.5.0",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -309,53 +309,56 @@ struct PHDS_API
 
 PHDS = PHDS_API()
 
-rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
+rollout PHDS_MainRollout "DCC Capture Bridge" width:430 height:485
 (
     local detectedSize = [0, 0]
     local lastOutput = ""
     local lastFolder = ""
+    local language = #cn
 
-    label lblTitle "DCC Capture Bridge / AI 捕捉桥" width:470 align:#left
-    label lblSubtitle "从 3ds Max 视口导出 AI 可读图包 / AI-ready viewport capture pack" width:470 align:#left
+    label lblTitle "DCC Capture Bridge" width:390 align:#left
+    label lblSubtitle "AI capture pack from 3ds Max viewport" width:390 align:#left
+    dropdownlist ddlLanguage "Language:" items:#("中文", "English") selection:1 width:130 align:#left
 
-    group "1. 捕捉来源 / Capture"
+    group "Input"
     (
-        dropdownlist ddlMode "模式 / Mode:" items:#("AI 捕捉包 / AI Capture Pack", "视口快照 / Viewport Snapshot", "当前渲染器 / Production Render") selection:1 width:330 align:#left
-        label lblViewport "视口 / Viewport: 未检测" width:430 align:#left
-        button btnDetect "检测视口 / Detect" width:150 height:26 align:#left
-        label lblModeHint "生成视口图 + metadata，作为后续 AI 输入。" width:450 align:#left
+        dropdownlist ddlMode "Mode:" items:#("AI Capture Pack", "Viewport Snapshot", "Production Render") selection:1 width:250 align:#left
+        label lblViewport "Viewport: not detected" width:370 align:#left
+        label lblModeHint "Capture viewport image and metadata for AI." width:370 align:#left
+        button btnDetect "Detect Viewport" width:135 height:26 align:#left
     )
 
-    group "2. 渲染尺寸 / Render Size"
+    group "Render"
     (
-        label lblRenderNote "只在 Production Render 模式启用；AI 捕捉包使用真实视口像素。" width:450 align:#left
-        dropdownlist ddlPreset "预设 / Preset:" items:#("当前渲染尺寸 / Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "自定义 / Custom") selection:2 width:260 align:#left
-        spinner spnWidth "宽 / Width:" range:[1,32768,1920] type:#integer fieldwidth:96 align:#left
-        spinner spnHeight "高 / Height:" range:[1,32768,1080] type:#integer fieldwidth:96 align:#left
-        button btnRenderSetup "打开渲染设置 / Render Setup" width:190 height:26 align:#left
+        label lblRenderNote "Only enabled for Production Render." width:370 align:#left
+        dropdownlist ddlPreset "Preset:" items:#("Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "Custom") selection:2 width:210 align:#left
+        spinner spnWidth "Width:" range:[1,32768,1920] type:#integer fieldwidth:90 align:#left
+        spinner spnHeight "Height:" range:[1,32768,1080] type:#integer fieldwidth:90 align:#left
+        button btnRenderSetup "Render Setup" width:120 height:26 align:#left
     )
 
-    group "3. 输出 / Output"
+    group "Output"
     (
-        dropdownlist ddlFormat "格式 / Format:" items:PHDS.formats selection:1 width:120 align:#left
-        edittext edtFolder "目录 / Folder:" text:(getDir #image) width:430 align:#left
-        button btnFolder "选择目录 / Pick Folder" width:160 height:26 align:#left
-        edittext edtPrefix "命名 / Prefix:" text:"PHDS" width:260 align:#left
-        checkbox chkAlpha "透明通道 / Alpha" checked:false align:#left
-        checkbox chkGamma "Gamma 校正 / Gamma Correct" checked:true align:#left
-        checkbox chkVfb "显示 VFB / Show VFB" checked:false align:#left
-        checkbox chkMetadata "写入 metadata / Metadata sidecar" checked:true align:#left
-        checkbox chkOpenFolder "保存后打开目录 / Open folder after save" checked:false align:#left
+        edittext edtFolder "Folder:" text:(getDir #image) width:370 align:#left
+        button btnFolder "Pick Folder" width:105 height:26 align:#left
+        edittext edtPrefix "Prefix:" text:"PHDS" width:220 align:#left
+        dropdownlist ddlFormat "Format:" items:PHDS.formats selection:1 width:95 align:#left
+        checkbox chkOpenFolder "Open folder after save" checked:true align:#left
     )
 
-    button btnSave "保存 AI 捕捉包 / Save Pack" width:230 height:36 align:#center
-    group "4. 结果 / Result"
+    button btnSave "Capture Pack" width:200 height:38 align:#center
+    group "Result"
     (
-        edittext edtLastOutput "最近 / Last:" text:"" width:430 align:#left
-        button btnOpenLast "打开图片 / Open Image" width:150 height:26 align:#left
-        button btnOpenFolder2 "打开目录 / Open Folder" width:150 height:26 align:#left
-        label lblStatus "准备就绪 / Ready" width:450 align:#left
+        edittext edtLastOutput "Last:" text:"" width:370 align:#left
+        button btnOpenLast "Open Image" width:105 height:26 align:#left
+        button btnOpenFolder2 "Open Folder" width:105 height:26 align:#left
+        label lblStatus "Ready" width:370 align:#left
     )
+
+    checkbox chkAlpha "Alpha" checked:false visible:false
+    checkbox chkGamma "Gamma Correct" checked:true visible:false
+    checkbox chkVfb "Show VFB" checked:false visible:false
+    checkbox chkMetadata "Metadata" checked:true visible:false
 
     fn isRenderMode =
     (
@@ -381,25 +384,63 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
 
         if renderMode then
         (
-            lblModeHint.text = "使用当前 3ds Max 渲染设置和渲染器。"
-            btnSave.text = "执行渲染 / Render"
+            lblModeHint.text = if language == #cn then "使用当前 3ds Max 渲染器。" else "Use the current 3ds Max renderer."
+            lblRenderNote.text = if language == #cn then "渲染尺寸只影响 Production Render。" else "Render size only affects Production Render."
+            btnSave.text = if language == #cn then "开始渲染" else "Run Render"
         )
         else if isPackMode() then
         (
-            lblModeHint.text = "生成视口图 + metadata，作为后续 AI 输入。"
-            btnSave.text = "保存 AI 捕捉包 / Save Pack"
+            lblModeHint.text = if language == #cn then "导出视口图和 metadata，提供给 AI。" else "Capture viewport image and metadata for AI."
+            lblRenderNote.text = if language == #cn then "AI 捕捉包使用真实视口像素。" else "AI pack uses real viewport pixels."
+            btnSave.text = if language == #cn then "捕捉 AI 图包" else "Capture Pack"
         )
         else
         (
-            lblModeHint.text = "保存当前视口真实像素，不做假的 4K/8K 放大。"
-            btnSave.text = "保存视口快照 / Save Snapshot"
+            lblModeHint.text = if language == #cn then "保存当前视口真实像素，不做假放大。" else "Save real viewport pixels. No fake upscale."
+            lblRenderNote.text = if language == #cn then "快照不使用渲染尺寸。" else "Snapshot does not use render size."
+            btnSave.text = if language == #cn then "保存快照" else "Save Snapshot"
         )
+    )
+
+    fn applyLanguage =
+    (
+        language = if ddlLanguage.selection == 1 then #cn else #en
+
+        if language == #cn then
+        (
+            lblSubtitle.text = "把 3D 视口转成 AI 可读图包"
+            ddlMode.items = #("AI 捕捉包", "视口快照", "当前渲染器")
+            btnDetect.text = "检测视口"
+            ddlPreset.items = #("当前渲染尺寸", "1920 x 1080", "3840 x 2160", "7680 x 4320", "自定义")
+            btnRenderSetup.text = "渲染设置"
+            btnFolder.text = "选择目录"
+            chkOpenFolder.text = "保存后打开目录"
+            btnOpenLast.text = "打开图片"
+            btnOpenFolder2.text = "打开目录"
+            lblStatus.text = "准备就绪"
+        )
+        else
+        (
+            lblSubtitle.text = "AI capture pack from 3ds Max viewport"
+            ddlMode.items = #("AI Capture Pack", "Viewport Snapshot", "Production Render")
+            btnDetect.text = "Detect Viewport"
+            ddlPreset.items = #("Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "Custom")
+            btnRenderSetup.text = "Render Setup"
+            btnFolder.text = "Pick Folder"
+            chkOpenFolder.text = "Open folder after save"
+            btnOpenLast.text = "Open Image"
+            btnOpenFolder2.text = "Open Folder"
+            lblStatus.text = "Ready"
+        )
+
+        syncModeUI()
+        if detectedSize.x > 0 do setDetected detectedSize
     )
 
     fn setDetected size =
     (
         detectedSize = size
-        lblViewport.text = "视口 / Viewport: " + (size.x as string) + " x " + (size.y as string)
+        lblViewport.text = (if language == #cn then "视口: " else "Viewport: ") + (size.x as string) + " x " + (size.y as string)
     )
 
     fn detect =
@@ -408,7 +449,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
         if result.ok then
         (
             setDetected result.value
-            lblStatus.text = "已检测视口；AI 捕捉包会使用这个真实尺寸。"
+            lblStatus.text = if language == #cn then "已检测视口，捕捉包会使用真实尺寸。" else "Viewport detected. Pack uses this real size."
         )
         else
         (
@@ -440,15 +481,17 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
     on ddlMode selected index do
     (
         syncModeUI()
-        lblStatus.text = "模式已切换 / Mode changed."
+        lblStatus.text = if language == #cn then "模式已切换" else "Mode changed."
     )
+
+    on ddlLanguage selected index do applyLanguage()
 
     on btnDetect pressed do detect()
 
     on ddlPreset selected index do
     (
         applyPreset()
-        lblStatus.text = "渲染尺寸已应用 / Render size applied."
+        lblStatus.text = if language == #cn then "渲染尺寸已应用" else "Render size applied."
     )
 
     on btnRenderSetup pressed do
@@ -458,13 +501,13 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
 
     on btnFolder pressed do
     (
-        local picked = getSavePath caption:"Pick Output Folder / 选择输出目录" initialDir:edtFolder.text
+        local picked = getSavePath caption:(if language == #cn then "选择输出目录" else "Pick Output Folder") initialDir:edtFolder.text
         if picked != undefined do edtFolder.text = picked
     )
 
     on btnSave pressed do
     (
-        lblStatus.text = "处理中 / Working..."
+        lblStatus.text = if language == #cn then "处理中..." else "Working..."
         local result = PHDS.save (buildRequest())
         if result.ok then
         (
@@ -479,7 +522,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
                 local meta = PHDS.writeMetadata result.value metaType metaWidth metaHeight
                 if not meta.ok do format "Metadata warning: %\n" meta.error
             )
-            lblStatus.text = "已保存 / Saved: " + filenameFromPath result.value
+            lblStatus.text = (if language == #cn then "已保存: " else "Saved: ") + filenameFromPath result.value
             if chkOpenFolder.checked do shellLaunch lastFolder ""
             messageBox ("Saved:\n" + result.value) title:PHDS.appName
         )
@@ -493,18 +536,19 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:520 height:560
     on PHDS_MainRollout open do
     (
         syncModeUI()
+        applyLanguage()
         detect()
     )
 
     on btnOpenLast pressed do
     (
-        if lastOutput != "" and doesFileExist lastOutput then shellLaunch lastOutput "" else messageBox "No saved image yet. / 还没有保存图片。" title:PHDS.appName
+        if lastOutput != "" and doesFileExist lastOutput then shellLaunch lastOutput "" else messageBox (if language == #cn then "还没有保存图片。" else "No saved image yet.") title:PHDS.appName
     )
 
     on btnOpenFolder2 pressed do
     (
         local folderToOpen = if lastFolder != "" then lastFolder else edtFolder.text
-        if folderToOpen != "" and doesFileExist folderToOpen then shellLaunch folderToOpen "" else messageBox "Output folder is not available. / 输出目录不可用。" title:PHDS.appName
+        if folderToOpen != "" and doesFileExist folderToOpen then shellLaunch folderToOpen "" else messageBox (if language == #cn then "输出目录不可用。" else "Output folder is not available.") title:PHDS.appName
     )
 )
 
