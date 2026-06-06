@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,517 +7,104 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0f1115;
-      --panel: #171a20;
-      --panel-2: #1e232b;
-      --line: #303641;
-      --text: #f3f5f8;
-      --muted: #9aa4b2;
-      --soft: #c8ced8;
-      --blue: #66a6ff;
-      --green: #6ee7b7;
-      --yellow: #facc15;
-      --red: #fb7185;
-      --radius: 8px;
-      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      --bg: #070a0f;
+      --surface: #0f141d;
+      --panel: #141b25;
+      --panel-2: #1a2330;
+      --line: rgba(255,255,255,.12);
+      --text: #f6f8fc;
+      --muted: #9ba8ba;
+      --soft: #cbd6e5;
+      --cyan: #66e8ff;
+      --blue: #6ea8ff;
+      --mint: #69f0bd;
+      --lime: #d9ff66;
+      --pink: #ff7ab6;
+      --amber: #ffd166;
+      --radius: 10px;
+      font-family: Inter, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
     }
-
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      overflow: hidden;
-    }
-
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 22% 16%, rgba(105,240,189,.16), transparent 30%), radial-gradient(circle at 76% 18%, rgba(110,168,255,.20), transparent 32%), radial-gradient(circle at 70% 84%, rgba(255,122,182,.10), transparent 34%), var(--bg); color: var(--text); overflow: hidden; }
     button, input, select, textarea { font: inherit; }
-
-    .app {
-      display: grid;
-      grid-template-columns: 280px minmax(420px, 1fr) 320px;
-      grid-template-rows: 56px minmax(0, 1fr) 118px;
-      height: 100vh;
-      min-width: 1040px;
-    }
-
-    header {
-      grid-column: 1 / 4;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 0 18px;
-      border-bottom: 1px solid var(--line);
-      background: #11141a;
-    }
-
-    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-    .brand strong { font-size: 16px; letter-spacing: 0; }
-    .brand span { color: var(--muted); font-size: 13px; white-space: nowrap; }
-    .top-actions { display: flex; align-items: center; gap: 8px; }
-
-    .pill {
-      min-height: 30px;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--panel-2);
-      color: var(--soft);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-    }
-
-    .sidebar, .inspector { min-height: 0; overflow: auto; background: var(--panel); }
-    .sidebar { border-right: 1px solid var(--line); padding: 14px; }
-    .inspector { border-left: 1px solid var(--line); padding: 14px; }
-
-    .canvas-wrap {
-      min-height: 0;
-      position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
-        #10131a;
-      background-size: 28px 28px;
-    }
-
-    .canvas-toolbar {
-      position: absolute;
-      left: 16px;
-      top: 14px;
-      z-index: 2;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      max-width: calc(100% - 32px);
-    }
-
-    .tool {
-      height: 34px;
-      padding: 0 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 999px;
-      background: rgba(23,26,32,.92);
-      color: var(--soft);
-      cursor: pointer;
-    }
-
-    .tool.active { border-color: var(--blue); color: var(--text); background: rgba(102,166,255,.16); }
-
-    .evidence-board {
-      position: absolute;
-      inset: 70px 22px 22px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: var(--radius);
-      background: rgba(12,14,18,.72);
-      overflow: hidden;
-    }
-
-    canvas { width: 100%; height: 100%; display: block; }
-
-    .drop-hint {
-      position: absolute;
-      left: 24px;
-      bottom: 20px;
-      max-width: 440px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-      pointer-events: none;
-    }
-
-    section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    button { cursor: pointer; }
+    .app { height: 100vh; min-width: 1120px; display: grid; grid-template-rows: 64px minmax(0, 1fr) 112px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 22px; border-bottom: 1px solid var(--line); background: rgba(7,10,15,.72); backdrop-filter: blur(18px); }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--mint), var(--blue) 54%, var(--pink)); box-shadow: 0 0 34px rgba(105,240,189,.25); }
+    .brand strong { display: block; font-size: 15px; letter-spacing: 0; }
+    .brand span { color: var(--muted); font-size: 12px; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .segmented { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.04); }
+    .segmented button, .pill { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; }
+    .segmented button.active { background: var(--mint); color: #061017; font-weight: 800; }
+    .pill { display: inline-flex; align-items: center; border: 1px solid var(--line); color: var(--soft); background: rgba(255,255,255,.04); }
+    .workspace { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+    .stage { position: relative; min-width: 0; overflow: hidden; padding: 22px; }
+    .stage-inner { position: relative; height: 100%; min-height: 520px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; overflow: hidden; background: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px), rgba(10,14,21,.78); background-size: 32px 32px; box-shadow: 0 24px 90px rgba(0,0,0,.38); }
+    .stage-toolbar { position: absolute; top: 18px; left: 18px; right: 18px; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tool { height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(14,20,30,.78); color: var(--soft); }
+    .tool.active { border-color: var(--cyan); background: rgba(102,232,255,.14); color: var(--text); }
+    .capture-button { height: 38px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--mint); color: #061017; font-weight: 900; box-shadow: 0 12px 34px rgba(105,240,189,.22); }
+    .hero-canvas { position: absolute; inset: 82px 280px 32px 32px; border: 1px solid rgba(255,255,255,.10); border-radius: 14px; background: radial-gradient(circle at 50% 42%, rgba(110,168,255,.20), transparent 32%), rgba(8,12,18,.62); overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .drop-copy { position: absolute; left: 24px; bottom: 20px; max-width: 440px; color: var(--muted); font-size: 13px; line-height: 1.5; pointer-events: none; }
+    .reference-stack { position: absolute; top: 82px; right: 32px; bottom: 32px; width: 220px; display: grid; grid-template-rows: repeat(3, 1fr); gap: 14px; }
+    .slot { position: relative; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.045); padding: 12px; overflow: hidden; }
+    .slot strong { display: block; font-size: 12px; margin-bottom: 6px; }
+    .slot span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .slot.active { border-color: var(--mint); background: rgba(105,240,189,.10); }
+    .slot::after { content: ""; position: absolute; right: -24px; bottom: -28px; width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,.06); }
+    aside { min-height: 0; overflow: auto; border-left: 1px solid var(--line); background: rgba(13,18,27,.86); backdrop-filter: blur(18px); padding: 18px; }
+    section { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
     section:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
-
-    h2 {
-      margin: 0 0 10px;
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-
-    label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 6px; }
-
-    select, input, textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #101318;
-      color: var(--text);
-      min-height: 34px;
-      padding: 7px 9px;
-      outline: none;
-    }
-
-    textarea { min-height: 92px; resize: vertical; line-height: 1.45; }
-
-    .primary {
-      width: 100%;
-      min-height: 42px;
-      border: 0;
-      border-radius: var(--radius);
-      background: var(--blue);
-      color: #07101f;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .secondary {
-      width: 100%;
-      min-height: 36px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel-2);
-      color: var(--text);
-      cursor: pointer;
-    }
-
-    .capture-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-    .chip {
-      min-height: 32px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #11151b;
-      color: var(--soft);
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .chip.active { border-color: var(--green); color: var(--text); background: rgba(110,231,183,.13); }
-
-    .task-card {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 10px;
-      margin-bottom: 8px;
-      background: #12161d;
-      cursor: pointer;
-    }
-
-    .task-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
-    .task-card span { color: var(--muted); font-size: 12px; line-height: 1.4; }
-    .task-card.active { border-color: var(--blue); background: rgba(102,166,255,.12); }
-
-    .history {
-      grid-column: 1 / 4;
-      display: grid;
-      grid-template-columns: 280px minmax(0, 1fr) 320px;
-      border-top: 1px solid var(--line);
-      background: #11141a;
-      min-height: 0;
-    }
-
-    .history-title {
-      display: flex;
-      align-items: center;
-      padding: 0 14px;
-      border-right: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-
-    .thumbs { display: flex; gap: 10px; align-items: center; overflow-x: auto; padding: 10px 14px; }
-
-    .thumb {
-      flex: 0 0 118px;
-      height: 78px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: linear-gradient(135deg, #202734, #10131a);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .thumb::after {
-      content: attr(data-label);
-      position: absolute;
-      left: 8px;
-      bottom: 7px;
-      color: var(--soft);
-      font-size: 11px;
-    }
-
-    .status {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 6px;
-      padding: 0 14px;
-      border-left: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
-    }
-
+    h2 { margin: 0 0 12px; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+    label { display: block; margin: 10px 0 6px; color: var(--muted); font-size: 12px; }
+    select, input, textarea { width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 8px; background: rgba(7,10,15,.82); color: var(--text); padding: 8px 10px; outline: none; }
+    textarea { min-height: 118px; resize: vertical; line-height: 1.55; }
+    .source-grid, .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .chip { min-height: 34px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.035); color: var(--soft); font-size: 12px; }
+    .chip.active { border-color: var(--mint); background: rgba(105,240,189,.13); color: var(--text); }
+    .task { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.04); margin-bottom: 9px; }
+    .task.active { border-color: var(--blue); background: rgba(110,168,255,.14); }
+    .task strong { display: block; margin-bottom: 5px; font-size: 13px; }
+    .task span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .primary { width: 100%; min-height: 44px; border: 0; border-radius: 10px; background: var(--blue); color: #061019; font-weight: 900; }
+    .secondary { width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.045); color: var(--text); }
+    .timeline { display: grid; grid-template-columns: 300px minmax(0, 1fr) 360px; border-top: 1px solid var(--line); background: rgba(7,10,15,.82); }
+    .timeline-title { display: flex; align-items: center; padding: 0 20px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; border-right: 1px solid var(--line); }
+    .frames { display: flex; align-items: center; gap: 10px; overflow-x: auto; padding: 12px 16px; }
+    .frame { flex: 0 0 120px; height: 76px; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(135deg, rgba(110,168,255,.18), rgba(255,255,255,.04)); display: flex; align-items: end; padding: 9px; color: var(--soft); font-size: 11px; }
+    .status { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 18px; border-left: 1px solid var(--line); color: var(--muted); font-size: 12px; }
     .status strong { color: var(--text); font-size: 13px; }
-
-    @media (max-width: 1100px) {
-      body { overflow: auto; }
-      .app { min-width: 0; height: auto; min-height: 100vh; grid-template-columns: 1fr; grid-template-rows: auto; }
-      header, .history { grid-column: auto; }
-      .canvas-wrap { min-height: 520px; }
-      .history { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1180px) { body { overflow: auto; } .app { min-width: 0; height: auto; min-height: 100vh; grid-template-rows: auto; } .workspace, .timeline { grid-template-columns: 1fr; } .stage { min-height: 760px; } .hero-canvas { inset: 82px 24px 290px 24px; } .reference-stack { left: 24px; right: 24px; bottom: 24px; top: auto; width: auto; height: 238px; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr; } aside { border-left: 0; border-top: 1px solid var(--line); } }
   </style>
 </head>
 <body>
   <div class="app">
     <header>
-      <div class="brand">
-        <strong>DCC Capture Canvas</strong>
-        <span>3D evidence board for AI product generation</span>
-      </div>
-      <div class="top-actions">
-        <span class="pill">Local prototype</span>
-        <span class="pill">3ds Max / Blender ready</span>
-      </div>
+      <div class="brand"><span class="logo"></span><div><strong data-cn="DCC Capture Canvas" data-en="DCC Capture Canvas">DCC Capture Canvas</strong><span data-cn="实时产品证据画布 / 给 AI 的 3D 输入工作台" data-en="Realtime product evidence canvas for AI">实时产品证据画布 / 给 AI 的 3D 输入工作台</span></div></div>
+      <div class="topbar-actions"><span class="pill" data-cn="本地原型" data-en="Local prototype">本地原型</span><span class="pill" data-cn="3ds Max / Blender 适配" data-en="3ds Max / Blender ready">3ds Max / Blender 适配</span><div class="segmented"><button class="active" data-lang="cn">中文</button><button data-lang="en">English</button></div></div>
     </header>
-
-    <aside class="sidebar">
-      <section>
-        <h2>Capture Source</h2>
-        <label>DCC</label>
-        <select id="dcc">
-          <option>3ds Max</option>
-          <option>Blender</option>
-          <option>Future DCC</option>
-        </select>
-
-        <label>Source</label>
-        <div class="capture-grid" id="sourceGrid">
-          <button class="chip active">Viewport</button>
-          <button class="chip">Camera</button>
-          <button class="chip">Selected</button>
-          <button class="chip">Animation</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>Evidence Types</h2>
-        <div class="capture-grid" id="assetGrid">
-          <button class="chip active">Beauty</button>
-          <button class="chip active">Depth</button>
-          <button class="chip">Normal</button>
-          <button class="chip">Mask</button>
-          <button class="chip">Material</button>
-          <button class="chip">Texture</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>Reference Slots</h2>
-        <button class="secondary" id="uploadBtn">Import reference image</button>
-        <input id="fileInput" type="file" accept="image/*" hidden>
-        <label>Session folder</label>
-        <input value="PHDS_session_20260606_121743">
-      </section>
-
-      <button class="primary" id="captureBtn">Capture Evidence Pack</button>
-    </aside>
-
-    <main class="canvas-wrap">
-      <div class="canvas-toolbar">
-        <button class="tool active">Evidence Board</button>
-        <button class="tool">Multi-angle</button>
-        <button class="tool">Material Study</button>
-        <button class="tool">Scene Draft</button>
-      </div>
-      <div class="evidence-board">
-        <canvas id="board"></canvas>
-        <div class="drop-hint">Drop a capture or reference image here. This board is the future bridge between 3ds Max / Blender scene evidence and AI generation.</div>
-      </div>
-    </main>
-
-    <aside class="inspector">
-      <section>
-        <h2>AI Task</h2>
-        <div class="task-card active"><strong>Scene generation</strong><span>Use product angle and shape as a fixed reference.</span></div>
-        <div class="task-card"><strong>Render refinement</strong><span>Improve light, detail, and presentation quality.</span></div>
-        <div class="task-card"><strong>Material / texture</strong><span>Generate texture maps or material variations.</span></div>
-        <div class="task-card"><strong>Subject isolation</strong><span>Create clean product masks and object identity.</span></div>
-      </section>
-
-      <section>
-        <h2>Prompt</h2>
-        <textarea id="prompt">Create a clean product scene. Preserve object shape, camera angle, proportions, and material boundaries.</textarea>
-      </section>
-
-      <section>
-        <h2>Controls</h2>
-        <label>AI strength</label>
-        <input type="range" min="0" max="100" value="45">
-        <label>Output ratio</label>
-        <select>
-          <option>16:9 landscape</option>
-          <option>1:1 square</option>
-          <option>4:5 portrait</option>
-        </select>
-      </section>
-
-      <button class="primary" id="generateBtn">Generate Variant</button>
-    </aside>
-
-    <footer class="history">
-      <div class="history-title">Multi-angle / History</div>
-      <div class="thumbs">
-        <div class="thumb" data-label="Front"></div>
-        <div class="thumb" data-label="Side"></div>
-        <div class="thumb" data-label="Back"></div>
-        <div class="thumb" data-label="Detail"></div>
-        <div class="thumb" data-label="AI Variant"></div>
-      </div>
-      <div class="status">
-        <strong id="statusTitle">Ready</strong>
-        <span id="statusText">Waiting for a DCC capture session.</span>
-      </div>
-    </footer>
+    <div class="workspace">
+      <main class="stage"><div class="stage-inner"><div class="stage-toolbar"><div class="mode-tabs"><button class="tool active" data-cn="实时画布" data-en="Realtime Canvas">实时画布</button><button class="tool" data-cn="多角度" data-en="Multi-angle">多角度</button><button class="tool" data-cn="材质研究" data-en="Material Study">材质研究</button><button class="tool" data-cn="场景草图" data-en="Scene Draft">场景草图</button></div><button class="capture-button" id="captureBtn" data-cn="捕捉证据包" data-en="Capture Evidence Pack">捕捉证据包</button></div><div class="hero-canvas" id="dropZone"><canvas id="board"></canvas><div class="drop-copy" data-cn="把 Max / Blender 捕捉图或参考图拖到这里。这里会成为 3D 产品证据、参考图和 AI 生成结果的实时工作台。" data-en="Drop a DCC capture or reference image here. This becomes the realtime workspace for 3D product evidence, references, and AI outputs.">把 Max / Blender 捕捉图或参考图拖到这里。这里会成为 3D 产品证据、参考图和 AI 生成结果的实时工作台。</div></div><div class="reference-stack"><div class="slot active"><strong data-cn="参考 1" data-en="Reference 1">参考 1</strong><span data-cn="DCC 视口捕捉 / 产品结构" data-en="DCC viewport capture / product structure">DCC 视口捕捉 / 产品结构</span></div><div class="slot"><strong data-cn="参考 2" data-en="Reference 2">参考 2</strong><span data-cn="材质、纹理、颜色方向" data-en="Material, texture, color direction">材质、纹理、颜色方向</span></div><div class="slot"><strong data-cn="参考 3" data-en="Reference 3">参考 3</strong><span data-cn="场景、灯光、情绪板" data-en="Scene, lighting, mood board">场景、灯光、情绪板</span></div></div></div></main>
+      <aside><section><h2 data-cn="捕捉源" data-en="Capture Source">捕捉源</h2><label data-cn="DCC 软件" data-en="DCC">DCC 软件</label><select><option>3ds Max</option><option>Blender</option><option>Future DCC</option></select><label data-cn="来源" data-en="Source">来源</label><div class="source-grid"><button class="chip active" data-cn="视口" data-en="Viewport">视口</button><button class="chip" data-cn="相机" data-en="Camera">相机</button><button class="chip" data-cn="主体" data-en="Subject">主体</button><button class="chip" data-cn="动画" data-en="Animation">动画</button></div></section><section><h2 data-cn="AI 任务" data-en="AI Task">AI 任务</h2><div class="task active"><strong data-cn="场景生成" data-en="Scene generation">场景生成</strong><span data-cn="锁定产品结构、比例和相机角度。" data-en="Lock product structure, proportions, and camera angle.">锁定产品结构、比例和相机角度。</span></div><div class="task"><strong data-cn="细化渲染" data-en="Render refinement">细化渲染</strong><span data-cn="提升光影、细节和展示质感。" data-en="Improve lighting, details, and presentation quality.">提升光影、细节和展示质感。</span></div><div class="task"><strong data-cn="材质 / 纹理" data-en="Material / texture">材质 / 纹理</strong><span data-cn="生成贴图、材质变体和表面参考。" data-en="Generate texture maps, material variants, and surface references.">生成贴图、材质变体和表面参考。</span></div><div class="task"><strong data-cn="主体识别" data-en="Subject isolation">主体识别</strong><span data-cn="提取主体、遮罩和产品身份。" data-en="Extract subject, mask, and product identity.">提取主体、遮罩和产品身份。</span></div></section><section><h2 data-cn="提示词" data-en="Prompt">提示词</h2><textarea data-cn-value="生成干净的产品场景，保持产品形状、相机角度、比例和材质边界。" data-en-value="Create a clean product scene. Preserve object shape, camera angle, proportions, and material boundaries.">生成干净的产品场景，保持产品形状、相机角度、比例和材质边界。</textarea></section><section><h2 data-cn="控制" data-en="Controls">控制</h2><label data-cn="AI 强度" data-en="AI strength">AI 强度</label><input type="range" min="0" max="100" value="45"><label data-cn="输出比例" data-en="Output ratio">输出比例</label><select><option>16:9 landscape</option><option>1:1 square</option><option>4:5 portrait</option></select></section><button class="primary" id="generateBtn" data-cn="生成变体" data-en="Generate Variant">生成变体</button></aside>
+    </div>
+    <footer class="timeline"><div class="timeline-title" data-cn="多角度 / 历史" data-en="Multi-angle / History">多角度 / 历史</div><div class="frames"><div class="frame" data-cn="正面" data-en="Front">正面</div><div class="frame" data-cn="侧面" data-en="Side">侧面</div><div class="frame" data-cn="背面" data-en="Back">背面</div><div class="frame" data-cn="细节" data-en="Detail">细节</div><div class="frame" data-cn="AI 变体" data-en="AI Variant">AI 变体</div></div><div class="status"><strong id="statusTitle" data-cn="准备就绪" data-en="Ready">准备就绪</strong><span id="statusText" data-cn="等待 DCC 捕捉会话。" data-en="Waiting for a DCC capture session.">等待 DCC 捕捉会话。</span></div></footer>
   </div>
-
   <script>
-    const canvas = document.getElementById("board");
-    const ctx = canvas.getContext("2d");
-    const statusTitle = document.getElementById("statusTitle");
-    const statusText = document.getElementById("statusText");
-    const fileInput = document.getElementById("fileInput");
-
-    function fitCanvas() {
-      const rect = canvas.getBoundingClientRect();
-      const ratio = window.devicePixelRatio || 1;
-      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      drawBoard();
-    }
-
-    function drawBoard(image) {
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#151922";
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = "rgba(255,255,255,.08)";
-      for (let x = 24; x < w; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-      for (let y = 24; y < h; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-
-      if (image) {
-        const scale = Math.min((w * .74) / image.width, (h * .72) / image.height);
-        const iw = image.width * scale;
-        const ih = image.height * scale;
-        ctx.drawImage(image, (w - iw) / 2, (h - ih) / 2, iw, ih);
-      } else {
-        drawProductMock(w, h);
-      }
-    }
-
-    function drawProductMock(w, h) {
-      const cx = w / 2;
-      const cy = h / 2 + 10;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.fillStyle = "#222b38";
-      ctx.strokeStyle = "#66a6ff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(0, 88, 150, 28, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2f3b4e";
-      ctx.beginPath();
-      ctx.roundRect(-92, -92, 184, 184, 22);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#11141a";
-      ctx.beginPath();
-      ctx.roundRect(-58, -54, 116, 104, 14);
-      ctx.fill();
-      ctx.fillStyle = "#6ee7b7";
-      ctx.beginPath();
-      ctx.arc(-38, -18, 12, 0, Math.PI * 2);
-      ctx.arc(38, -18, 12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#facc15";
-      ctx.beginPath();
-      ctx.moveTo(-48, 36);
-      ctx.quadraticCurveTo(0, 62, 48, 36);
-      ctx.stroke();
-      ctx.restore();
-      ctx.fillStyle = "#f3f5f8";
-      ctx.font = "600 18px Inter, Segoe UI, sans-serif";
-      ctx.fillText("DCC product evidence", 28, 42);
-      ctx.fillStyle = "#9aa4b2";
-      ctx.font = "13px Inter, Segoe UI, sans-serif";
-      ctx.fillText("Viewport, material references, masks, multi-angle frames", 28, 64);
-    }
-
-    CanvasRenderingContext2D.prototype.roundRect ||= function(x, y, width, height, radius) {
-      const r = Math.min(radius, width / 2, height / 2);
-      this.beginPath();
-      this.moveTo(x + r, y);
-      this.arcTo(x + width, y, x + width, y + height, r);
-      this.arcTo(x + width, y + height, x, y + height, r);
-      this.arcTo(x, y + height, x, y, r);
-      this.arcTo(x, y, x + width, y, r);
-      this.closePath();
-      return this;
-    };
-
-    document.querySelectorAll(".chip, .task-card, .tool").forEach((el) => {
-      el.addEventListener("click", () => {
-        if (el.classList.contains("task-card")) document.querySelectorAll(".task-card").forEach((card) => card.classList.remove("active"));
-        if (el.classList.contains("tool")) document.querySelectorAll(".tool").forEach((tool) => tool.classList.remove("active"));
-        el.classList.toggle("active");
-      });
-    });
-
-    document.getElementById("uploadBtn").addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (!file) return;
-      loadImage(file);
-    });
-
-    document.getElementById("captureBtn").addEventListener("click", () => {
-      statusTitle.textContent = "Evidence pack queued";
-      statusText.textContent = "Future build will read the latest 3ds Max / Blender capture session.";
-    });
-
-    document.getElementById("generateBtn").addEventListener("click", () => {
-      statusTitle.textContent = "Variant request prepared";
-      statusText.textContent = "ComfyUI connection will be added after the capture session format is stable.";
-    });
-
-    function loadImage(file) {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        drawBoard(img);
-        URL.revokeObjectURL(url);
-        statusTitle.textContent = "Reference loaded";
-        statusText.textContent = file.name;
-      };
-      img.src = url;
-    }
-
-    const board = document.querySelector(".evidence-board");
-    board.addEventListener("dragover", (event) => { event.preventDefault(); board.style.borderColor = "#66a6ff"; });
-    board.addEventListener("dragleave", () => { board.style.borderColor = "rgba(255,255,255,.1)"; });
-    board.addEventListener("drop", (event) => {
-      event.preventDefault();
-      board.style.borderColor = "rgba(255,255,255,.1)";
-      const file = event.dataTransfer.files[0];
-      if (file && file.type.startsWith("image/")) loadImage(file);
-    });
-
-    window.addEventListener("resize", fitCanvas);
-    fitCanvas();
+    const canvas = document.getElementById("board"); const ctx = canvas.getContext("2d"); const dropZone = document.getElementById("dropZone"); const statusTitle = document.getElementById("statusTitle"); const statusText = document.getElementById("statusText"); let currentLang = "cn"; let currentImage = null;
+    CanvasRenderingContext2D.prototype.roundRect ||= function(x, y, width, height, radius) { const r = Math.min(radius, width / 2, height / 2); this.beginPath(); this.moveTo(x + r, y); this.arcTo(x + width, y, x + width, y + height, r); this.arcTo(x + width, y + height, x, y + height, r); this.arcTo(x, y + height, x, y, r); this.arcTo(x, y, x + width, y, r); this.closePath(); return this; };
+    function fitCanvas() { const rect = canvas.getBoundingClientRect(); const ratio = window.devicePixelRatio || 1; canvas.width = Math.max(1, Math.floor(rect.width * ratio)); canvas.height = Math.max(1, Math.floor(rect.height * ratio)); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); drawBoard(currentImage); }
+    function drawBoard(image) { const w = canvas.clientWidth; const h = canvas.clientHeight; ctx.clearRect(0, 0, w, h); ctx.fillStyle = "rgba(7,10,15,.25)"; ctx.fillRect(0, 0, w, h); if (image) { const scale = Math.min((w * .76) / image.width, (h * .76) / image.height); const iw = image.width * scale; const ih = image.height * scale; ctx.drawImage(image, (w - iw) / 2, (h - ih) / 2, iw, ih); return; } const cx = w / 2; const cy = h / 2 + 8; ctx.save(); ctx.translate(cx, cy); const shadow = ctx.createRadialGradient(0, 124, 20, 0, 124, 190); shadow.addColorStop(0, "rgba(110,168,255,.26)"); shadow.addColorStop(1, "rgba(110,168,255,0)"); ctx.fillStyle = shadow; ctx.beginPath(); ctx.ellipse(0, 112, 210, 52, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#27364a"; ctx.strokeStyle = "#6ea8ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-96, -98, 192, 192, 34); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#0b1017"; ctx.beginPath(); ctx.roundRect(-58, -48, 116, 92, 15); ctx.fill(); ctx.fillStyle = "#69f0bd"; ctx.beginPath(); ctx.arc(-38, -16, 12, 0, Math.PI * 2); ctx.arc(38, -16, 12, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#d9ff66"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-44, 26); ctx.quadraticCurveTo(0, 52, 44, 26); ctx.stroke(); ctx.restore(); ctx.fillStyle = "#f6f8fc"; ctx.font = "700 19px Inter, Segoe UI, sans-serif"; ctx.fillText(currentLang === "cn" ? "产品证据画布" : "Product Evidence Canvas", 26, 36); ctx.fillStyle = "#9ba8ba"; ctx.font = "13px Inter, Segoe UI, sans-serif"; ctx.fillText(currentLang === "cn" ? "视口、多角度、材质参考、遮罩、AI 变体" : "Viewport, multi-angle, material references, masks, AI variants", 26, 58); }
+    function setLanguage(lang) { currentLang = lang; document.documentElement.lang = lang === "cn" ? "zh-CN" : "en"; document.querySelectorAll("[data-cn][data-en]").forEach((node) => { node.textContent = node.dataset[lang]; }); document.querySelectorAll("[data-cn-value][data-en-value]").forEach((node) => { node.value = node.dataset[`${lang}Value`]; }); document.querySelectorAll(".segmented button").forEach((button) => { button.classList.toggle("active", button.dataset.lang === lang); }); drawBoard(currentImage); }
+    document.querySelectorAll(".segmented button").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
+    document.querySelectorAll(".chip, .task, .tool").forEach((item) => { item.addEventListener("click", () => { if (item.classList.contains("task")) document.querySelectorAll(".task").forEach((task) => task.classList.remove("active")); if (item.classList.contains("tool")) document.querySelectorAll(".tool").forEach((tool) => tool.classList.remove("active")); item.classList.toggle("active"); }); });
+    dropZone.addEventListener("dragover", (event) => { event.preventDefault(); dropZone.style.borderColor = "#66e8ff"; }); dropZone.addEventListener("dragleave", () => { dropZone.style.borderColor = "rgba(255,255,255,.10)"; }); dropZone.addEventListener("drop", (event) => { event.preventDefault(); dropZone.style.borderColor = "rgba(255,255,255,.10)"; const file = event.dataTransfer.files[0]; if (!file || !file.type.startsWith("image/")) return; const url = URL.createObjectURL(file); const img = new Image(); img.onload = () => { currentImage = img; drawBoard(currentImage); URL.revokeObjectURL(url); statusTitle.textContent = currentLang === "cn" ? "参考图已载入" : "Reference loaded"; statusText.textContent = file.name; }; img.src = url; });
+    document.getElementById("captureBtn").addEventListener("click", () => { statusTitle.textContent = currentLang === "cn" ? "捕捉请求已准备" : "Capture request prepared"; statusText.textContent = currentLang === "cn" ? "下一步会读取 3ds Max / Blender 的捕捉会话。" : "Next build will read the 3ds Max / Blender capture session."; });
+    document.getElementById("generateBtn").addEventListener("click", () => { statusTitle.textContent = currentLang === "cn" ? "生成任务已准备" : "Generation request prepared"; statusText.textContent = currentLang === "cn" ? "ComfyUI 连接会在捕捉协议稳定后加入。" : "ComfyUI connection will be added after the capture protocol is stable."; });
+    window.addEventListener("resize", fitCanvas); fitCanvas();
   </script>
 </body>
 </html>
