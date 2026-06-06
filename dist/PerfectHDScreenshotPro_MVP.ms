@@ -36,7 +36,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.5.0",
+    version = "0.5.1",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -309,50 +309,51 @@ struct PHDS_API
 
 PHDS = PHDS_API()
 
-rollout PHDS_MainRollout "DCC Capture Bridge" width:430 height:485
+rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
 (
     local detectedSize = [0, 0]
     local lastOutput = ""
     local lastFolder = ""
     local language = #cn
 
-    label lblTitle "DCC Capture Bridge" width:390 align:#left
-    label lblSubtitle "AI capture pack from 3ds Max viewport" width:390 align:#left
+    label lblStudio "CAPTURE STUDIO" width:450 align:#left
+    label lblTitle "DCC Capture Bridge" width:450 align:#left
+    label lblSubtitle "AI capture pack from 3ds Max viewport" width:450 align:#left
     dropdownlist ddlLanguage "Language:" items:#("中文", "English") selection:1 width:130 align:#left
 
-    group "Input"
+    group "01  Source"
     (
-        dropdownlist ddlMode "Mode:" items:#("AI Capture Pack", "Viewport Snapshot", "Production Render") selection:1 width:250 align:#left
-        label lblViewport "Viewport: not detected" width:370 align:#left
-        label lblModeHint "Capture viewport image and metadata for AI." width:370 align:#left
-        button btnDetect "Detect Viewport" width:135 height:26 align:#left
+        dropdownlist ddlMode "Mode:" items:#("AI Capture Pack", "Viewport Snapshot", "Production Render") selection:1 width:280 align:#left
+        label lblViewport "Viewport: not detected" width:430 align:#left
+        label lblModeHint "Capture viewport image and metadata for AI." width:430 align:#left
+        button btnDetect "Detect Viewport" width:150 height:28 align:#left
     )
 
-    group "Render"
+    group "02  Render Options"
     (
-        label lblRenderNote "Only enabled for Production Render." width:370 align:#left
-        dropdownlist ddlPreset "Preset:" items:#("Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "Custom") selection:2 width:210 align:#left
-        spinner spnWidth "Width:" range:[1,32768,1920] type:#integer fieldwidth:90 align:#left
-        spinner spnHeight "Height:" range:[1,32768,1080] type:#integer fieldwidth:90 align:#left
-        button btnRenderSetup "Render Setup" width:120 height:26 align:#left
+        label lblRenderNote "Only enabled for Production Render." width:430 align:#left
+        dropdownlist ddlPreset "Preset:" items:#("Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "Custom") selection:2 width:240 align:#left
+        spinner spnWidth "Width:" range:[1,32768,1920] type:#integer fieldwidth:100 align:#left
+        spinner spnHeight "Height:" range:[1,32768,1080] type:#integer fieldwidth:100 align:#left
+        button btnRenderSetup "Render Setup" width:135 height:28 align:#left
     )
 
-    group "Output"
+    group "03  Destination"
     (
-        edittext edtFolder "Folder:" text:(getDir #image) width:370 align:#left
-        button btnFolder "Pick Folder" width:105 height:26 align:#left
-        edittext edtPrefix "Prefix:" text:"PHDS" width:220 align:#left
-        dropdownlist ddlFormat "Format:" items:PHDS.formats selection:1 width:95 align:#left
+        edittext edtFolder "Folder:" text:(getDir #image) width:440 align:#left
+        button btnFolder "Pick Folder" width:120 height:28 align:#left
+        edittext edtPrefix "Prefix:" text:"PHDS" width:250 align:#left
+        dropdownlist ddlFormat "Format:" items:PHDS.formats selection:1 width:110 align:#left
         checkbox chkOpenFolder "Open folder after save" checked:true align:#left
     )
 
-    button btnSave "Capture Pack" width:200 height:38 align:#center
-    group "Result"
+    button btnSave "Capture Pack" width:240 height:42 align:#center
+    group "04  Result"
     (
-        edittext edtLastOutput "Last:" text:"" width:370 align:#left
-        button btnOpenLast "Open Image" width:105 height:26 align:#left
-        button btnOpenFolder2 "Open Folder" width:105 height:26 align:#left
-        label lblStatus "Ready" width:370 align:#left
+        edittext edtLastOutput "Last:" text:"" width:440 align:#left
+        button btnOpenLast "Open Image" width:120 height:28 align:#left
+        button btnOpenFolder2 "Open Folder" width:120 height:28 align:#left
+        label lblStatus "Ready" width:430 align:#left
     )
 
     checkbox chkAlpha "Alpha" checked:false visible:false
@@ -554,5 +555,5 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:430 height:485
 
 if PHDS_HEADLESS_TEST != true do
 (
-    createDialog PHDS_MainRollout style:#(#style_titlebar, #style_sysmenu, #style_toolwindow)
+    createDialog PHDS_MainRollout style:#(#style_titlebar, #style_border, #style_sysmenu, #style_resizing)
 )
