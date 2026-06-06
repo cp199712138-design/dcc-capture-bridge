@@ -10,9 +10,11 @@
 
 global PHDS
 global PHDS_MainRollout
+global PHDS_Floater
 global PHDS_HEADLESS_TEST
 
 try (destroyDialog PHDS_MainRollout) catch()
+try (closeRolloutFloater PHDS_Floater) catch()
 
 struct PHDS_Result
 (
@@ -36,7 +38,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.6.0",
+    version = "0.6.1",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -309,13 +311,13 @@ struct PHDS_API
 
 PHDS = PHDS_API()
 
-rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
+rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:720
 (
     local detectedSize = [0, 0]
     local lastOutput = ""
     local lastFolder = ""
     local language = #cn
-    local canvasUrl = "https://htmlpreview.github.io/?https://github.com/cp199712138-design/dcc-capture-bridge/blob/main/capture-canvas/index.html"
+    local canvasUrl = "https://raw.githack.com/cp199712138-design/dcc-capture-bridge/main/capture-canvas/index.html"
 
     label lblStudio "CAPTURE STUDIO" width:450 align:#left
     label lblTitle "DCC Capture Bridge" width:450 align:#left
@@ -478,6 +480,30 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
         )
     )
 
+    fn openCaptureCanvas =
+    (
+        local localCanvas = ""
+        try
+        (
+            local scriptPath = getSourceFileName()
+            if scriptPath != undefined and scriptPath != "" do
+            (
+                local scriptFolder = getFilenamePath scriptPath
+                localCanvas = pathConfig.normalizePath (pathConfig.appendPath scriptFolder "..\capture-canvas\index.html")
+            )
+        )
+        catch()
+
+        if localCanvas != "" and doesFileExist localCanvas then
+        (
+            shellLaunch localCanvas ""
+        )
+        else
+        (
+            shellLaunch canvasUrl ""
+        )
+    )
+
     fn buildRequest =
     (
         PHDS_Request mode:(if isRenderMode() then #render else (if isPackMode() then #pack else #capture)) width:spnWidth.value height:spnHeight.value folder:edtFolder.text prefix:edtPrefix.text format:PHDS.formats[ddlFormat.selection] alpha:chkAlpha.checked gamma:chkGamma.checked showVfb:chkVfb.checked
@@ -495,7 +521,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
 
     on btnOpenCanvas pressed do
     (
-        shellLaunch canvasUrl ""
+        openCaptureCanvas()
     )
 
     on ddlPreset selected index do
@@ -564,5 +590,6 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:640
 
 if PHDS_HEADLESS_TEST != true do
 (
-    createDialog PHDS_MainRollout style:#(#style_titlebar, #style_border, #style_sysmenu, #style_resizing)
+    PHDS_Floater = newRolloutFloater "DCC Capture Bridge" 520 620 lockWidth:false lockHeight:false scrollBar:true
+    addRollout PHDS_MainRollout PHDS_Floater
 )
