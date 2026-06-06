@@ -1,12 +1,11 @@
 /*
-    Perfect HD Screenshot Pro - MVP
+    DCC Capture Bridge - 3ds Max MVP
+    Product label: Perfect HD Screenshot Pro
     Drag this file into a 3ds Max viewport.
 
-    Scope:
-    - Detect active viewport size.
-    - Save active viewport bitmap.
-    - Render active view/camera at selected size.
-    - Keep UI thin and core API reusable.
+    MVP focus:
+    - Fast viewport snapshot for references / AI input.
+    - Optional production render using the current 3ds Max Render Setup.
 */
 
 global PHDS
@@ -36,7 +35,7 @@ struct PHDS_Request
 
 struct PHDS_API
 (
-    version = "0.1.0",
+    version = "0.2.0",
     appName = "Perfect HD Screenshot Pro",
     formats = #("PNG", "TIF", "JPG", "BMP"),
 
@@ -87,10 +86,7 @@ struct PHDS_API
             try
             (
                 if not (doesFileExist folderPath) do makeDir folderPath all:true
-                if doesFileExist folderPath then
-                    success folderPath
-                else
-                    failure ("Output folder is not available: " + folderPath)
+                if doesFileExist folderPath then success folderPath else failure ("Output folder is not available: " + folderPath)
             )
             catch
             (
@@ -99,12 +95,13 @@ struct PHDS_API
         )
     ),
 
-    fn buildOutputPath request actualWidth:undefined actualHeight:undefined =
+    fn buildOutputPath request actualWidth:undefined actualHeight:undefined suffix:"" =
     (
         local w = if actualWidth == undefined then request.width else actualWidth
         local h = if actualHeight == undefined then request.height else actualHeight
         local safePrefix = if request.prefix == undefined or request.prefix == "" then "PHDS" else request.prefix
-        local fileName = safePrefix + "_" + (w as string) + "x" + (h as string) + "_" + timestamp() + extensionFor request.format
+        local safeSuffix = if suffix == undefined or suffix == "" then "" else ("_" + suffix)
+        local fileName = safePrefix + safeSuffix + "_" + (w as string) + "x" + (h as string) + "_" + timestamp() + extensionFor request.format
         success (pathConfig.appendPath request.folder fileName)
     ),
 
@@ -161,7 +158,7 @@ struct PHDS_API
         local bmp = grabViewport alpha:request.alpha gamma:request.gamma
         if bmp == undefined then return failure "Could not capture active viewport."
 
-        local output = buildOutputPath request actualWidth:bmp.width actualHeight:bmp.height
+        local output = buildOutputPath request actualWidth:bmp.width actualHeight:bmp.height suffix:"viewport"
         if not output.ok do
         (
             try (close bmp) catch()
@@ -176,7 +173,7 @@ struct PHDS_API
         local folder = ensureFolder request.folder
         if not folder.ok then return folder
 
-        local output = buildOutputPath request
+        local output = buildOutputPath request suffix:"render"
         if not output.ok then return output
 
         local bmp = undefined
@@ -189,7 +186,7 @@ struct PHDS_API
         catch
         (
             if bmp != undefined do try (close bmp) catch()
-            failure ("Render failed: " + output.value)
+            failure ("Render failed. Check the current 3ds Max Render Setup. Output: " + output.value)
         )
     ),
 
@@ -201,27 +198,27 @@ struct PHDS_API
 
 PHDS = PHDS_API()
 
-rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
+rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:420 height:430
 (
     local detectedSize = [0, 0]
 
-    group "Mode"
+    label lblTitle "DCC Capture Bridge" align:#left
+    label lblSubtitle "Viewport-first capture for reference and AI input" align:#left
+
+    group "Capture Source"
     (
-        radiobuttons rbMode labels:#("Capture Viewport", "High-res Render") columns:2 default:1 align:#left
-        label lblFuture "AI pipeline: planned, not connected" align:#left
+        dropdownlist ddlMode "Type:" items:#("Viewport Snapshot", "Production Render (current renderer)") selection:1 width:260 align:#left
+        label lblViewport "Active viewport: not detected" width:350 align:#left
+        button btnDetect "Detect Viewport" width:130 height:24 align:#left
+        label lblModeHint "Snapshot saves the active viewport's real pixels." width:360 align:#left
     )
 
-    group "Viewport"
+    group "Render Size"
     (
-        label lblViewport "Active viewport: not detected" align:#left
-        button btnDetect "Detect Viewport" width:140 height:26 align:#left
-    )
-
-    group "Resolution"
-    (
-        dropdownlist ddlPreset "Preset:" items:#("Viewport", "2x", "4K 3840x2160", "8K 7680x4320", "Custom") selection:1 width:180 align:#left
+        dropdownlist ddlPreset "Preset:" items:#("Current Render Size", "1920 x 1080", "3840 x 2160", "7680 x 4320", "Custom") selection:2 width:180 align:#left
         spinner spnWidth "Width:" range:[1,32768,1920] type:#integer fieldwidth:96 align:#left
         spinner spnHeight "Height:" range:[1,32768,1080] type:#integer fieldwidth:96 align:#left
+        button btnRenderSetup "Open Render Setup" width:140 height:24 align:#left
     )
 
     group "Output"
@@ -230,22 +227,44 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
         edittext edtFolder "Folder:" text:(getDir #image) width:350 align:#left
         button btnFolder "Pick Folder" width:90 height:24 align:#left
         edittext edtPrefix "Prefix:" text:"PHDS" width:240 align:#left
-        checkbox chkAlpha "Alpha" checked:false align:#left
+        checkbox chkAlpha "Alpha for viewport snapshot" checked:false align:#left
         checkbox chkGamma "Gamma Correct" checked:true align:#left
         checkbox chkVfb "Show VFB for render" checked:false align:#left
     )
 
-    group "Action"
+    button btnSave "Save Viewport Snapshot" width:190 height:34 align:#center
+    label lblStatus "Ready" width:360 align:#left
+
+    fn isRenderMode =
     (
-        button btnSave "Save Image" width:160 height:34 align:#center
-        label lblStatus "Ready" width:350 align:#left
+        ddlMode.selection == 2
+    )
+
+    fn syncModeUI =
+    (
+        local renderMode = isRenderMode()
+        ddlPreset.enabled = renderMode
+        spnWidth.enabled = renderMode
+        spnHeight.enabled = renderMode
+        btnRenderSetup.enabled = renderMode
+        chkVfb.enabled = renderMode
+        chkAlpha.enabled = not renderMode
+
+        if renderMode then
+        (
+            lblModeHint.text = "Uses the current 3ds Max Render Setup and renderer."
+            btnSave.text = "Run Production Render"
+        )
+        else
+        (
+            lblModeHint.text = "Snapshot saves the active viewport's real pixels. No fake 8K upscale."
+            btnSave.text = "Save Viewport Snapshot"
+        )
     )
 
     fn setDetected size =
     (
         detectedSize = size
-        spnWidth.value = size.x
-        spnHeight.value = size.y
         lblViewport.text = "Active viewport: " + (size.x as string) + " x " + (size.y as string)
     )
 
@@ -255,7 +274,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
         if result.ok then
         (
             setDetected result.value
-            lblStatus.text = "Viewport detected."
+            lblStatus.text = "Viewport detected. Snapshot output will use this exact size."
         )
         else
         (
@@ -265,11 +284,14 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
 
     fn applyPreset =
     (
-        if detectedSize.x <= 0 or detectedSize.y <= 0 do detect()
         case ddlPreset.selection of
         (
-            1: if detectedSize.x > 0 do (spnWidth.value = detectedSize.x; spnHeight.value = detectedSize.y)
-            2: if detectedSize.x > 0 do (spnWidth.value = detectedSize.x * 2; spnHeight.value = detectedSize.y * 2)
+            1:
+            (
+                spnWidth.value = renderWidth
+                spnHeight.value = renderHeight
+            )
+            2: (spnWidth.value = 1920; spnHeight.value = 1080)
             3: (spnWidth.value = 3840; spnHeight.value = 2160)
             4: (spnWidth.value = 7680; spnHeight.value = 4320)
             default: ok
@@ -278,7 +300,13 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
 
     fn buildRequest =
     (
-        PHDS_Request mode:(if rbMode.state == 2 then #render else #capture) width:spnWidth.value height:spnHeight.value folder:edtFolder.text prefix:edtPrefix.text format:PHDS.formats[ddlFormat.selection] alpha:chkAlpha.checked gamma:chkGamma.checked showVfb:chkVfb.checked
+        PHDS_Request mode:(if isRenderMode() then #render else #capture) width:spnWidth.value height:spnHeight.value folder:edtFolder.text prefix:edtPrefix.text format:PHDS.formats[ddlFormat.selection] alpha:chkAlpha.checked gamma:chkGamma.checked showVfb:chkVfb.checked
+    )
+
+    on ddlMode selected index do
+    (
+        syncModeUI()
+        lblStatus.text = "Mode changed."
     )
 
     on btnDetect pressed do detect()
@@ -286,7 +314,12 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
     on ddlPreset selected index do
     (
         applyPreset()
-        lblStatus.text = "Preset applied."
+        lblStatus.text = "Render size preset applied."
+    )
+
+    on btnRenderSetup pressed do
+    (
+        try (renderSceneDialog.open()) catch (messageBox "Could not open Render Setup." title:PHDS.appName)
     )
 
     on btnFolder pressed do
@@ -297,7 +330,7 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
 
     on btnSave pressed do
     (
-        lblStatus.text = "Saving..."
+        lblStatus.text = "Working..."
         local result = PHDS.save (buildRequest())
         if result.ok then
         (
@@ -311,7 +344,11 @@ rollout PHDS_MainRollout "Perfect HD Screenshot Pro" width:408 height:492
         )
     )
 
-    on PHDS_MainRollout open do detect()
+    on PHDS_MainRollout open do
+    (
+        syncModeUI()
+        detect()
+    )
 )
 
 createDialog PHDS_MainRollout style:#(#style_titlebar, #style_sysmenu, #style_toolwindow)
