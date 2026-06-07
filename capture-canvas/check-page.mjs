@@ -10,8 +10,9 @@ for (const script of scripts) {
 
 console.log(JSON.stringify({
   scripts_ok: scripts.length,
-  hasImport: html.includes('id="importBtn"'),
-  hasFile: html.includes('id="fileInput"'),
-  hasChinese: html.includes("实时产品证据画布"),
+  hasImageImport: html.includes('id="importBtn"'),
+  hasModelImport: html.includes('id="importModelBtn"'),
+  hasModelInput: html.includes('id="modelInput"'),
+  hasChinese: html.includes("产品证据画布"),
   hasMojibake: /[鐢鎹�]/.test(html)
 }));
