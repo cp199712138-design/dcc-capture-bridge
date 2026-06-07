@@ -6,15 +6,18 @@ $node = "C:\Program Files\nodejs\node.exe"
 if (-not (Test-Path $node)) {
     $node = "node"
 }
-$outLog = Join-Path $here "server.out.log"
-$errLog = Join-Path $here "server.err.log"
 
 if (-not $existing) {
-    $commandLine = "`"$node`" serve-static.mjs > `"$outLog`" 2> `"$errLog`""
-    Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
-        CommandLine = $commandLine
-        CurrentDirectory = $here
-    } | Out-Null
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo.FileName = $node
+    $process.StartInfo.Arguments = "serve-static.mjs"
+    $process.StartInfo.WorkingDirectory = $here
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.CreateNoWindow = $true
+    $process.StartInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    $process.Start() | Out-Null
     Start-Sleep -Seconds 1
 }
 
