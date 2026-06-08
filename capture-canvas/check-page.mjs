@@ -14,5 +14,5 @@ console.log(JSON.stringify({
   hasModelImport: html.includes('id="importModelBtn"'),
   hasModelInput: html.includes('id="modelInput"'),
   hasChinese: html.includes("产品证据画布"),
-  hasMojibake: /[鐢鎹�]/.test(html)
+  hasMojibake: /[鐢鎹浜璇诲竷搧]/.test(html)
 }));
