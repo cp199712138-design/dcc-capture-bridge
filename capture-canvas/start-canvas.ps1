@@ -8,16 +8,9 @@ if (-not (Test-Path $node)) {
 }
 
 if (-not $existing) {
-    $process = New-Object System.Diagnostics.Process
-    $process.StartInfo.FileName = $node
-    $process.StartInfo.Arguments = "serve-static.mjs"
-    $process.StartInfo.WorkingDirectory = $here
-    $process.StartInfo.UseShellExecute = $false
-    $process.StartInfo.CreateNoWindow = $true
-    $process.StartInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
-    $process.StartInfo.RedirectStandardOutput = $true
-    $process.StartInfo.RedirectStandardError = $true
-    $process.Start() | Out-Null
+    $command = "cmd /c cd /d `"$here`" && `"$node`" serve-static.mjs > server.out.log 2> server.err.log"
+    $shell = New-Object -ComObject WScript.Shell
+    $shell.Run($command, 0, $false) | Out-Null
     Start-Sleep -Seconds 1
 }
 
