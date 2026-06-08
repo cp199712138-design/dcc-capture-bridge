@@ -37,7 +37,14 @@ const server = http.createServer(async (req, res) => {
     }
 
     let path = decodeURIComponent(url.pathname);
-    if (path === "/") path = "/capture-canvas/index.html";
+    if (path === "/" || path === "/index.html") {
+      res.writeHead(302, {
+        "location": "/capture-canvas/index.html",
+        "cache-control": "no-store"
+      });
+      res.end();
+      return;
+    }
     const file = normalize(join(root, path));
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
@@ -45,7 +52,10 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    res.writeHead(200, { "content-type": types[extname(file).toLowerCase()] || "application/octet-stream" });
+    res.writeHead(200, {
+      "content-type": types[extname(file).toLowerCase()] || "application/octet-stream",
+      "cache-control": "no-store"
+    });
     res.end(await readFile(file));
   } catch (error) {
     res.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
