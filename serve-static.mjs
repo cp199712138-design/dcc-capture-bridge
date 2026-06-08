@@ -37,7 +37,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     let path = decodeURIComponent(url.pathname);
-    if (path === "/") path = "/index.html";
+    if (path === "/") path = "/capture-canvas/index.html";
     const file = normalize(join(root, path));
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
@@ -54,7 +54,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`DCC Capture Canvas: http://127.0.0.1:${port}/index.html`);
+  console.log(`DCC Capture Canvas http://127.0.0.1:${port}/capture-canvas/index.html`);
 });
 
 function sendJson(res, status, data) {

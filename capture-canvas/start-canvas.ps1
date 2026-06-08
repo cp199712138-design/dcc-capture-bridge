@@ -6,7 +6,6 @@ $node = "C:\Program Files\nodejs\node.exe"
 if (-not (Test-Path $node)) {
     $node = "node"
 }
-
 if (-not $existing) {
     Start-Process -FilePath $node -ArgumentList "serve-static.mjs" -WorkingDirectory $here -WindowStyle Hidden
     Start-Sleep -Seconds 1
