@@ -8,9 +8,7 @@ if (-not (Test-Path $node)) {
 }
 
 if (-not $existing) {
-    $command = "cmd /c cd /d `"$here`" && `"$node`" serve-static.mjs > server.out.log 2> server.err.log"
-    $shell = New-Object -ComObject WScript.Shell
-    $shell.Run($command, 0, $false) | Out-Null
+    Start-Process -FilePath $node -ArgumentList "serve-static.mjs" -WorkingDirectory $here -WindowStyle Hidden
     Start-Sleep -Seconds 1
 }
 
