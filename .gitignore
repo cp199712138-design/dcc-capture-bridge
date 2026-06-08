@@ -1,7 +1,29 @@
-# Generated outputs
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.env
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.token
+*_TOKEN*
+*API_KEY*
+*SECRET*
+secrets/
+.local/
+
+# Local AI / DCC generated outputs
 outputs/
 renders/
 screenshots/
+captures/
+sessions/
+sceneassets/
+scene-assets/
 *.png
 *.jpg
 *.jpeg
@@ -9,18 +31,44 @@ screenshots/
 *.tiff
 *.bmp
 *.exr
+*.hdr
 *.mp4
+*.mov
+*.avi
 *.gif
 
-# Local temp
+# Local model and texture assets
+*.max
+*.blend
+*.fbx
+*.obj
+*.glb
+*.gltf
+*.stl
+*.usdz
+*.abc
+*.usd
+*.usdc
+*.usda
+*.vrscene
+*.tx
+*.psd
+*.kra
+
+# Local temp/cache
 .tmp/
 temp/
 .cache/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
 
 # 3ds Max local files
-*.max
 *.bak
 *.autosave
+*.mxs.bak
 
 # Python / Blender later
 __pycache__/
