@@ -36,6 +36,8 @@ const requiredIds = [
   "eraseBtn",
   "rectBtn",
   "circleBtn",
+  "undoBtn",
+  "redoBtn",
   "clearBtn",
   "importImageBtn",
   "importModelBtn",
@@ -59,7 +61,7 @@ const report = {
   hasApiStatus: html.includes('id="apiState"') && localServer.includes("/api/status"),
   hasLiveChip: html.includes('id="liveChip"') && app.includes("liveEnabled"),
   hasNoVideoPlaceholder: !html.includes("outputVideoChip") && !app.includes("Video mode"),
-  hasChineseDefault: visibleDefaultText.includes("画布工具") && visibleDefaultText.includes("更新预览"),
+  hasChineseDefault: app.includes('lang: "cn"') && app.includes("\\u753b\\u7b14") && html.includes('class="active" data-lang="cn"'),
   hasMojibake: mojibakePattern.test(html) || mojibakePattern.test(app),
   hasMixedDefaultLabels: mixedChineseEnglishLabels.test(visibleDefaultText),
 };

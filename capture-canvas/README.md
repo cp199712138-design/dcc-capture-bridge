@@ -33,6 +33,14 @@ node serve-static.mjs
 
 Without `OPENAI_API_KEY`, the page stays honest and uses local preview mode.
 
+The API contract is intentionally simple for client testing:
+
+- `GET /api/status` returns whether the local server has an API key.
+- `POST /api/realtime-render` accepts prompt, source image data URL, mask data URL,
+  seed, ratio, strength, mode, and provider.
+- If the server has no key, the response is a local preview message.
+- If the server has `OPENAI_API_KEY`, the same endpoint calls the image edit API.
+
 ## GitHub Visibility
 
 To make the repo public:

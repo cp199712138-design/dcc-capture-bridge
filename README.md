@@ -13,6 +13,16 @@ DCC evidence / sketch / viewport
 
 ## Current Prototype
 
+Customer-testable features in this build:
+
+- dark low-saturation realtime canvas UI
+- Chinese / English language switch without mixed labels
+- import image or model evidence
+- example sketch loader
+- brush, eraser, rectangle, circle, clear, undo, redo
+- prompt, live toggle, seed, ratio, strength, provider selector
+- local `/api/realtime-render` interface for future API and ComfyUI adapters
+
 Run the local canvas:
 
 ```powershell
@@ -41,6 +51,9 @@ node serve-static.mjs
 ```
 
 Without `OPENAI_API_KEY`, the UI stays in local preview mode and clearly says so.
+
+Keep real keys in the shell or a local `.env` file only. Do not commit `.env`,
+customer images, model files, renders, captures, or generated materials.
 
 ## Product Direction
 

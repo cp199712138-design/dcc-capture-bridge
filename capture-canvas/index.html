@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,25 +7,23 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #090a0d;
-      --rail: #050608;
-      --panel: #11141a;
-      --panel-2: #181c24;
-      --panel-3: #242936;
-      --line: rgba(255, 255, 255, 0.1);
-      --line-strong: rgba(255, 255, 255, 0.18);
-      --text: #f7f8fb;
-      --muted: #9aa3b1;
-      --soft: #d9dee8;
-      --canvas: #e8e9e5;
-      --canvas-2: #dfe3e1;
-      --blue: #68a5ff;
-      --mint: #63e6b4;
-      --red: #ff6575;
-      --yellow: #f3d35a;
-      --cyan: #29f2ff;
-      --shadow: 0 18px 60px rgba(0, 0, 0, 0.42);
-      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      --bg: #08090b;
+      --panel: #101216;
+      --panel-2: #151922;
+      --panel-3: #1c222c;
+      --canvas: #d8d9d4;
+      --canvas-2: #d0d4d2;
+      --line: rgba(255,255,255,.09);
+      --line-2: rgba(255,255,255,.15);
+      --text: #eff2f5;
+      --muted: #89919d;
+      --soft: #c4cad3;
+      --accent: #8da2b8;
+      --accent-2: #88d4c0;
+      --warn: #d6b870;
+      --danger: #d77980;
+      --shadow: 0 18px 56px rgba(0,0,0,.42);
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
     }
 
     * { box-sizing: border-box; }
@@ -36,407 +34,255 @@
       color: var(--text);
       background: var(--bg);
     }
-    button, input, textarea { font: inherit; }
+    button, input, textarea, select { font: inherit; }
     button { cursor: pointer; }
-    button:focus-visible, textarea:focus-visible, input:focus-visible {
-      outline: 2px solid var(--blue);
+    button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent-2);
       outline-offset: 2px;
-    }
-    button:disabled {
-      cursor: not-allowed;
-      opacity: .46;
     }
 
     .app {
-      min-height: 100vh;
+      height: 100vh;
       display: grid;
-      grid-template-columns: 248px minmax(0, 1fr);
+      grid-template-columns: 216px minmax(0,1fr);
       background:
-        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px),
         var(--bg);
-      background-size: 34px 34px;
+      background-size: 36px 36px;
     }
 
     .rail {
+      min-width: 0;
       display: grid;
       grid-template-rows: auto auto auto 1fr auto;
       gap: 14px;
-      padding: 14px;
-      background: rgba(5, 6, 8, .96);
+      padding: 16px 12px;
+      background: rgba(8,9,11,.96);
       border-right: 1px solid var(--line);
     }
-    .brand {
-      display: grid;
-      gap: 4px;
-      padding: 10px 2px 8px;
-    }
-    .brand strong { font-size: 16px; letter-spacing: 0; }
+    .brand { display: grid; gap: 5px; padding: 4px 4px 8px; }
+    .brand strong { font-size: 15px; letter-spacing: 0; }
     .brand span { color: var(--muted); font-size: 12px; line-height: 1.45; }
-
-    .section {
+    .section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .section-title { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .tool-grid { display: grid; gap: 7px; }
+    .tool {
+      min-height: 38px;
       display: grid;
-      gap: 10px;
-      padding-top: 14px;
-      border-top: 1px solid var(--line);
-    }
-    .section-title {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .tool-list { display: grid; gap: 8px; }
-    .tool-row {
-      min-height: 44px;
-      display: grid;
-      grid-template-columns: 34px 1fr;
+      grid-template-columns: 28px 1fr;
       align-items: center;
       gap: 8px;
-      padding: 0 10px;
+      padding: 0 9px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 9px;
       color: var(--soft);
       background: rgba(255,255,255,.035);
       text-align: left;
+      font-size: 12px;
     }
-    .tool-row .icon {
-      width: 26px;
-      height: 26px;
+    .tool b {
+      width: 24px;
+      height: 24px;
       display: grid;
       place-items: center;
-      border-radius: 8px;
+      border-radius: 7px;
+      background: rgba(255,255,255,.055);
+      font-size: 11px;
       color: var(--soft);
-      background: rgba(255,255,255,.06);
-      font-weight: 800;
-      font-size: 12px;
     }
-    .tool-row span:last-child {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 13px;
-    }
-    .tool-row.active {
-      color: #061018;
-      background: var(--mint);
-      border-color: var(--mint);
+    .tool.active {
+      color: #07100d;
+      background: var(--accent-2);
+      border-color: var(--accent-2);
       font-weight: 800;
     }
-    .tool-row.active .icon {
-      color: #061018;
-      background: rgba(6,16,24,.1);
-    }
-    .tool-row.danger.active {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
-    }
-
-    .mini-field {
-      display: grid;
-      gap: 7px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .mini-field input {
+    .tool.active b { color: #07100d; background: rgba(0,0,0,.08); }
+    .field { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+    .field input, .field select {
       width: 100%;
-      accent-color: var(--mint);
-    }
-
-    .session-card {
-      display: grid;
-      gap: 8px;
-      padding: 12px;
+      min-height: 34px;
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 9px;
+      color: var(--text);
+      background: rgba(255,255,255,.045);
+      padding: 0 9px;
+      accent-color: var(--accent-2);
+    }
+    .field input[type="range"] { padding: 0; min-height: auto; }
+    .note {
+      align-self: end;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--muted);
       background: rgba(255,255,255,.035);
+      font-size: 12px;
+      line-height: 1.45;
     }
-    .session-card strong { font-size: 13px; }
-    .session-card span { color: var(--muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
 
-    .main {
-      min-width: 0;
-      display: grid;
-      grid-template-rows: 54px minmax(0, 1fr) 128px;
-    }
-    .topbar {
+    .main { min-width: 0; display: grid; grid-template-rows: 52px minmax(0,1fr) 118px; }
+    .top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 14px;
       padding: 0 18px;
-      background: rgba(9,10,13,.9);
       border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(14px);
+      background: rgba(8,9,11,.82);
+      backdrop-filter: blur(12px);
     }
-    .title {
-      min-width: 0;
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-    }
-    .status-pill.api {
-      border-color: rgba(41,242,255,.26);
-      color: #d8fcff;
-      background: rgba(41,242,255,.08);
-    }
-    .status-pill.api.busy {
-      color: #061018;
-      background: var(--cyan);
-      border-color: var(--cyan);
-      font-weight: 900;
-    }
-    .status-pill.api.error {
-      color: #fff3f4;
-      background: rgba(255,101,117,.14);
-      border-color: rgba(255,101,117,.42);
-    }
-    .title strong { font-size: 15px; white-space: nowrap; }
-    .title span {
-      min-width: 0;
-      color: var(--muted);
-      font-size: 12px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .top-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .pill {
-      min-height: 30px;
+    .title { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+    .title strong { font-size: 14px; white-space: nowrap; }
+    .title span { min-width: 0; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pill, .lang button {
+      min-height: 28px;
       display: inline-flex;
       align-items: center;
-      padding: 0 11px;
+      justify-content: center;
       border: 1px solid var(--line);
       border-radius: 999px;
       color: var(--soft);
       background: rgba(255,255,255,.04);
+      padding: 0 10px;
       font-size: 12px;
       white-space: nowrap;
     }
-    .lang {
-      display: inline-grid;
-      grid-template-columns: 1fr 1fr;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .lang button {
-      min-height: 30px;
-      padding: 0 10px;
-      border: 0;
-      color: var(--muted);
-      background: transparent;
-      font-size: 12px;
-    }
-    .lang button.active {
-      color: #061018;
-      background: var(--mint);
-      font-weight: 800;
-    }
+    .pill.busy { color: #07100d; background: var(--warn); border-color: var(--warn); font-weight: 800; }
+    .pill.api { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
+    .pill.error { color: #fff; background: rgba(215,121,128,.24); border-color: rgba(215,121,128,.48); }
+    .lang { display: flex; gap: 6px; }
+    .lang button { border-radius: 9px; }
+    .lang button.active { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
 
-    .board {
+    .workspace {
       position: relative;
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
       gap: 2px;
-      padding: 0;
-      background: #06070a;
+      background: #050608;
     }
-    .pane {
-      position: relative;
-      overflow: hidden;
-      background: var(--canvas);
-    }
+    .pane { position: relative; overflow: hidden; background: var(--canvas); }
     .pane.output { background: var(--canvas-2); }
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-      touch-action: none;
-    }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
     #sourceCanvas { cursor: none; }
-    .pane-label {
+    .badge {
       position: absolute;
-      top: 14px;
+      z-index: 5;
       left: 14px;
-      z-index: 4;
-      min-height: 32px;
+      top: 14px;
+      min-height: 30px;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 12px;
+      padding: 0 10px;
       border-radius: 999px;
       color: var(--text);
-      background: rgba(7, 8, 11, .76);
-      backdrop-filter: blur(14px);
+      background: rgba(8,9,11,.78);
+      border: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(12px);
       font-size: 12px;
       font-weight: 700;
     }
-    .live-badge {
-      top: auto;
-      bottom: 14px;
-      left: 14px;
-      color: #061018;
-      background: rgba(99,230,180,.86);
-    }
-    .output-badge {
-      background: rgba(41,242,255,.82);
-    }
-    .asset-card {
+    .badge.bottom { top: auto; bottom: 14px; color: #07100d; background: rgba(136,212,192,.9); }
+    .asset {
       position: absolute;
       top: 14px;
       right: 14px;
-      z-index: 4;
-      width: min(260px, calc(100% - 28px));
-      padding: 12px;
-      border: 1px solid rgba(0,0,0,.08);
-      border-radius: 14px;
-      color: #17202c;
-      background: rgba(255,255,255,.82);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 12px 28px rgba(0,0,0,.08);
-    }
-    .asset-card strong { display: block; font-size: 13px; }
-    .asset-card span {
-      display: block;
-      margin-top: 5px;
-      color: #5a6573;
+      z-index: 5;
+      width: min(250px, calc(100% - 28px));
+      padding: 10px;
+      border-radius: 11px;
+      color: #182027;
+      background: rgba(239,242,245,.78);
+      backdrop-filter: blur(14px);
       font-size: 12px;
-      line-height: 1.45;
-      overflow-wrap: anywhere;
+      line-height: 1.4;
     }
-
+    .asset strong { display: block; margin-bottom: 4px; }
     .empty {
       position: absolute;
       inset: 0;
       display: grid;
       place-items: center;
-      pointer-events: none;
       text-align: center;
-      color: #626d7b;
+      pointer-events: none;
+      color: #5e6670;
     }
-    .empty strong {
-      display: block;
-      color: #1d2632;
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
-    .empty span {
-      display: block;
-      max-width: 430px;
-      padding: 0 28px;
-      line-height: 1.55;
-    }
+    .empty strong { display: block; margin-bottom: 8px; color: #1b222b; font-size: 18px; }
+    .empty span { display: block; max-width: 420px; padding: 0 24px; line-height: 1.5; }
 
-    .canvas-toolbar {
+    .floating {
       position: absolute;
       left: 50%;
-      bottom: 24px;
+      bottom: 18px;
       z-index: 8;
       transform: translateX(-50%);
       display: flex;
       align-items: center;
-      gap: 8px;
-      max-width: calc(100% - 32px);
-      padding: 8px;
-      border: 1px solid var(--line-strong);
-      border-radius: 18px;
-      background: rgba(22, 23, 27, .88);
+      gap: 7px;
+      max-width: calc(100% - 28px);
+      padding: 7px;
+      border: 1px solid var(--line-2);
+      border-radius: 15px;
+      background: rgba(17,19,24,.88);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
     }
-    .icon-btn {
-      min-width: 42px;
-      min-height: 42px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 13px;
-      color: var(--text);
-      background: rgba(255,255,255,.06);
+    .icon {
+      min-width: 38px;
+      min-height: 38px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px;
+      color: var(--soft);
+      background: rgba(255,255,255,.055);
       font-weight: 800;
       font-size: 12px;
     }
-    .icon-btn.active {
-      color: #061018;
-      background: var(--mint);
-      border-color: var(--mint);
-    }
-    .icon-btn.danger {
-      color: #ffeef1;
-      background: rgba(255,101,117,.16);
-      border-color: rgba(255,101,117,.32);
-    }
-    .divider {
-      width: 1px;
-      height: 30px;
-      background: rgba(255,255,255,.12);
-    }
-    .slider-pack {
-      min-width: 132px;
-      display: grid;
-      gap: 3px;
-      padding: 0 4px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-    .slider-pack input { width: 100%; accent-color: var(--mint); }
-    .readout {
-      min-width: 130px;
-      display: grid;
-      gap: 3px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-    .readout strong { color: var(--text); font-size: 12px; }
-
+    .icon.active { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); }
+    .icon.danger { color: #f7d8db; background: rgba(215,121,128,.14); border-color: rgba(215,121,128,.3); }
+    .sep { width: 1px; height: 26px; background: rgba(255,255,255,.12); }
+    .mini { display: grid; gap: 2px; min-width: 112px; padding: 0 4px; color: var(--muted); font-size: 10px; }
+    .mini input { width: 100%; accent-color: var(--accent-2); }
+    .readout { min-width: 120px; display: grid; gap: 3px; color: var(--muted); font-size: 11px; }
+    .readout strong { color: var(--text); }
     .brush-cursor {
       position: absolute;
       z-index: 7;
       width: var(--brush, 42px);
       height: var(--brush, 42px);
-      border: 2px solid rgba(99,230,180,.98);
+      border: 2px solid rgba(136,212,192,.96);
       border-radius: 999px;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%,-50%);
       pointer-events: none;
       opacity: 0;
-      box-shadow: 0 0 0 1px rgba(0,0,0,.72), 0 0 22px rgba(99,230,180,.28);
-      transition: width .08s ease, height .08s ease, opacity .12s ease, border-color .12s ease;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.65);
     }
-    .brush-cursor.erase {
-      border-color: rgba(255,101,117,.98);
-      box-shadow: 0 0 0 1px rgba(0,0,0,.72), 0 0 22px rgba(255,101,117,.26);
-    }
+    .brush-cursor.erase { border-color: rgba(215,121,128,.96); }
     .brush-cursor.shape { border-style: dashed; }
 
     .footer {
       display: grid;
       place-items: start center;
-      padding: 10px 18px 18px;
+      padding: 10px 18px 16px;
       border-top: 1px solid var(--line);
-      background: rgba(9,10,13,.92);
+      background: rgba(8,9,11,.94);
     }
-    .prompt-shell {
-      width: min(640px, calc(100vw - 36px));
+    .prompt {
+      width: min(760px, calc(100vw - 36px));
       display: grid;
-      gap: 10px;
-      padding: 12px 14px;
-      border: 1px solid var(--line-strong);
-      border-radius: 22px;
-      background: rgba(39, 40, 45, .94);
+      gap: 9px;
+      padding: 11px 12px;
+      border: 1px solid var(--line-2);
+      border-radius: 16px;
+      background: rgba(30,34,42,.94);
       box-shadow: var(--shadow);
     }
-    .prompt-shell textarea {
+    textarea {
       width: 100%;
-      min-height: 46px;
-      max-height: 76px;
+      min-height: 42px;
+      max-height: 72px;
       resize: none;
       border: 0;
       outline: none;
@@ -444,89 +290,54 @@
       background: transparent;
       line-height: 1.45;
     }
-    .prompt-actions {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .prompt-tags {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .prompt-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .chips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
     .chip {
-      min-height: 30px;
-      padding: 0 11px;
+      min-height: 28px;
       border: 1px solid rgba(255,255,255,.09);
       border-radius: 999px;
       color: var(--soft);
       background: rgba(255,255,255,.055);
+      padding: 0 10px;
       font-size: 12px;
-      white-space: nowrap;
     }
-    .chip.active {
-      color: #061018;
-      background: var(--mint);
-      border-color: var(--mint);
-      font-weight: 800;
-    }
+    .chip.active { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
     .primary {
-      min-height: 42px;
-      padding: 0 18px;
+      min-height: 38px;
       border: 0;
-      border-radius: 12px;
-      color: #071018;
-      background: var(--blue);
+      border-radius: 10px;
+      color: #07100d;
+      background: var(--accent-2);
+      padding: 0 16px;
       font-weight: 900;
       white-space: nowrap;
     }
-    .status-line {
-      width: min(640px, calc(100vw - 36px));
+    .status {
+      width: min(760px, calc(100vw - 36px));
       margin-top: 7px;
       display: flex;
       align-items: center;
       gap: 8px;
       color: var(--muted);
       font-size: 12px;
-      line-height: 1.35;
     }
-    .status-line strong { color: var(--text); font-size: 12px; }
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--mint);
-      box-shadow: 0 0 16px rgba(99,230,180,.56);
-      flex: 0 0 auto;
-    }
-
+    .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--accent-2); }
+    .status strong { color: var(--text); }
     input[type="file"] { display: none; }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 980px) {
       body { overflow: auto; }
-      .app { grid-template-columns: 1fr; }
-      .rail {
-        grid-template-rows: auto auto;
-        grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(220px, 1fr));
-        align-items: start;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-      }
-      .rail .section:nth-of-type(3),
-      .rail .session-card { display: none; }
+      .app { height: auto; min-height: 100vh; grid-template-columns: 1fr; }
+      .rail { grid-template-columns: repeat(3,minmax(0,1fr)); grid-template-rows: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .brand, .note { display: none; }
       .main { min-height: 820px; }
     }
-
-    @media (max-width: 760px) {
+    @media (max-width: 720px) {
       .rail { grid-template-columns: 1fr; }
-      .main { grid-template-rows: auto minmax(640px, 1fr) auto; }
-      .topbar { align-items: flex-start; flex-direction: column; padding: 12px 14px; }
-      .top-actions { flex-wrap: wrap; }
-      .board { grid-template-columns: 1fr; }
-      .canvas-toolbar { flex-wrap: wrap; justify-content: center; bottom: 14px; }
-      .slider-pack { min-width: 112px; }
+      .main { grid-template-rows: auto minmax(640px,1fr) auto; }
+      .top { align-items: flex-start; flex-direction: column; padding: 12px; }
+      .workspace { grid-template-columns: 1fr; }
+      .floating { flex-wrap: wrap; justify-content: center; }
       .prompt-actions { align-items: stretch; flex-direction: column; }
       .primary { width: 100%; }
     }
@@ -537,153 +348,106 @@
     <aside class="rail">
       <div class="brand">
         <strong>DCC Capture Canvas</strong>
-        <span data-cn="把 3ds Max / Blender 证据变成可控的实时 AI 编辑输入。" data-en="Turn 3ds Max / Blender evidence into controllable realtime AI edit input.">把 3ds Max / Blender 证据变成可控的实时 AI 编辑输入。</span>
+        <span data-i18n="tagline">Realtime DCC evidence board for AI product generation.</span>
       </div>
 
       <section class="section">
-        <div class="section-title" data-cn="画布工具" data-en="Canvas Tools">画布工具</div>
-        <div class="tool-list">
-          <button class="tool-row" id="selectTool" data-tool="select" data-cn-title="选择" data-en-title="Select">
-            <span class="icon">↖</span><span data-cn="选择" data-en="Select">选择</span>
-          </button>
-          <button class="tool-row active" id="brushChip" data-tool="brush" data-cn-title="画笔" data-en-title="Brush">
-            <span class="icon">B</span><span data-cn="画笔" data-en="Brush">画笔</span>
-          </button>
-          <button class="tool-row" id="eraserChip" data-tool="erase" data-cn-title="橡皮擦" data-en-title="Eraser">
-            <span class="icon">E</span><span data-cn="橡皮擦" data-en="Eraser">橡皮擦</span>
-          </button>
-          <button class="tool-row" id="rectTool" data-tool="rect" data-cn-title="矩形选区" data-en-title="Rectangle Region">
-            <span class="icon">□</span><span data-cn="矩形选区" data-en="Rectangle Region">矩形选区</span>
-          </button>
-          <button class="tool-row" id="circleTool" data-tool="circle" data-cn-title="圆形选区" data-en-title="Circle Region">
-            <span class="icon">○</span><span data-cn="圆形选区" data-en="Circle Region">圆形选区</span>
-          </button>
+        <div class="section-title" data-i18n="tools">Tools</div>
+        <div class="tool-grid">
+          <button class="tool" id="selectTool" data-tool="select"><b>V</b><span data-i18n="select">Select</span></button>
+          <button class="tool active" id="brushChip" data-tool="brush"><b>B</b><span data-i18n="brush">Brush</span></button>
+          <button class="tool" id="eraserChip" data-tool="erase"><b>E</b><span data-i18n="eraser">Eraser</span></button>
+          <button class="tool" id="rectTool" data-tool="rect"><b>R</b><span data-i18n="rect">Rectangle</span></button>
+          <button class="tool" id="circleTool" data-tool="circle"><b>C</b><span data-i18n="circle">Circle</span></button>
         </div>
       </section>
 
       <section class="section">
-        <div class="section-title" data-cn="输入" data-en="Input">输入</div>
-        <div class="tool-list">
-          <button class="tool-row" id="importImageNav">
-            <span class="icon">IMG</span><span data-cn="导入图片" data-en="Import Image">导入图片</span>
-          </button>
-          <button class="tool-row" id="importModelNav">
-            <span class="icon">3D</span><span data-cn="导入模型" data-en="Import Model">导入模型</span>
-          </button>
-        </div>
+        <div class="section-title" data-i18n="input">Input</div>
+        <button class="tool" id="importImageNav"><b>IMG</b><span data-i18n="importImage">Import image</span></button>
+        <button class="tool" id="importModelNav"><b>3D</b><span data-i18n="importModel">Import model</span></button>
+        <button class="tool" id="exampleNav"><b>EX</b><span data-i18n="example">Example</span></button>
       </section>
 
       <section class="section">
-        <div class="section-title" data-cn="控制" data-en="Controls">控制</div>
-        <label class="mini-field">
-          <span data-cn="画笔大小" data-en="Brush Size">画笔大小</span>
-          <input id="brushSize" type="range" min="10" max="96" value="42">
-        </label>
-        <label class="mini-field">
-          <span data-cn="生成强度" data-en="Generation Strength">生成强度</span>
-          <input id="strength" type="range" min="0" max="100" value="62">
-        </label>
+        <div class="section-title" data-i18n="controls">Controls</div>
+        <label class="field"><span data-i18n="provider">Provider</span><select id="providerSelect"><option value="auto">Auto</option><option value="mock-local">Mock</option><option value="openai">OpenAI</option></select></label>
+        <label class="field"><span data-i18n="brushSize">Brush size</span><input id="brushSize" type="range" min="8" max="120" value="42"></label>
+        <label class="field"><span data-i18n="strength">Strength</span><input id="strength" type="range" min="0" max="100" value="62"></label>
       </section>
 
-      <div class="session-card">
-        <strong data-cn="本地原型" data-en="Local Prototype">本地原型</strong>
-        <span data-cn="当前先做实时编辑体验：导入、涂抹、擦除、矩形、圆形、示例、种子和预览都要能工作。" data-en="This version focuses on realtime edit UX: import, paint, erase, rectangle, circle, examples, seed, and preview all work.">当前先做实时编辑体验：导入、涂抹、擦除、矩形、圆形、示例、种子和预览都要能工作。</span>
-      </div>
+      <div class="note" id="safetyNote" data-i18n="safety">Keys stay on the local server. The browser only sends canvas and mask data.</div>
     </aside>
 
     <main class="main">
-      <header class="topbar">
+      <header class="top">
         <div class="title">
           <strong>DCC Capture Canvas</strong>
-          <span data-cn="实时编辑画布，不再是单一截图按钮" data-en="Realtime edit canvas, not a single screenshot button">实时编辑画布，不再是单一截图按钮</span>
+          <span data-i18n="subtitle">minimal realtime edit prototype</span>
         </div>
         <div class="top-actions">
-          <span class="pill">v0.6</span>
-          <span class="pill status-pill api" id="apiState" data-cn="API 未检测" data-en="API not checked">API 未检测</span>
-          <div class="lang" aria-label="Language">
-            <button class="active" data-lang="cn">中文</button>
+          <span class="pill" id="apiState">checking...</span>
+          <span class="pill" id="requestState">idle</span>
+          <div class="lang">
             <button data-lang="en">EN</button>
+            <button class="active" data-lang="cn">CN</button>
           </div>
         </div>
       </header>
 
-      <section class="board" id="board">
+      <section class="workspace" id="board">
         <div class="pane input">
-          <div class="pane-label" data-cn="输入画布" data-en="Input Canvas">输入画布</div>
+          <div class="badge" data-i18n="inputCanvas">Input canvas</div>
           <canvas id="sourceCanvas"></canvas>
-          <div class="pane-label live-badge" id="inputBadge" data-cn="输入" data-en="Input">输入</div>
-          <div class="empty" id="sourceEmpty">
-            <div>
-              <strong data-cn="导入图片或模型开始" data-en="Import an image or model">导入图片或模型开始</strong>
-              <span data-cn="左侧是证据输入和遮罩编辑。画笔添加区域，橡皮擦移除区域，矩形和圆形用于快速圈选。" data-en="The left side is for evidence input and mask editing. Brush adds regions, eraser removes regions, and shapes select areas quickly.">左侧是证据输入和遮罩编辑。画笔添加区域，橡皮擦移除区域，矩形和圆形用于快速圈选。</span>
-            </div>
-          </div>
+          <div class="badge bottom" id="inputBadge" data-i18n="editable">editable</div>
+          <div class="empty" id="sourceEmpty"><div><strong data-i18n="emptyTitle">Drop evidence here</strong><span data-i18n="emptyBody">Import an image/model or load the example, then paint the edit region.</span></div></div>
         </div>
-
         <div class="pane output">
-          <div class="pane-label" data-cn="实时预览" data-en="Live Preview">实时预览</div>
+          <div class="badge" data-i18n="outputCanvas">Realtime output</div>
           <canvas id="resultCanvas"></canvas>
-          <div class="pane-label live-badge output-badge" id="outputBadge" data-cn="本地预览" data-en="Local Preview">本地预览</div>
-          <div class="asset-card">
-            <strong data-cn="当前证据" data-en="Current Evidence">当前证据</strong>
-            <span id="assetInfo" data-cn="等待输入。" data-en="Waiting for input.">等待输入。</span>
-          </div>
+          <div class="badge bottom" id="outputBadge">local preview</div>
+          <div class="asset"><strong data-i18n="asset">Current evidence</strong><span id="assetInfo">Waiting.</span></div>
         </div>
 
-        <div class="canvas-toolbar">
-          <button class="icon-btn tool-button" id="brushBtn" data-tool="brush" title="Brush">B</button>
-          <button class="icon-btn tool-button" id="eraseBtn" data-tool="erase" title="Eraser">E</button>
-          <button class="icon-btn tool-button" id="rectBtn" data-tool="rect" title="Rectangle">□</button>
-          <button class="icon-btn tool-button" id="circleBtn" data-tool="circle" title="Circle">○</button>
-          <button class="icon-btn danger" id="clearBtn" title="Clear Mask">CLR</button>
-          <span class="divider"></span>
-          <button class="icon-btn" id="importImageBtn" title="Import Image">IMG</button>
-          <button class="icon-btn" id="importModelBtn" title="Import Model">3D</button>
-          <span class="divider"></span>
-          <label class="slider-pack">
-            <span data-cn="大小" data-en="Size">大小</span>
-            <input id="brushSizeDock" type="range" min="10" max="96" value="42">
-          </label>
-          <label class="slider-pack">
-            <span data-cn="强度" data-en="Strength">强度</span>
-            <input id="strengthDock" type="range" min="0" max="100" value="62">
-          </label>
-          <div class="readout">
-            <strong id="toolModeText">画笔</strong>
-            <span id="brushSizeText">42 px</span>
-          </div>
+        <div class="floating">
+          <button class="icon active" id="brushBtn" data-tool="brush" title="Brush">B</button>
+          <button class="icon" id="eraseBtn" data-tool="erase" title="Eraser">E</button>
+          <button class="icon" id="rectBtn" data-tool="rect" title="Rectangle">R</button>
+          <button class="icon" id="circleBtn" data-tool="circle" title="Circle">C</button>
+          <button class="icon" id="undoBtn" title="Undo">UN</button>
+          <button class="icon" id="redoBtn" title="Redo">RE</button>
+          <button class="icon danger" id="clearBtn" title="Clear">CLR</button>
+          <span class="sep"></span>
+          <button class="icon" id="importImageBtn" title="Import image">IMG</button>
+          <button class="icon" id="importModelBtn" title="Import model">3D</button>
+          <label class="mini"><span data-i18n="size">size</span><input id="brushSizeDock" type="range" min="8" max="120" value="42"></label>
+          <label class="mini"><span data-i18n="ai">AI</span><input id="strengthDock" type="range" min="0" max="100" value="62"></label>
+          <div class="readout"><strong id="toolModeText">Brush</strong><span id="brushSizeText">42 px</span></div>
         </div>
-
         <div class="brush-cursor" id="brushCursor"></div>
       </section>
 
       <section class="footer">
-        <div class="prompt-shell">
-          <textarea id="prompt" data-cn-value="把遮罩区域生成更干净的产品场景，保留主体形状、材质边界和相机角度。" data-en-value="Generate a cleaner product scene inside the masked region while preserving shape, material boundaries, and camera angle.">把遮罩区域生成更干净的产品场景，保留主体形状、材质边界和相机角度。</textarea>
+        <div class="prompt">
+          <textarea id="prompt">Render the selected region as an HD photorealistic product image while preserving shape, camera angle, and material boundaries.</textarea>
           <div class="prompt-actions">
-            <div class="prompt-tags">
-              <button class="chip active" id="imageChip" data-cn="图像" data-en="Image">图像</button>
-              <button class="chip" id="drawModeChip" data-cn="绘制" data-en="Draw">绘制</button>
+            <div class="chips">
+              <button class="chip active" id="drawModeChip">Draw</button>
               <button class="chip" id="aspectRatioChip">1:1</button>
-              <button class="chip" id="examplesChip" data-cn="示例" data-en="Examples">示例</button>
-              <button class="chip" id="seedChip" data-cn="种子 1284" data-en="Seed 1284">种子 1284</button>
-              <button class="chip active" id="liveChip" data-cn="实时" data-en="Live">实时</button>
+              <button class="chip" id="seedChip">Seed 1284</button>
+              <button class="chip active" id="liveChip">Live</button>
+              <button class="chip" id="examplesChip" data-i18n="example">Example</button>
             </div>
-            <button class="primary" id="previewBtn" data-cn="更新预览" data-en="Update Preview">更新预览</button>
+            <button class="primary" id="previewBtn" data-i18n="generate">Generate</button>
           </div>
         </div>
-        <div class="status-line">
-          <span class="dot"></span>
-          <strong id="statusTitle" data-cn="准备就绪" data-en="Ready">准备就绪</strong>
-          <span id="statusText" data-cn="导入图片或模型，然后用画笔/形状定义要编辑的区域。" data-en="Import an image or model, then use brush or shapes to define the edit region.">导入图片或模型，然后用画笔/形状定义要编辑的区域。</span>
-        </div>
+        <div class="status"><span class="dot"></span><strong id="statusTitle">Ready</strong><span id="statusText">Load evidence and paint a region.</span></div>
       </section>
     </main>
   </div>
 
   <input id="imageInput" type="file" accept="image/*">
   <input id="modelInput" type="file" accept=".glb,.gltf,.obj,.fbx,.stl,.usdz">
-
   <script type="module" src="./app.mjs"></script>
 </body>
 </html>
