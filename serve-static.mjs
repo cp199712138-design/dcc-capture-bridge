@@ -21,10 +21,13 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://127.0.0.1");
 
     if (req.method === "GET" && url.pathname === "/api/status") {
+      const provider = chooseRuntimeProvider({});
       sendJson(res, 200, {
         ok: true,
-        provider: process.env.OPENAI_API_KEY ? "openai" : "mock-local",
-        has_api_key: Boolean(process.env.OPENAI_API_KEY)
+        provider,
+        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY),
+        has_custom_api: Boolean(process.env.DCC_CUSTOM_API_URL),
+        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL)
       });
       return;
     }
@@ -82,7 +85,9 @@ async function readJsonBody(req) {
 }
 
 async function handleRealtimeRender(body) {
-  if (!process.env.OPENAI_API_KEY) {
+  const provider = chooseRuntimeProvider(body);
+  if (provider === "custom-http") return handleCustomRender(body);
+  if (provider !== "openai") {
     return {
       ok: true,
       provider: "mock-local",
@@ -144,6 +149,104 @@ async function handleRealtimeRender(body) {
     message_cn: b64 ? "API \u5df2\u8fd4\u56de\u56fe\u50cf\u3002" : "API \u6ca1\u6709\u8fd4\u56de\u56fe\u50cf\u6570\u636e\u3002",
     message_en: b64 ? "API returned an image." : "API did not return image data."
   };
+}
+
+function chooseRuntimeProvider(body) {
+  const requested = String(body.provider || "auto");
+  if (requested === "mock-local") return "mock-local";
+  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL ? "custom-http" : "mock-local";
+  if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "mock-local";
+  if (process.env.DCC_CUSTOM_API_URL) return "custom-http";
+  if (process.env.OPENAI_API_KEY) return "openai";
+  return "mock-local";
+}
+
+async function handleCustomRender(body) {
+  if (!process.env.DCC_CUSTOM_API_URL) {
+    return {
+      ok: false,
+      provider: "custom-http",
+      cn: "\u81ea\u5b9a\u4e49 API \u672a\u914d\u7f6e",
+      en: "Custom API Missing",
+      message_cn: "\u9700\u8981\u8bbe\u7f6e DCC_CUSTOM_API_URL \u540e\u624d\u80fd\u8c03\u7528\u5ba2\u6237\u81ea\u5df1\u7684 API\u3002",
+      message_en: "Set DCC_CUSTOM_API_URL to call a customer-owned API."
+    };
+  }
+
+  const headers = {
+    "content-type": "application/json",
+    ...parseJsonEnv("DCC_CUSTOM_API_HEADERS")
+  };
+  if (process.env.DCC_CUSTOM_API_KEY) {
+    const authHeader = process.env.DCC_CUSTOM_API_AUTH_HEADER || "authorization";
+    const authScheme = process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer";
+    headers[authHeader] = authScheme ? `${authScheme} ${process.env.DCC_CUSTOM_API_KEY}` : process.env.DCC_CUSTOM_API_KEY;
+  }
+
+  const response = await fetch(process.env.DCC_CUSTOM_API_URL, {
+    method: process.env.DCC_CUSTOM_API_METHOD || "POST",
+    headers,
+    body: JSON.stringify({
+      schema_version: body.schema_version,
+      session_id: body.session_id,
+      task: body.task || "regional_scene_generation",
+      prompt: body.prompt || "",
+      strength: body.strength,
+      assets: body.assets || [],
+      mask: body.mask || {},
+      output: body.output || {},
+      sourceImageDataUrl: body.sourceImageDataUrl || "",
+      maskDataUrl: body.maskDataUrl || "",
+      reason: body.reason || "preview"
+    })
+  });
+
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { message: text };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      provider: "custom-http",
+      cn: "\u81ea\u5b9a\u4e49 API \u9519\u8bef",
+      en: "Custom API Error",
+      message_cn: data.message || data.error?.message || "\u5ba2\u6237 API \u8bf7\u6c42\u5931\u8d25\u3002",
+      message_en: data.message || data.error?.message || "Customer API request failed."
+    };
+  }
+
+  const imageDataUrl = extractImageDataUrl(data);
+  return {
+    ok: true,
+    provider: "custom-http",
+    imageDataUrl,
+    cn: imageDataUrl ? "\u81ea\u5b9a\u4e49 API \u8f93\u51fa" : "\u81ea\u5b9a\u4e49 API \u5df2\u54cd\u5e94",
+    en: imageDataUrl ? "Custom API Output" : "Custom API Response",
+    message_cn: data.message_cn || data.message || "\u5ba2\u6237 API \u5df2\u8fd4\u56de\u3002",
+    message_en: data.message_en || data.message || "Customer API returned a response."
+  };
+}
+
+function parseJsonEnv(name) {
+  if (!process.env[name]) return {};
+  try {
+    const parsed = JSON.parse(process.env[name]);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function extractImageDataUrl(data) {
+  const value = data.imageDataUrl || data.image_data_url || data.output_image || data.image_url || data.url;
+  if (typeof value === "string" && value.startsWith("data:image/")) return value;
+  const b64 = data.b64_json || data.image_base64 || data.data?.[0]?.b64_json;
+  return b64 ? `data:image/png;base64,${b64}` : "";
 }
 
 function stripDataUrl(value) {

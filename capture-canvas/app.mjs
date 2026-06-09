@@ -19,6 +19,7 @@ const copy = {
     providerAuto: "Auto",
     providerMock: "Mock",
     providerOpenai: "OpenAI",
+    providerCustom: "Custom API",
     brushSize: "Brush size",
     strength: "Strength",
     safety: "Keys stay on the local server. The browser only sends canvas and mask data.",
@@ -69,6 +70,10 @@ const copy = {
     eraseHint: "Drag the eraser to remove extra mask.",
     rectHint: "Drag to create a rectangular region.",
     circleHint: "Drag to create a circular region.",
+    selected: "Region selected",
+    selectedText: "Drag the selected mask region to move it.",
+    noSelection: "No region selected",
+    noSelectionText: "Click a mask region first, then drag to move it.",
     exampleLoaded: "Example loaded",
     exampleLoadedText: "Paint a mask and the right side will queue output automatically.",
     promptDefault: "Render the selected region as an HD photorealistic product image while preserving shape, camera angle, and material boundaries.",
@@ -98,6 +103,7 @@ const copy = {
     providerAuto: "\u81ea\u52a8",
     providerMock: "\u672c\u5730\u9884\u89c8",
     providerOpenai: "OpenAI",
+    providerCustom: "\u81ea\u5b9a\u4e49 API",
     brushSize: "\u753b\u7b14\u5927\u5c0f",
     strength: "\u5f3a\u5ea6",
     safety: "\u5bc6\u94a5\u53ea\u7559\u5728\u672c\u5730\u670d\u52a1\u7aef\uff0c\u6d4f\u89c8\u5668\u53ea\u53d1\u9001\u753b\u5e03\u548c\u906e\u7f69\u6570\u636e\u3002",
@@ -148,6 +154,10 @@ const copy = {
     eraseHint: "\u62d6\u52a8\u6a61\u76ae\u64e6\u79fb\u9664\u591a\u4f59\u906e\u7f69\u3002",
     rectHint: "\u62d6\u62fd\u521b\u5efa\u77e9\u5f62\u533a\u57df\u3002",
     circleHint: "\u62d6\u62fd\u521b\u5efa\u5706\u5f62\u533a\u57df\u3002",
+    selected: "\u5df2\u9009\u4e2d\u533a\u57df",
+    selectedText: "\u62d6\u52a8\u9009\u4e2d\u7684\u906e\u7f69\u533a\u57df\u5373\u53ef\u79fb\u52a8\u3002",
+    noSelection: "\u672a\u9009\u4e2d\u533a\u57df",
+    noSelectionText: "\u5148\u70b9\u51fb\u4e00\u4e2a\u906e\u7f69\u533a\u57df\uff0c\u518d\u62d6\u52a8\u79fb\u52a8\u3002",
     exampleLoaded: "\u793a\u4f8b\u5df2\u52a0\u8f7d",
     exampleLoadedText: "\u53ef\u4ee5\u76f4\u63a5\u753b\u906e\u7f69\uff0c\u53f3\u4fa7\u4f1a\u81ea\u52a8\u6392\u961f\u8f93\u51fa\u3002",
     promptDefault: "\u5c06\u9009\u4e2d\u533a\u57df\u751f\u6210\u4e3a\u9ad8\u6e05\u5199\u5b9e\u4ea7\u54c1\u56fe\uff0c\u4fdd\u7559\u5f62\u72b6\u3001\u76f8\u673a\u89d2\u5ea6\u548c\u6750\u8d28\u8fb9\u754c\u3002",
@@ -173,6 +183,9 @@ const state = {
   session: createSessionState(),
   strokes: [],
   redoStack: [],
+  selectedStrokeIndex: -1,
+  movingSelection: false,
+  moveLast: null,
   drawing: false,
   draft: null,
   liveEnabled: true,
@@ -268,6 +281,7 @@ function updateI18n() {
     if (option.value === "auto") option.textContent = tr("providerAuto");
     if (option.value === "mock-local") option.textContent = tr("providerMock");
     if (option.value === "openai") option.textContent = tr("providerOpenai");
+    if (option.value === "custom-http") option.textContent = tr("providerCustom");
   });
   updateToolReadout();
   updateChips();
@@ -285,6 +299,7 @@ function updateToolReadout() {
   document.querySelectorAll("[data-tool]").forEach((node) => {
     node.classList.toggle("active", node.dataset.tool === state.tool);
   });
+  ui.sourceCanvas.style.cursor = state.tool === "select" ? "grab" : "none";
   ui.brushCursor.classList.toggle("erase", state.tool === "erase");
   ui.brushCursor.classList.toggle("shape", state.tool === "rect" || state.tool === "circle");
 }
@@ -475,6 +490,71 @@ function drawDraft(ctx) {
   ctx.restore();
 }
 
+function strokeBounds(stroke) {
+  if (!stroke) return null;
+  if (stroke.kind === "rect") {
+    return {
+      x: Math.min(stroke.start.x, stroke.end.x),
+      y: Math.min(stroke.start.y, stroke.end.y),
+      w: Math.abs(stroke.end.x - stroke.start.x),
+      h: Math.abs(stroke.end.y - stroke.start.y),
+    };
+  }
+  if (stroke.kind === "circle") {
+    const dx = stroke.end.x - stroke.start.x;
+    const dy = stroke.end.y - stroke.start.y;
+    const r = Math.max(4, Math.sqrt(dx * dx + dy * dy));
+    return { x: stroke.start.x - r, y: stroke.start.y - r, w: r * 2, h: r * 2 };
+  }
+  const points = stroke.points || [];
+  if (!points.length) return null;
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const pad = Math.max(10, stroke.size / 2);
+  return {
+    x: Math.min(...xs) - pad,
+    y: Math.min(...ys) - pad,
+    w: Math.max(...xs) - Math.min(...xs) + pad * 2,
+    h: Math.max(...ys) - Math.min(...ys) + pad * 2,
+  };
+}
+
+function drawSelectedOverlay(ctx) {
+  const stroke = state.strokes[state.selectedStrokeIndex];
+  const bounds = strokeBounds(stroke);
+  if (!bounds) return;
+  ctx.save();
+  ctx.setLineDash([6, 5]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#07100d";
+  ctx.fillStyle = "rgba(7,16,13,.08)";
+  if (stroke.kind === "circle") {
+    const dx = stroke.end.x - stroke.start.x;
+    const dy = stroke.end.y - stroke.start.y;
+    ctx.beginPath();
+    ctx.arc(stroke.start.x, stroke.start.y, Math.max(4, Math.sqrt(dx * dx + dy * dy)), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+    ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#88d4c0";
+  const handles = [
+    [bounds.x, bounds.y],
+    [bounds.x + bounds.w, bounds.y],
+    [bounds.x + bounds.w, bounds.y + bounds.h],
+    [bounds.x, bounds.y + bounds.h],
+  ];
+  handles.forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
 function drawSource() {
   const w = ui.sourceCanvas.clientWidth;
   const h = ui.sourceCanvas.clientHeight;
@@ -486,6 +566,7 @@ function drawSource() {
     const rect = imageRect(ui.sourceCanvas, state.image);
     sctx.drawImage(state.image, rect.x, rect.y, rect.w, rect.h);
     drawMaskOverlay(sctx, w, h);
+    drawSelectedOverlay(sctx);
     drawDraft(sctx);
     return;
   }
@@ -493,6 +574,7 @@ function drawSource() {
   if (state.model) {
     drawModel(sctx, ui.sourceCanvas);
     drawMaskOverlay(sctx, w, h);
+    drawSelectedOverlay(sctx);
     drawDraft(sctx);
     return;
   }
@@ -573,6 +655,7 @@ function draw() {
 function pushHistory(stroke) {
   if (!stroke) return;
   state.strokes.push(stroke);
+  state.selectedStrokeIndex = state.strokes.length - 1;
   state.redoStack = [];
   redrawMaskBitmap();
 }
@@ -581,6 +664,9 @@ function resetMask() {
   state.strokes = [];
   state.redoStack = [];
   state.draft = null;
+  state.selectedStrokeIndex = -1;
+  state.movingSelection = false;
+  state.moveLast = null;
   state.lastRequest = null;
   state.generatedImage = null;
   redrawMaskBitmap();
@@ -588,6 +674,7 @@ function resetMask() {
 
 function setTool(tool) {
   state.tool = tool;
+  if (tool !== "select") state.movingSelection = false;
   updateToolReadout();
   const hintKey = {
     select: "selectHint",
@@ -597,6 +684,58 @@ function setTool(tool) {
     circle: "circleHint",
   }[tool];
   setStatus(tool === "erase" ? "eraser" : tool, hintKey);
+}
+
+function distanceToSegment(point, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (dx === 0 && dy === 0) return Math.hypot(point.x - a.x, point.y - a.y);
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
+}
+
+function pointInStroke(point, stroke) {
+  if (!stroke || stroke.mode === "erase") return false;
+  if (stroke.kind === "rect") {
+    const b = strokeBounds(stroke);
+    return point.x >= b.x && point.x <= b.x + b.w && point.y >= b.y && point.y <= b.y + b.h;
+  }
+  if (stroke.kind === "circle") {
+    const dx = point.x - stroke.start.x;
+    const dy = point.y - stroke.start.y;
+    const rx = stroke.end.x - stroke.start.x;
+    const ry = stroke.end.y - stroke.start.y;
+    return Math.hypot(dx, dy) <= Math.max(4, Math.hypot(rx, ry));
+  }
+  const points = stroke.points || [];
+  const hitSize = Math.max(12, stroke.size / 2 + 6);
+  for (let i = 1; i < points.length; i += 1) {
+    if (distanceToSegment(point, points[i - 1], points[i]) <= hitSize) return true;
+  }
+  return points.length === 1 && Math.hypot(point.x - points[0].x, point.y - points[0].y) <= hitSize;
+}
+
+function findStrokeAt(point) {
+  for (let index = state.strokes.length - 1; index >= 0; index -= 1) {
+    if (pointInStroke(point, state.strokes[index])) return index;
+  }
+  return -1;
+}
+
+function translateStroke(stroke, dx, dy) {
+  if (!stroke) return;
+  if (stroke.points) stroke.points.forEach((point) => {
+    point.x += dx;
+    point.y += dy;
+  });
+  if (stroke.start) {
+    stroke.start.x += dx;
+    stroke.start.y += dy;
+  }
+  if (stroke.end) {
+    stroke.end.x += dx;
+    stroke.end.y += dy;
+  }
 }
 
 function sourceDataUrl() {
@@ -828,12 +967,22 @@ function handleFile(file) {
 
 function beginStroke(e) {
   updateBrushCursor(e);
-  if (!activeAsset() || state.tool === "select") return;
+  if (!activeAsset()) return;
   e.preventDefault();
   state.generatedImage = null;
-  state.drawing = true;
   ui.sourceCanvas.setPointerCapture(e.pointerId);
   const p = localPoint(e);
+  if (state.tool === "select") {
+    state.selectedStrokeIndex = findStrokeAt(p);
+    state.movingSelection = state.selectedStrokeIndex >= 0;
+    state.moveLast = p;
+    ui.sourceCanvas.style.cursor = state.movingSelection ? "grabbing" : "grab";
+    setStatus(state.movingSelection ? "selected" : "noSelection", state.movingSelection ? "selectedText" : "noSelectionText");
+    scheduleDraw();
+    return;
+  }
+
+  state.drawing = true;
   if (state.tool === "brush" || state.tool === "erase") {
     pushHistory({
       kind: "path",
@@ -856,6 +1005,16 @@ function beginStroke(e) {
 
 function extendStroke(e) {
   updateBrushCursor(e);
+  if (state.movingSelection && state.selectedStrokeIndex >= 0) {
+    e.preventDefault();
+    const p = localPoint(e);
+    translateStroke(state.strokes[state.selectedStrokeIndex], p.x - state.moveLast.x, p.y - state.moveLast.y);
+    state.moveLast = p;
+    state.generatedImage = null;
+    redrawMaskBitmap();
+    scheduleDraw();
+    return;
+  }
   if (!state.drawing) return;
   e.preventDefault();
   const p = localPoint(e);
@@ -868,6 +1027,14 @@ function extendStroke(e) {
 function endStroke(e) {
   if (e && ui.sourceCanvas.hasPointerCapture?.(e.pointerId)) ui.sourceCanvas.releasePointerCapture(e.pointerId);
   let changed = false;
+  if (state.movingSelection) {
+    state.movingSelection = false;
+    ui.sourceCanvas.style.cursor = "grab";
+    redrawMaskBitmap();
+    scheduleDraw();
+    scheduleRealtimeRender("move");
+    return;
+  }
   if (state.draft) {
     pushHistory(state.draft);
     state.draft = null;
@@ -905,6 +1072,7 @@ function undoMask() {
   const stroke = state.strokes.pop();
   if (!stroke) return;
   state.redoStack.push(stroke);
+  state.selectedStrokeIndex = -1;
   state.generatedImage = null;
   redrawMaskBitmap();
   draw();
@@ -916,6 +1084,7 @@ function redoMask() {
   const stroke = state.redoStack.pop();
   if (!stroke) return;
   state.strokes.push(stroke);
+  state.selectedStrokeIndex = state.strokes.length - 1;
   state.generatedImage = null;
   redrawMaskBitmap();
   draw();

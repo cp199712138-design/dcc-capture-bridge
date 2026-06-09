@@ -22,6 +22,7 @@ Customer-testable features in this build:
 - brush, eraser, rectangle, circle, clear, undo, redo
 - prompt, live toggle, seed, ratio, strength, provider selector
 - local `/api/realtime-render` interface for future API and ComfyUI adapters
+- selectable and movable mask regions in Select mode
 
 Run the local canvas:
 
@@ -54,6 +55,33 @@ Without `OPENAI_API_KEY`, the UI stays in local preview mode and clearly says so
 
 Keep real keys in the shell or a local `.env` file only. Do not commit `.env`,
 customer images, model files, renders, captures, or generated materials.
+
+## Customer API Adapter
+
+Customers can bring their own image API without changing the browser code:
+
+```powershell
+$env:DCC_CUSTOM_API_URL="https://your-api.example.com/render"
+$env:DCC_CUSTOM_API_KEY="YOUR_CUSTOM_KEY"
+$env:DCC_CUSTOM_API_AUTH_HEADER="authorization"
+$env:DCC_CUSTOM_API_AUTH_SCHEME="Bearer"
+node serve-static.mjs
+```
+
+The local server sends JSON containing `prompt`, `sourceImageDataUrl`,
+`maskDataUrl`, `assets`, `mask`, `output`, `strength`, and `reason`.
+
+Accepted response shapes:
+
+```json
+{ "imageDataUrl": "data:image/png;base64,..." }
+```
+
+or:
+
+```json
+{ "b64_json": "..." }
+```
 
 ## Product Direction
 

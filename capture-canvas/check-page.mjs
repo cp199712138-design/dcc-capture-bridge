@@ -58,6 +58,8 @@ const report = {
   hasSeedAndRatio: app.includes("nextSeed") && app.includes("cycleAspectRatio"),
   hasRealtimeApiClient: app.includes("/api/realtime-render") && app.includes("scheduleRealtimeRender") && app.includes("sourceImageDataUrl") && app.includes("maskDataUrl"),
   hasRealtimeApiServer: localServer.includes("/api/realtime-render") && localServer.includes("OPENAI_API_KEY") && packageServer.includes("/api/realtime-render"),
+  hasCustomApiAdapter: html.includes('value="custom-http"') && localServer.includes("DCC_CUSTOM_API_URL") && packageServer.includes("DCC_CUSTOM_API_URL"),
+  hasMovableSelection: app.includes("findStrokeAt") && app.includes("translateStroke") && app.includes("movingSelection") && app.includes("drawSelectedOverlay"),
   hasApiStatus: html.includes('id="apiState"') && localServer.includes("/api/status"),
   hasLiveChip: html.includes('id="liveChip"') && app.includes("liveEnabled"),
   hasNoVideoPlaceholder: !html.includes("outputVideoChip") && !app.includes("Video mode"),
