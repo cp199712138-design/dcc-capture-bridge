@@ -20,6 +20,12 @@ const copy = {
     providerMock: "Mock",
     providerOpenai: "OpenAI",
     providerCustom: "Custom API",
+    apiHelp: "Set .env, restart the server, then test the provider.",
+    testApi: "Test API",
+    apiLocal: "Local preview only",
+    apiOpenAiReady: "OpenAI configured",
+    apiCustomReady: "Custom API configured",
+    apiMissing: "Provider not configured",
     brushSize: "Brush size",
     strength: "Strength",
     safety: "Keys stay on the local server. The browser only sends canvas and mask data.",
@@ -104,6 +110,12 @@ const copy = {
     providerMock: "\u672c\u5730\u9884\u89c8",
     providerOpenai: "OpenAI",
     providerCustom: "\u81ea\u5b9a\u4e49 API",
+    apiHelp: "\u586b\u597d .env \u5e76\u91cd\u542f\u670d\u52a1\u540e\uff0c\u518d\u6d4b\u8bd5\u63d0\u4f9b\u65b9\u3002",
+    testApi: "\u6d4b\u8bd5 API",
+    apiLocal: "\u4ec5\u672c\u5730\u9884\u89c8",
+    apiOpenAiReady: "OpenAI \u5df2\u914d\u7f6e",
+    apiCustomReady: "\u81ea\u5b9a\u4e49 API \u5df2\u914d\u7f6e",
+    apiMissing: "\u63d0\u4f9b\u65b9\u672a\u914d\u7f6e",
     brushSize: "\u753b\u7b14\u5927\u5c0f",
     strength: "\u5f3a\u5ea6",
     safety: "\u5bc6\u94a5\u53ea\u7559\u5728\u672c\u5730\u670d\u52a1\u7aef\uff0c\u6d4f\u89c8\u5668\u53ea\u53d1\u9001\u753b\u5e03\u548c\u906e\u7f69\u6570\u636e\u3002",
@@ -193,6 +205,7 @@ const state = {
   renderSeq: 0,
   renderController: null,
   lastRequest: null,
+  apiStatus: {},
   raf: 0,
 };
 
@@ -223,6 +236,9 @@ const ui = {
   seedChip: $("seedChip"),
   liveChip: $("liveChip"),
   providerSelect: $("providerSelect"),
+  apiSummary: $("apiSummary"),
+  apiHelp: $("apiHelp"),
+  testApiBtn: $("testApiBtn"),
 };
 
 const sctx = ui.sourceCanvas.getContext("2d");
@@ -289,7 +305,20 @@ function updateI18n() {
   if (!activeAsset()) ui.assetInfo.textContent = state.lang === "cn" ? "\u7b49\u5f85\u5bfc\u5165\u3002" : "Waiting.";
   setApiState(ui.apiState.classList.contains("api") ? "api" : "local", ui.apiState.classList.contains("api") ? "apiOutput" : "localPreview");
   setRequestState("local", "idle");
+  updateApiSummary(state.apiStatus);
   draw();
+}
+
+function updateApiSummary(payload = {}) {
+  state.apiStatus = payload;
+  if (payload.openai_configured) {
+    ui.apiSummary.textContent = tr("apiOpenAiReady");
+  } else if (payload.custom_api_configured) {
+    ui.apiSummary.textContent = `${tr("apiCustomReady")}${payload.custom_api_host ? ` (${payload.custom_api_host})` : ""}`;
+  } else {
+    ui.apiSummary.textContent = tr("apiLocal");
+  }
+  ui.apiHelp.textContent = tr("apiHelp");
 }
 
 function updateToolReadout() {
@@ -761,6 +790,10 @@ function sourceDataUrl() {
   return canvas.toDataURL("image/png");
 }
 
+function transparentPixelDataUrl() {
+  return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+}
+
 function editMaskDataUrl() {
   const canvas = document.createElement("canvas");
   const w = Math.max(1, Math.round(ui.sourceCanvas.clientWidth));
@@ -787,8 +820,9 @@ function loadGeneratedImage(dataUrl) {
 }
 
 async function requestRealtimeRender(reason) {
-  if (!activeAsset()) return;
-  if (!state.strokes.length && reason !== "preview" && reason !== "example" && state.mode === "draw") return;
+  const isApiTest = reason === "api-test";
+  if (!activeAsset() && !isApiTest) return;
+  if (!state.strokes.length && reason !== "preview" && reason !== "example" && reason !== "api-test" && state.mode === "draw") return;
 
   const seq = state.renderSeq + 1;
   state.renderSeq = seq;
@@ -817,8 +851,8 @@ async function requestRealtimeRender(reason) {
       body: JSON.stringify({
         ...state.lastRequest,
         reason,
-        sourceImageDataUrl: sourceDataUrl(),
-        maskDataUrl: editMaskDataUrl(),
+        sourceImageDataUrl: isApiTest ? transparentPixelDataUrl() : sourceDataUrl(),
+        maskDataUrl: isApiTest ? transparentPixelDataUrl() : editMaskDataUrl(),
       }),
       signal: state.renderController.signal,
     });
@@ -836,9 +870,10 @@ async function requestRealtimeRender(reason) {
     state.generatedImage = null;
     draw();
     const isApi = payload.provider === "openai";
-    setApiState(isApi ? "api" : "local", isApi ? "apiOutput" : "localPreview");
-    setRequestState("local", "idle");
-    setStatus("localPreview", "noKey", state.lang === "cn" ? payload.message_cn || tr("noKey") : payload.message_en || tr("noKey"));
+    const isError = payload.ok === false;
+    setApiState(isError ? "error" : (isApi ? "api" : "local"), isError ? "apiMissing" : (isApi ? "apiOutput" : "localPreview"));
+    setRequestState(isError ? "error" : "local", isError ? "apiMissing" : "idle");
+    setStatus(isError ? "apiMissing" : "localPreview", isError ? "apiMissing" : "noKey", state.lang === "cn" ? payload.message_cn || tr("noKey") : payload.message_en || tr("noKey"));
   } catch (error) {
     if (error.name === "AbortError") return;
     state.generatedImage = null;
@@ -1124,9 +1159,12 @@ async function checkApiStatus() {
   try {
     const response = await fetch("/api/status", { cache: "no-store" });
     const payload = await response.json();
-    setApiState(payload.has_api_key ? "api" : "local", payload.has_api_key ? "apiOutput" : "localPreview");
+    const configured = payload.openai_configured || payload.custom_api_configured;
+    setApiState(configured ? "api" : "local", configured ? "apiOutput" : "localPreview");
+    updateApiSummary(payload);
   } catch {
     setApiState("error", "apiError");
+    ui.apiSummary.textContent = tr("apiError");
   }
 }
 
@@ -1138,6 +1176,10 @@ $("clearBtn").addEventListener("click", clearMask);
 $("undoBtn")?.addEventListener("click", undoMask);
 $("redoBtn")?.addEventListener("click", redoMask);
 $("previewBtn").addEventListener("click", updatePreview);
+$("testApiBtn").addEventListener("click", () => {
+  setStatus("previewQueued", "previewQueuedText");
+  requestRealtimeRender("api-test");
+});
 $("importImageBtn").addEventListener("click", () => ui.imageInput.click());
 $("importImageNav").addEventListener("click", () => ui.imageInput.click());
 $("importModelBtn").addEventListener("click", () => ui.modelInput.click());

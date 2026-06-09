@@ -27,6 +27,7 @@ Customer-testable features in this build:
 Run the local canvas:
 
 ```powershell
+copy .env.example .env
 node serve-static.mjs
 ```
 
@@ -42,6 +43,10 @@ The browser never stores an API key. The local Node server exposes:
 
 - `GET /api/status`
 - `POST /api/realtime-render`
+
+The UI includes an API status panel and a `Test API` button. If OpenAI or
+Custom API is selected but missing configuration, the page shows the missing
+`.env` setting instead of silently falling back to local preview.
 
 Enable OpenAI image editing by starting the server with:
 
@@ -82,6 +87,8 @@ or:
 ```json
 { "b64_json": "..." }
 ```
+
+Full request and response details are in `docs/API_ADAPTER.md`.
 
 ## Product Direction
 

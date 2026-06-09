@@ -109,7 +109,22 @@
       padding: 0 9px;
       accent-color: var(--accent-2);
     }
+    .field select option {
+      color: var(--text);
+      background: #101216;
+    }
     .field input[type="range"] { padding: 0; min-height: auto; }
+    .api-box {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(255,255,255,.035);
+    }
+    .api-box strong { font-size: 12px; }
+    .api-box span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .api-box .tool { width: 100%; }
     .note {
       align-self: end;
       padding: 11px;
@@ -374,6 +389,15 @@
         <label class="field"><span data-i18n="provider">Provider</span><select id="providerSelect"><option value="auto">Auto</option><option value="mock-local">Mock</option><option value="openai">OpenAI</option><option value="custom-http">Custom API</option></select></label>
         <label class="field"><span data-i18n="brushSize">Brush size</span><input id="brushSize" type="range" min="8" max="120" value="42"></label>
         <label class="field"><span data-i18n="strength">Strength</span><input id="strength" type="range" min="0" max="100" value="62"></label>
+      </section>
+
+      <section class="section">
+        <div class="section-title">API</div>
+        <div class="api-box">
+          <strong id="apiSummary">Local preview</strong>
+          <span id="apiHelp" data-i18n="apiHelp">Set .env, restart the server, then test the provider.</span>
+          <button class="tool" id="testApiBtn"><b>API</b><span data-i18n="testApi">Test API</span></button>
+        </div>
       </section>
 
       <div class="note" id="safetyNote" data-i18n="safety">Keys stay on the local server. The browser only sends canvas and mask data.</div>

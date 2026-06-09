@@ -1,10 +1,11 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 
 const root = process.cwd();
 const port = 8765;
+loadLocalEnv();
 const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -25,9 +26,10 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, {
         ok: true,
         provider,
-        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY),
-        has_custom_api: Boolean(process.env.DCC_CUSTOM_API_URL),
-        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL)
+        openai_configured: Boolean(process.env.OPENAI_API_KEY),
+        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL),
+        custom_api_host: safeHost(process.env.DCC_CUSTOM_API_URL),
+        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY)
       });
       return;
     }
@@ -86,6 +88,8 @@ async function readJsonBody(req) {
 
 async function handleRealtimeRender(body) {
   const provider = chooseRuntimeProvider(body);
+  if (provider === "openai-missing") return missingOpenAiConfig();
+  if (provider === "custom-http-missing") return missingCustomConfig();
   if (provider === "custom-http") return handleCustomRender(body);
   if (provider !== "openai") {
     return {
@@ -154,11 +158,33 @@ async function handleRealtimeRender(body) {
 function chooseRuntimeProvider(body) {
   const requested = String(body.provider || "auto");
   if (requested === "mock-local") return "mock-local";
-  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL ? "custom-http" : "mock-local";
-  if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "mock-local";
+  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL ? "custom-http" : "custom-http-missing";
+  if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "openai-missing";
   if (process.env.DCC_CUSTOM_API_URL) return "custom-http";
   if (process.env.OPENAI_API_KEY) return "openai";
   return "mock-local";
+}
+
+function missingOpenAiConfig() {
+  return {
+    ok: false,
+    provider: "openai-missing",
+    cn: "OpenAI \u672a\u914d\u7f6e",
+    en: "OpenAI Not Configured",
+    message_cn: "\u8bf7\u5728 .env \u6216\u547d\u4ee4\u884c\u8bbe\u7f6e OPENAI_API_KEY\uff0c\u7136\u540e\u91cd\u542f node serve-static.mjs\u3002",
+    message_en: "Set OPENAI_API_KEY in .env or your shell, then restart node serve-static.mjs."
+  };
+}
+
+function missingCustomConfig() {
+  return {
+    ok: false,
+    provider: "custom-http-missing",
+    cn: "\u81ea\u5b9a\u4e49 API \u672a\u914d\u7f6e",
+    en: "Custom API Not Configured",
+    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_URL\uff0c\u53ef\u9009\u8bbe\u7f6e DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
+    message_en: "Set DCC_CUSTOM_API_URL in .env, optionally DCC_CUSTOM_API_KEY, then restart the server."
+  };
 }
 
 async function handleCustomRender(body) {
@@ -247,6 +273,37 @@ function extractImageDataUrl(data) {
   if (typeof value === "string" && value.startsWith("data:image/")) return value;
   const b64 = data.b64_json || data.image_base64 || data.data?.[0]?.b64_json;
   return b64 ? `data:image/png;base64,${b64}` : "";
+}
+
+function loadLocalEnv() {
+  loadEnvFile(join(root, ".env"));
+}
+
+function loadEnvFile(envPath) {
+  if (!existsSync(envPath)) return;
+  const lines = readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const index = trimmed.indexOf("=");
+    if (index <= 0) continue;
+    const key = trimmed.slice(0, index).trim();
+    let value = trimmed.slice(index + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+function safeHost(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    return url.host;
+  } catch {
+    return "";
+  }
 }
 
 function stripDataUrl(value) {
