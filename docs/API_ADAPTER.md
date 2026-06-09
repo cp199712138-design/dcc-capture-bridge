@@ -18,6 +18,7 @@ OpenAI:
 
 ```text
 OPENAI_API_KEY=your_key
+OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_IMAGE_MODEL=gpt-image-1.5
 ```
 
@@ -26,6 +27,7 @@ Custom customer API:
 ```text
 DCC_CUSTOM_API_URL=https://your-api.example.com/render
 DCC_CUSTOM_API_KEY=your_key
+DCC_CUSTOM_API_MODEL=your-image-model
 DCC_CUSTOM_API_AUTH_HEADER=authorization
 DCC_CUSTOM_API_AUTH_SCHEME=Bearer
 DCC_CUSTOM_API_METHOD=POST
@@ -88,4 +90,3 @@ Optional messages:
   "message_cn": "已生成"
 }
 ```
-

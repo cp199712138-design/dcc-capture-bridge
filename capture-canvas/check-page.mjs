@@ -43,7 +43,13 @@ const requiredIds = [
   "importModelBtn",
   "examplesChip",
   "seedChip",
-  "previewBtn"
+  "previewBtn",
+  "openApiSettingsBtn",
+  "apiModal",
+  "apiBaseUrlInput",
+  "apiKeyInput",
+  "saveApiSettingsBtn",
+  "modalTestApiBtn"
 ];
 
 const report = {
@@ -60,6 +66,7 @@ const report = {
   hasRealtimeApiServer: localServer.includes("/api/realtime-render") && localServer.includes("OPENAI_API_KEY") && packageServer.includes("/api/realtime-render"),
   hasCustomApiAdapter: html.includes('value="custom-http"') && localServer.includes("DCC_CUSTOM_API_URL") && packageServer.includes("DCC_CUSTOM_API_URL"),
   hasApiTestUi: html.includes('id="apiSummary"') && html.includes('id="testApiBtn"') && app.includes('reason === "api-test"'),
+  hasApiSettingsUi: html.includes('id="apiModal"') && app.includes("saveApiSettings") && app.includes("/api/config") && app.includes("openApiSettings"),
   hasEnvLoader: localServer.includes("loadLocalEnv") && packageServer.includes("loadLocalEnv") && localServer.includes('join(root, ".env")'),
   hasExplicitMissingProvider: localServer.includes("openai-missing") && localServer.includes("custom-http-missing") && packageServer.includes("openai-missing"),
   hasMovableSelection: app.includes("findStrokeAt") && app.includes("translateStroke") && app.includes("movingSelection") && app.includes("drawSelectedOverlay"),

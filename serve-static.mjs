@@ -1,6 +1,6 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 
 const root = process.cwd();
@@ -27,10 +27,23 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         provider,
         openai_configured: Boolean(process.env.OPENAI_API_KEY),
+        openai_host: safeHost(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"),
         custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL),
         custom_api_host: safeHost(process.env.DCC_CUSTOM_API_URL),
         has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY)
       });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/config") {
+      sendJson(res, 200, getProviderConfig());
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/config") {
+      const body = await readJsonBody(req);
+      const result = saveProviderConfig(body);
+      sendJson(res, 200, result);
       return;
     }
 
@@ -123,7 +136,8 @@ async function handleRealtimeRender(body) {
   form.set("image", new Blob([Buffer.from(source, "base64")], { type: "image/png" }), "source.png");
   form.set("mask", new Blob([Buffer.from(mask, "base64")], { type: "image/png" }), "mask.png");
 
-  const response = await fetch("https://api.openai.com/v1/images/edits", {
+  const openAiBase = String(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const response = await fetch(`${openAiBase}/images/edits`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${process.env.OPENAI_API_KEY}`
@@ -153,6 +167,85 @@ async function handleRealtimeRender(body) {
     message_cn: b64 ? "API \u5df2\u8fd4\u56de\u56fe\u50cf\u3002" : "API \u6ca1\u6709\u8fd4\u56de\u56fe\u50cf\u6570\u636e\u3002",
     message_en: b64 ? "API returned an image." : "API did not return image data."
   };
+}
+
+function getProviderConfig() {
+  return {
+    ok: true,
+    openai: {
+      base_url: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
+      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5",
+      key_saved: Boolean(process.env.OPENAI_API_KEY)
+    },
+    custom: {
+      base_url: process.env.DCC_CUSTOM_API_URL || "",
+      model: process.env.DCC_CUSTOM_API_MODEL || "",
+      auth_header: process.env.DCC_CUSTOM_API_AUTH_HEADER || "authorization",
+      auth_scheme: process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer",
+      method: process.env.DCC_CUSTOM_API_METHOD || "POST",
+      key_saved: Boolean(process.env.DCC_CUSTOM_API_KEY)
+    }
+  };
+}
+
+function saveProviderConfig(body) {
+  const provider = String(body.provider || "");
+  if (provider !== "openai" && provider !== "custom-http") {
+    return { ok: false, message: "Unsupported provider" };
+  }
+
+  const updates = {};
+  if (provider === "openai") {
+    updates.OPENAI_BASE_URL = String(body.baseUrl || "https://api.openai.com/v1").trim();
+    updates.OPENAI_IMAGE_MODEL = String(body.model || "gpt-image-1.5").trim();
+    if (String(body.apiKey || "").trim()) updates.OPENAI_API_KEY = String(body.apiKey).trim();
+  } else {
+    updates.DCC_CUSTOM_API_URL = String(body.baseUrl || "").trim();
+    updates.DCC_CUSTOM_API_MODEL = String(body.model || "").trim();
+    updates.DCC_CUSTOM_API_AUTH_HEADER = String(body.authHeader || "authorization").trim();
+    updates.DCC_CUSTOM_API_AUTH_SCHEME = String(body.authScheme || "Bearer").trim();
+    updates.DCC_CUSTOM_API_METHOD = String(body.method || "POST").trim();
+    if (String(body.apiKey || "").trim()) updates.DCC_CUSTOM_API_KEY = String(body.apiKey).trim();
+  }
+
+  writeEnvUpdates(updates);
+  Object.assign(process.env, updates);
+  return { ok: true, config: getProviderConfig() };
+}
+
+function writeEnvUpdates(updates) {
+  const envPath = join(root, ".env");
+  const current = {};
+  if (existsSync(envPath)) {
+    for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+      const index = trimmed.indexOf("=");
+      current[trimmed.slice(0, index).trim()] = trimmed.slice(index + 1).trim();
+    }
+  }
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== "") current[key] = value;
+  }
+  const ordered = [
+    "OPENAI_BASE_URL",
+    "OPENAI_API_KEY",
+    "OPENAI_IMAGE_MODEL",
+    "DCC_CUSTOM_API_URL",
+    "DCC_CUSTOM_API_KEY",
+    "DCC_CUSTOM_API_MODEL",
+    "DCC_CUSTOM_API_AUTH_HEADER",
+    "DCC_CUSTOM_API_AUTH_SCHEME",
+    "DCC_CUSTOM_API_METHOD",
+    "DCC_CUSTOM_API_HEADERS"
+  ];
+  const keys = [...ordered, ...Object.keys(current).filter((key) => !ordered.includes(key)).sort()];
+  const lines = ["# Local only. Do not commit this file."];
+  for (const key of keys) {
+    if (current[key] !== undefined) lines.push(`${key}=${current[key]}`);
+  }
+  lines.push("");
+  writeFileSync(envPath, lines.join("\n"), "utf8");
 }
 
 function chooseRuntimeProvider(body) {

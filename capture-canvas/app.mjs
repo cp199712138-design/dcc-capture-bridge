@@ -21,7 +21,21 @@ const copy = {
     providerOpenai: "OpenAI",
     providerCustom: "Custom API",
     apiHelp: "Set .env, restart the server, then test the provider.",
+    apiSettings: "API Settings",
+    apiSettingsTitle: "API Settings",
+    apiSettingsSubtitle: "Save provider URL, model, and key to local .env. Keys are never shown after saving.",
+    apiBaseUrl: "Base URL",
+    apiModel: "Image model",
+    apiMethod: "Method",
+    apiKey: "API Key",
+    apiAuthHeader: "Auth header",
+    apiAuthScheme: "Auth scheme",
     testApi: "Test API",
+    save: "Save",
+    close: "Close",
+    keySaved: "Key saved. Leave blank to keep it.",
+    noKeySaved: "No key saved.",
+    saved: "Saved to local .env.",
     apiLocal: "Local preview only",
     apiOpenAiReady: "OpenAI configured",
     apiCustomReady: "Custom API configured",
@@ -111,7 +125,21 @@ const copy = {
     providerOpenai: "OpenAI",
     providerCustom: "\u81ea\u5b9a\u4e49 API",
     apiHelp: "\u586b\u597d .env \u5e76\u91cd\u542f\u670d\u52a1\u540e\uff0c\u518d\u6d4b\u8bd5\u63d0\u4f9b\u65b9\u3002",
+    apiSettings: "API \u8bbe\u7f6e",
+    apiSettingsTitle: "API \u8bbe\u7f6e",
+    apiSettingsSubtitle: "\u4fdd\u5b58\u5e73\u53f0\u5730\u5740\u3001\u6a21\u578b\u548c Key \u5230\u672c\u5730 .env\u3002Key \u4fdd\u5b58\u540e\u4e0d\u4f1a\u56de\u663e\u3002",
+    apiBaseUrl: "\u8bf7\u6c42\u5730\u5740",
+    apiModel: "\u751f\u56fe\u6a21\u578b",
+    apiMethod: "\u8bf7\u6c42\u65b9\u6cd5",
+    apiKey: "API Key",
+    apiAuthHeader: "\u9274\u6743\u5934",
+    apiAuthScheme: "\u9274\u6743\u65b9\u5f0f",
     testApi: "\u6d4b\u8bd5 API",
+    save: "\u4fdd\u5b58",
+    close: "\u5173\u95ed",
+    keySaved: "\u5df2\u4fdd\u5b58 Key\uff0c\u7559\u7a7a\u4fdd\u6301\u4e0d\u53d8\u3002",
+    noKeySaved: "\u8fd8\u6ca1\u6709\u4fdd\u5b58 Key\u3002",
+    saved: "\u5df2\u4fdd\u5b58\u5230\u672c\u5730 .env\u3002",
     apiLocal: "\u4ec5\u672c\u5730\u9884\u89c8",
     apiOpenAiReady: "OpenAI \u5df2\u914d\u7f6e",
     apiCustomReady: "\u81ea\u5b9a\u4e49 API \u5df2\u914d\u7f6e",
@@ -206,6 +234,8 @@ const state = {
   renderController: null,
   lastRequest: null,
   apiStatus: {},
+  apiConfig: null,
+  apiConfigTab: "openai",
   raf: 0,
 };
 
@@ -239,6 +269,23 @@ const ui = {
   apiSummary: $("apiSummary"),
   apiHelp: $("apiHelp"),
   testApiBtn: $("testApiBtn"),
+  openApiSettingsBtn: $("openApiSettingsBtn"),
+  apiModal: $("apiModal"),
+  apiOpenAiTab: $("apiOpenAiTab"),
+  apiCustomTab: $("apiCustomTab"),
+  apiProviderTitle: $("apiProviderTitle"),
+  apiProviderSubtitle: $("apiProviderSubtitle"),
+  apiBaseUrlInput: $("apiBaseUrlInput"),
+  apiModelInput: $("apiModelInput"),
+  apiMethodInput: $("apiMethodInput"),
+  apiKeyInput: $("apiKeyInput"),
+  apiKeySavedText: $("apiKeySavedText"),
+  apiAuthHeaderInput: $("apiAuthHeaderInput"),
+  apiAuthSchemeInput: $("apiAuthSchemeInput"),
+  apiModalStatus: $("apiModalStatus"),
+  closeApiSettingsBtn: $("closeApiSettingsBtn"),
+  saveApiSettingsBtn: $("saveApiSettingsBtn"),
+  modalTestApiBtn: $("modalTestApiBtn"),
 };
 
 const sctx = ui.sourceCanvas.getContext("2d");
@@ -319,6 +366,75 @@ function updateApiSummary(payload = {}) {
     ui.apiSummary.textContent = tr("apiLocal");
   }
   ui.apiHelp.textContent = tr("apiHelp");
+}
+
+async function loadApiConfig() {
+  const response = await fetch("/api/config", { cache: "no-store" });
+  state.apiConfig = await response.json();
+  renderApiConfigForm();
+}
+
+function openApiSettings(tab = state.apiConfigTab) {
+  state.apiConfigTab = tab;
+  ui.apiModal.classList.add("open");
+  ui.apiModal.setAttribute("aria-hidden", "false");
+  loadApiConfig().catch((error) => {
+    ui.apiModalStatus.textContent = String(error.message || error);
+  });
+}
+
+function closeApiSettings() {
+  ui.apiModal.classList.remove("open");
+  ui.apiModal.setAttribute("aria-hidden", "true");
+  ui.apiKeyInput.value = "";
+}
+
+function renderApiConfigForm() {
+  const config = state.apiConfig || {};
+  const isOpenAi = state.apiConfigTab === "openai";
+  const item = isOpenAi ? config.openai || {} : config.custom || {};
+  ui.apiOpenAiTab.classList.toggle("active", isOpenAi);
+  ui.apiCustomTab.classList.toggle("active", !isOpenAi);
+  ui.apiProviderTitle.textContent = isOpenAi ? "OpenAI" : "Custom API";
+  ui.apiProviderSubtitle.textContent = isOpenAi
+    ? "Configure OpenAI-compatible image edit endpoint."
+    : "Configure a customer-owned API endpoint.";
+  ui.apiBaseUrlInput.value = item.base_url || (isOpenAi ? "https://api.openai.com/v1" : "");
+  ui.apiModelInput.value = item.model || (isOpenAi ? "gpt-image-1.5" : "");
+  ui.apiMethodInput.value = item.method || "POST";
+  ui.apiMethodInput.disabled = isOpenAi;
+  ui.apiAuthHeaderInput.value = item.auth_header || "authorization";
+  ui.apiAuthSchemeInput.value = item.auth_scheme || "Bearer";
+  ui.apiAuthHeaderInput.disabled = isOpenAi;
+  ui.apiAuthSchemeInput.disabled = isOpenAi;
+  ui.apiKeyInput.value = "";
+  ui.apiKeySavedText.textContent = item.key_saved ? tr("keySaved") : tr("noKeySaved");
+  ui.apiModalStatus.textContent = "Ready.";
+}
+
+async function saveApiSettings() {
+  const payload = {
+    provider: state.apiConfigTab,
+    baseUrl: ui.apiBaseUrlInput.value.trim(),
+    model: ui.apiModelInput.value.trim(),
+    apiKey: ui.apiKeyInput.value.trim(),
+    method: ui.apiMethodInput.value,
+    authHeader: ui.apiAuthHeaderInput.value.trim(),
+    authScheme: ui.apiAuthSchemeInput.value.trim(),
+  };
+  ui.apiModalStatus.textContent = "Saving...";
+  const response = await fetch("/api/config", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!data.ok) throw new Error(data.message || "Save failed");
+  state.apiConfig = data.config;
+  ui.apiKeyInput.value = "";
+  renderApiConfigForm();
+  await checkApiStatus();
+  ui.apiModalStatus.textContent = tr("saved");
 }
 
 function updateToolReadout() {
@@ -1176,7 +1292,31 @@ $("clearBtn").addEventListener("click", clearMask);
 $("undoBtn")?.addEventListener("click", undoMask);
 $("redoBtn")?.addEventListener("click", redoMask);
 $("previewBtn").addEventListener("click", updatePreview);
+$("openApiSettingsBtn").addEventListener("click", () => openApiSettings());
 $("testApiBtn").addEventListener("click", () => {
+  setStatus("previewQueued", "previewQueuedText");
+  requestRealtimeRender("api-test");
+});
+ui.closeApiSettingsBtn.addEventListener("click", closeApiSettings);
+ui.apiModal.addEventListener("click", (event) => {
+  if (event.target === ui.apiModal) closeApiSettings();
+});
+ui.apiOpenAiTab.addEventListener("click", () => {
+  state.apiConfigTab = "openai";
+  renderApiConfigForm();
+});
+ui.apiCustomTab.addEventListener("click", () => {
+  state.apiConfigTab = "custom-http";
+  renderApiConfigForm();
+});
+ui.saveApiSettingsBtn.addEventListener("click", () => {
+  saveApiSettings().catch((error) => {
+    ui.apiModalStatus.textContent = String(error.message || error);
+  });
+});
+ui.modalTestApiBtn.addEventListener("click", () => {
+  ui.providerSelect.value = state.apiConfigTab;
+  closeApiSettings();
   setStatus("previewQueued", "previewQueuedText");
   requestRealtimeRender("api-test");
 });

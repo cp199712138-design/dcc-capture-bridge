@@ -48,10 +48,15 @@ The UI includes an API status panel and a `Test API` button. If OpenAI or
 Custom API is selected but missing configuration, the page shows the missing
 `.env` setting instead of silently falling back to local preview.
 
+The UI also includes an `API Settings` panel. It can save provider base URL,
+model name, and API key into a local `.env` file. Saved keys are never returned
+to the browser; the page only shows whether a key exists.
+
 Enable OpenAI image editing by starting the server with:
 
 ```powershell
 $env:OPENAI_API_KEY="YOUR_KEY"
+$env:OPENAI_BASE_URL="https://api.openai.com/v1"
 $env:OPENAI_IMAGE_MODEL="gpt-image-1.5"
 node serve-static.mjs
 ```
@@ -68,6 +73,7 @@ Customers can bring their own image API without changing the browser code:
 ```powershell
 $env:DCC_CUSTOM_API_URL="https://your-api.example.com/render"
 $env:DCC_CUSTOM_API_KEY="YOUR_CUSTOM_KEY"
+$env:DCC_CUSTOM_API_MODEL="YOUR_IMAGE_MODEL"
 $env:DCC_CUSTOM_API_AUTH_HEADER="authorization"
 $env:DCC_CUSTOM_API_AUTH_SCHEME="Bearer"
 node serve-static.mjs
