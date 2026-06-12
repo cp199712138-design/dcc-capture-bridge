@@ -142,6 +142,9 @@ try {
   })`);
 
   client.close();
+  if (!report.hasSourceCanvas || !report.promptVisible || !report.toolbarVisible || !report.menuOpen) {
+    throw new Error(`Browser smoke failed: ${JSON.stringify(report)}`);
+  }
   console.log(JSON.stringify({ browser_smoke_ok: true, report }));
 } finally {
   chrome.kill();

@@ -39,6 +39,8 @@ const copy = {
     apiTestOk: "API connection passed",
     apiTestFailed: "API connection failed",
     apiTestLocal: "Local preview is active. Choose OpenAI or Custom API to test a remote provider.",
+    staticDemo: "Static demo",
+    staticDemoText: "Public demo mode is active. Canvas editing works, while cloud API calls require a local or hosted server.",
     apiOpenAiSubtitle: "Configure base URL, API key, and image model.",
     apiCustomSubtitle: "Configure a customer-owned compatible render endpoint.",
     apiLocal: "Local preview only",
@@ -161,6 +163,8 @@ const copy = {
     apiTestOk: "API \u8fde\u63a5\u901a\u8fc7",
     apiTestFailed: "API \u8fde\u63a5\u5931\u8d25",
     apiTestLocal: "\u5f53\u524d\u662f\u672c\u5730\u9884\u89c8\u3002\u8bf7\u9009\u62e9 OpenAI \u6216\u81ea\u5b9a\u4e49 API \u518d\u6d4b\u8bd5\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u3002",
+    staticDemo: "\u9759\u6001\u6f14\u793a",
+    staticDemoText: "\u5f53\u524d\u662f\u516c\u5f00\u9759\u6001\u6f14\u793a\u6a21\u5f0f\u3002\u753b\u5e03\u7f16\u8f91\u53ef\u7528\uff0c\u4e91\u7aef API \u9700\u8981\u672c\u5730\u6216\u7ebf\u4e0a\u670d\u52a1\u7aef\u3002",
     apiOpenAiSubtitle: "\u914d\u7f6e\u8bf7\u6c42\u5730\u5740\u3001API Key \u548c\u751f\u56fe\u6a21\u578b\u3002",
     apiCustomSubtitle: "\u914d\u7f6e\u5ba2\u6237\u81ea\u6709\u7684\u517c\u5bb9\u751f\u56fe\u63a5\u53e3\u3002",
     apiLocal: "\u4ec5\u672c\u5730\u9884\u89c8",
@@ -335,6 +339,7 @@ const maskCanvas = document.createElement("canvas");
 const maskCtx = maskCanvas.getContext("2d");
 const fxCanvas = document.createElement("canvas");
 const fxCtx = fxCanvas.getContext("2d");
+const STATIC_API_CONFIG_KEY = "dcc-capture-static-api-config";
 
 function tr(key) {
   return (copy[state.lang] && copy[state.lang][key]) || copy.en[key] || key;
@@ -399,6 +404,11 @@ function updateI18n() {
 
 function updateApiSummary(payload = {}) {
   state.apiStatus = payload;
+  if (payload.static_demo) {
+    ui.apiSummary.textContent = tr("staticDemo");
+    ui.apiHelp.textContent = tr("staticDemoText");
+    return;
+  }
   if (payload.openai_configured) {
     ui.apiSummary.textContent = tr("apiOpenAiReady");
   } else if (payload.custom_api_configured) {
@@ -409,9 +419,59 @@ function updateApiSummary(payload = {}) {
   ui.apiHelp.textContent = tr("apiHelp");
 }
 
+function enterStaticDemoMode(text = tr("staticDemoText")) {
+  state.apiStatus = { static_demo: true };
+  updateApiSummary(state.apiStatus);
+  state.generatedImage = null;
+  setApiState("local", "localPreview");
+  setRequestState("local", "idle");
+  setStatus("staticDemo", "staticDemoText", text);
+  draw();
+}
+
+function loadStaticApiConfig() {
+  try {
+    return JSON.parse(localStorage.getItem(STATIC_API_CONFIG_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveStaticApiConfig(payload) {
+  const current = loadStaticApiConfig();
+  const providerKey = payload.provider === "openai" ? "openai" : "custom";
+  const next = {
+    ...current,
+    static_demo: true,
+    [providerKey]: {
+      ...(current[providerKey] || {}),
+      base_url: payload.baseUrl,
+      model: payload.model,
+      method: payload.method,
+      auth_header: payload.authHeader,
+      auth_scheme: payload.authScheme,
+      key_saved: Boolean(payload.apiKey || current[providerKey]?.api_key),
+      api_key: payload.apiKey || current[providerKey]?.api_key || "",
+    },
+  };
+  localStorage.setItem(STATIC_API_CONFIG_KEY, JSON.stringify(next));
+  return next;
+}
+
 async function loadApiConfig() {
-  const response = await fetch("/api/config", { cache: "no-store" });
-  state.apiConfig = await response.json();
+  try {
+    const response = await fetch("/api/config", { cache: "no-store" });
+    state.apiConfig = await response.json();
+  } catch {
+    const stored = loadStaticApiConfig();
+    state.apiConfig = {
+      static_demo: true,
+      ...stored,
+      openai: { base_url: "https://api.openai.com/v1", model: "gpt-image-2", ...(stored.openai || {}) },
+      custom: { method: "POST", auth_header: "authorization", auth_scheme: "Bearer", ...(stored.custom || {}) },
+    };
+    enterStaticDemoMode();
+  }
   renderApiConfigForm();
 }
 
@@ -458,7 +518,7 @@ function apiFormPayload(provider = state.apiConfigTab) {
     provider,
     baseUrl: (ui.apiBaseUrlInput.value || saved.base_url || "").trim(),
     model: (ui.apiModelInput.value || saved.model || "").trim(),
-    apiKey: ui.apiKeyInput.value.trim(),
+    apiKey: ui.apiKeyInput.value.trim() || saved.api_key || "",
     method: ui.apiMethodInput.value || saved.method || "POST",
     authHeader: (ui.apiAuthHeaderInput.value || saved.auth_header || "authorization").trim(),
     authScheme: (ui.apiAuthSchemeInput.value || saved.auth_scheme || "Bearer").trim(),
@@ -468,18 +528,60 @@ function apiFormPayload(provider = state.apiConfigTab) {
 async function saveApiSettings() {
   const payload = apiFormPayload(state.apiConfigTab);
   ui.apiModalStatus.textContent = "Saving...";
-  const response = await fetch("/api/config", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json();
-  if (!data.ok) throw new Error(data.message || "Save failed");
-  state.apiConfig = data.config;
+  try {
+    const response = await fetch("/api/config", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!data.ok) throw new Error(data.message || "Save failed");
+    state.apiConfig = data.config;
+    await checkApiStatus();
+  } catch {
+    state.apiConfig = saveStaticApiConfig(payload);
+    enterStaticDemoMode();
+  }
   ui.apiKeyInput.value = "";
   renderApiConfigForm();
-  await checkApiStatus();
   ui.apiModalStatus.textContent = tr("saved");
+}
+
+function directCustomConfig(payload = {}) {
+  const stored = loadStaticApiConfig();
+  const saved = stored.custom || state.apiConfig?.custom || {};
+  return {
+    provider: "custom-http",
+    baseUrl: payload.baseUrl || saved.base_url || "",
+    model: payload.model || saved.model || "",
+    apiKey: payload.apiKey || saved.api_key || "",
+    method: payload.method || saved.method || "POST",
+    authHeader: payload.authHeader || saved.auth_header || "authorization",
+    authScheme: payload.authScheme || saved.auth_scheme || "Bearer",
+  };
+}
+
+async function callDirectCustomApi(requestBody, payload = {}) {
+  const config = directCustomConfig(payload);
+  if (!config.baseUrl) throw new Error(state.lang === "cn" ? "\u8bf7\u5148\u586b\u5199 Custom API \u8bf7\u6c42\u5730\u5740\u3002" : "Set the Custom API URL first.");
+  const headers = { "content-type": "application/json" };
+  if (config.apiKey) headers[config.authHeader || "authorization"] = `${config.authScheme || "Bearer"} ${config.apiKey}`.trim();
+  const response = await fetch(config.baseUrl, {
+    method: config.method || "POST",
+    headers,
+    body: JSON.stringify({
+      ...requestBody,
+      model: config.model || requestBody.model || "",
+      dcc_capture_bridge: {
+        ...(requestBody.dcc_capture_bridge || {}),
+        static_demo_direct: true,
+        contract: "custom-http-json-v1",
+      },
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || data.error || `HTTP ${response.status}`);
+  return data;
 }
 
 async function testApiConnection(source = "panel") {
@@ -511,11 +613,34 @@ async function testApiConnection(source = "panel") {
     setRequestState(data.ok ? "api" : "error", data.ok ? "apiTestOk" : "apiTestFailed");
     setStatus(data.ok ? "apiTestOk" : "apiTestFailed", data.ok ? "apiTestOk" : "apiTestFailed", text || "");
   } catch (error) {
-    const text = String(error.message || error);
+    if (provider === "custom-http") {
+      try {
+        const data = await callDirectCustomApi({
+          schema_version: "0.2.0",
+          task: "connection_test",
+          prompt: "DCC Capture Bridge connection test",
+          dcc_capture_bridge: { test: true, contract: "custom-http-json-v1" },
+        }, payload);
+        const text = state.lang === "cn" ? data.message_cn || data.message || "Custom API \u8fde\u63a5\u901a\u8fc7" : data.message_en || data.message || "Custom API connection passed";
+        if (source === "modal") ui.apiModalStatus.textContent = text;
+        setApiState("api", "apiTestOk");
+        setRequestState("api", "apiTestOk");
+        setStatus("apiTestOk", "apiTestOk", text);
+        return;
+      } catch (directError) {
+        const text = String(directError.message || directError);
+        if (source === "modal") ui.apiModalStatus.textContent = text;
+        setApiState("error", "apiTestFailed");
+        setRequestState("error", "apiTestFailed");
+        setStatus("apiTestFailed", "apiTestFailed", text);
+        return;
+      }
+    }
+    const text = provider === "openai" ? tr("staticDemoText") : String(error.message || error);
     if (source === "modal") ui.apiModalStatus.textContent = text;
-    setApiState("error", "apiTestFailed");
-    setRequestState("error", "apiTestFailed");
-    setStatus("apiTestFailed", "apiTestFailed", text);
+    setApiState(provider === "openai" ? "local" : "error", provider === "openai" ? "staticDemo" : "apiTestFailed");
+    setRequestState(provider === "openai" ? "local" : "error", provider === "openai" ? "idle" : "apiTestFailed");
+    setStatus(provider === "openai" ? "staticDemo" : "apiTestFailed", provider === "openai" ? "staticDemoText" : "apiTestFailed", text);
   }
 }
 
@@ -1216,17 +1341,18 @@ async function requestRealtimeRender(reason) {
 
   setApiState("busy", "rendering");
   setRequestState("busy", "rendering");
+  const requestBody = {
+    ...state.lastRequest,
+    reason,
+    sourceImageDataUrl: isApiTest ? transparentPixelDataUrl() : sourceDataUrl(),
+    maskDataUrl: isApiTest ? transparentPixelDataUrl() : editMaskDataUrl(),
+  };
 
   try {
     const response = await fetch("/api/realtime-render", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        ...state.lastRequest,
-        reason,
-        sourceImageDataUrl: isApiTest ? transparentPixelDataUrl() : sourceDataUrl(),
-        maskDataUrl: isApiTest ? transparentPixelDataUrl() : editMaskDataUrl(),
-      }),
+      body: JSON.stringify(requestBody),
       signal: state.renderController.signal,
     });
     const payload = await response.json();
@@ -1249,11 +1375,30 @@ async function requestRealtimeRender(reason) {
     setStatus(isError ? "apiMissing" : "localPreview", isError ? "apiMissing" : "noKey", state.lang === "cn" ? payload.message_cn || tr("noKey") : payload.message_en || tr("noKey"));
   } catch (error) {
     if (error.name === "AbortError") return;
+    if (ui.providerSelect.value === "custom-http") {
+      try {
+        const payload = await callDirectCustomApi(requestBody);
+        if (seq !== state.renderSeq) return;
+        const imageDataUrl = payload.imageDataUrl || (payload.b64_json ? `data:image/png;base64,${payload.b64_json}` : "");
+        if (imageDataUrl) {
+          loadGeneratedImage(imageDataUrl);
+          setApiState("api", "apiOutput");
+          setRequestState("api", "apiOutput");
+          setStatus("outputUpdated", "outputUpdatedText", state.lang === "cn" ? payload.message_cn || payload.message || "" : payload.message_en || payload.message || "");
+          return;
+        }
+        throw new Error(state.lang === "cn" ? "Custom API \u672a\u8fd4\u56de imageDataUrl \u6216 b64_json\u3002" : "Custom API did not return imageDataUrl or b64_json.");
+      } catch (directError) {
+        state.generatedImage = null;
+        draw();
+        setApiState("error", "apiError");
+        setRequestState("error", "apiError");
+        setStatus("apiError", "apiError", String(directError.message || directError));
+        return;
+      }
+    }
     state.generatedImage = null;
-    draw();
-    setApiState("error", "apiError");
-    setRequestState("error", "apiError");
-    setStatus("apiError", "apiError", String(error.message || error));
+    enterStaticDemoMode();
   }
 }
 
@@ -1578,8 +1723,7 @@ async function checkApiStatus() {
     setApiState(configured ? "api" : "local", configured ? "apiOutput" : "localPreview");
     updateApiSummary(payload);
   } catch {
-    setApiState("error", "apiError");
-    ui.apiSummary.textContent = tr("apiError");
+    enterStaticDemoMode();
   }
 }
 

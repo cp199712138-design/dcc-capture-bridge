@@ -99,6 +99,20 @@ or:
 
 Full request and response details are in `docs/API_ADAPTER.md`.
 
+## Public Static Demo
+
+The canvas can be deployed as a static page for customer testing. In static
+demo mode:
+
+- the UI, import, drawing, selection, transform, prompt, and local preview work
+- customers can configure `Custom API` in the API Settings panel
+- Custom API settings are stored only in that customer's browser `localStorage`
+- the customer API must allow browser CORS requests
+- OpenAI keys should use the local/hosted server proxy, not direct browser calls
+
+Static demo is for trying the product flow. Full production use should run a
+server proxy so provider keys are not exposed to the browser.
+
 ## Verify Before Shipping
 
 Run the smoke checks from the project root:
@@ -121,6 +135,18 @@ right-click layer menu, and duplicates the selected region.
 - Do not fake AI output when no backend is configured.
 - Keep Chinese and English UI modes separate.
 - Preserve DCC evidence: shape, material boundaries, camera angle, and masks.
+
+## Development Modules
+
+Work is split by module so each coding pass can load only the relevant context:
+
+- `development/README.md`
+- `development/01-ui-shell/`
+- `development/02-canvas-editor/`
+- `development/03-realtime-api/`
+- `development/04-dcc-adapters/`
+- `development/05-ai-backends/`
+- `development/06-testing-release/`
 
 ## 3ds Max MVP
 

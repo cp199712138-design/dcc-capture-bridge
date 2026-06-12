@@ -66,6 +66,7 @@ const report = {
   hasRealtimeApiClient: app.includes("/api/realtime-render") && app.includes("scheduleRealtimeRender") && app.includes("sourceImageDataUrl") && app.includes("maskDataUrl"),
   hasRealtimeApiServer: localServer.includes("/api/realtime-render") && localServer.includes("OPENAI_API_KEY") && packageServer.includes("/api/realtime-render"),
   hasProviderTestEndpoint: app.includes("/api/test-provider") && localServer.includes("/api/test-provider") && packageServer.includes("/api/test-provider"),
+  hasStaticDemoFallback: app.includes("STATIC_API_CONFIG_KEY") && app.includes("enterStaticDemoMode") && app.includes("callDirectCustomApi"),
   hasCustomApiAdapter: html.includes('value="custom-http"') && localServer.includes("DCC_CUSTOM_API_URL") && packageServer.includes("DCC_CUSTOM_API_URL"),
   hasApiTestUi: html.includes('id="apiSummary"') && html.includes('id="testApiBtn"') && app.includes('reason === "api-test"'),
   hasApiSettingsUi: html.includes('id="apiModal"') && app.includes("saveApiSettings") && app.includes("/api/config") && app.includes("openApiSettings"),

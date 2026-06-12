@@ -96,3 +96,18 @@ Optional messages:
   "message_cn": "已生成"
 }
 ```
+
+## Static Demo Direct Mode
+
+When the page is hosted as a static site, there is no local Node proxy. In that
+case customers can use the API Settings panel to configure `Custom API`.
+
+The browser then calls the customer endpoint directly using the same JSON
+contract. Requirements:
+
+- the endpoint must allow browser CORS requests from the static demo domain
+- the customer accepts that their key is stored in their own browser localStorage
+- OpenAI-compatible keys should use the local/hosted server proxy instead of
+  static direct mode
+
+This mode is intended for customer testing, not final production security.
