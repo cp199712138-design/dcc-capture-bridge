@@ -4,7 +4,9 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 
 const root = process.cwd();
-const port = 8765;
+const port = Number(process.env.PORT || 8765);
+const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-2";
+const TRANSPARENT_PIXEL_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 loadLocalEnv();
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -43,6 +45,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/api/config") {
       const body = await readJsonBody(req);
       const result = saveProviderConfig(body);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/test-provider") {
+      const body = await readJsonBody(req);
+      const result = await handleProviderTest(body);
       sendJson(res, 200, result);
       return;
     }
@@ -130,10 +139,11 @@ async function handleRealtimeRender(body) {
   }
 
   const form = new FormData();
-  form.set("model", process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5");
+  form.set("model", process.env.OPENAI_IMAGE_MODEL || OPENAI_IMAGE_MODEL_DEFAULT);
   form.set("prompt", prompt || "Render the selected region as a clean product scene while preserving the source structure.");
   form.set("size", chooseApiSize(body.aspectRatio));
-  form.set("image", new Blob([Buffer.from(source, "base64")], { type: "image/png" }), "source.png");
+  form.set("quality", "low");
+  form.append("image[]", new Blob([Buffer.from(source, "base64")], { type: "image/png" }), "source.png");
   form.set("mask", new Blob([Buffer.from(mask, "base64")], { type: "image/png" }), "mask.png");
 
   const openAiBase = String(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
@@ -169,12 +179,90 @@ async function handleRealtimeRender(body) {
   };
 }
 
+async function handleProviderTest(body) {
+  const config = providerConfigFromRequest(body);
+  const provider = String(body.provider || "auto");
+
+  if (provider === "openai") {
+    if (!config.openai.apiKey) return missingOpenAiConfig();
+    const baseUrl = normalizeBaseUrl(config.openai.baseUrl || "https://api.openai.com/v1");
+    const model = config.openai.model || OPENAI_IMAGE_MODEL_DEFAULT;
+    try {
+      const response = await fetchWithTimeout(`${baseUrl}/models/${encodeURIComponent(model)}`, {
+        headers: { authorization: `Bearer ${config.openai.apiKey}` }
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        return providerTestError("openai", response.status, text, "OpenAI API key or model check failed.");
+      }
+      return {
+        ok: true,
+        provider: "openai",
+        model,
+        host: safeHost(baseUrl),
+        cn: "OpenAI \u8fde\u63a5\u901a\u8fc7",
+        en: "OpenAI connection passed",
+        message_cn: `OpenAI \u5df2\u8fde\u901a\uff0c\u6a21\u578b: ${model}`,
+        message_en: `OpenAI is reachable. Model: ${model}`
+      };
+    } catch (error) {
+      return providerTestException("openai", error);
+    }
+  }
+
+  if (provider === "custom-http") {
+    if (!config.custom.url) return missingCustomConfig();
+    try {
+      const response = await callCustomEndpoint({
+        config: config.custom,
+        payload: customRequestPayload({
+          schema_version: "0.2.0",
+          session_id: "dcc_connection_test",
+          task: "connection_test",
+          prompt: "DCC Capture Canvas connection test",
+          strength: 0,
+          assets: [],
+          mask: { type: "none", strokes: [] },
+          output: { target: "healthcheck", mode: "connection_test", type: "image" },
+          sourceImageDataUrl: TRANSPARENT_PIXEL_DATA_URL,
+          maskDataUrl: TRANSPARENT_PIXEL_DATA_URL,
+          reason: "api-test"
+        }, true)
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        return providerTestError("custom-http", response.status, text, "Custom API request failed.");
+      }
+      return {
+        ok: true,
+        provider: "custom-http",
+        host: safeHost(config.custom.url),
+        cn: "\u81ea\u5b9a\u4e49 API \u8fde\u63a5\u901a\u8fc7",
+        en: "Custom API connection passed",
+        message_cn: "\u81ea\u5b9a\u4e49 API \u5df2\u63a5\u6536\u6807\u51c6\u6d4b\u8bd5 payload\u3002",
+        message_en: "Custom API accepted the standard test payload."
+      };
+    } catch (error) {
+      return providerTestException("custom-http", error);
+    }
+  }
+
+  return {
+    ok: false,
+    provider: "mock-local",
+    cn: "\u672c\u5730\u9884\u89c8",
+    en: "Local Preview",
+    message_cn: "\u5f53\u524d\u662f\u672c\u5730\u9884\u89c8\uff0c\u8bf7\u9009\u62e9 OpenAI \u6216\u81ea\u5b9a\u4e49 API \u518d\u6d4b\u8bd5\u3002",
+    message_en: "Local preview is active. Choose OpenAI or Custom API to test a remote provider."
+  };
+}
+
 function getProviderConfig() {
   return {
     ok: true,
     openai: {
       base_url: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
-      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5",
+      model: process.env.OPENAI_IMAGE_MODEL || OPENAI_IMAGE_MODEL_DEFAULT,
       key_saved: Boolean(process.env.OPENAI_API_KEY)
     },
     custom: {
@@ -197,7 +285,7 @@ function saveProviderConfig(body) {
   const updates = {};
   if (provider === "openai") {
     updates.OPENAI_BASE_URL = String(body.baseUrl || "https://api.openai.com/v1").trim();
-    updates.OPENAI_IMAGE_MODEL = String(body.model || "gpt-image-1.5").trim();
+    updates.OPENAI_IMAGE_MODEL = String(body.model || OPENAI_IMAGE_MODEL_DEFAULT).trim();
     if (String(body.apiKey || "").trim()) updates.OPENAI_API_KEY = String(body.apiKey).trim();
   } else {
     updates.DCC_CUSTOM_API_URL = String(body.baseUrl || "").trim();
@@ -292,32 +380,10 @@ async function handleCustomRender(body) {
     };
   }
 
-  const headers = {
-    "content-type": "application/json",
-    ...parseJsonEnv("DCC_CUSTOM_API_HEADERS")
-  };
-  if (process.env.DCC_CUSTOM_API_KEY) {
-    const authHeader = process.env.DCC_CUSTOM_API_AUTH_HEADER || "authorization";
-    const authScheme = process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer";
-    headers[authHeader] = authScheme ? `${authScheme} ${process.env.DCC_CUSTOM_API_KEY}` : process.env.DCC_CUSTOM_API_KEY;
-  }
-
-  const response = await fetch(process.env.DCC_CUSTOM_API_URL, {
-    method: process.env.DCC_CUSTOM_API_METHOD || "POST",
-    headers,
-    body: JSON.stringify({
-      schema_version: body.schema_version,
-      session_id: body.session_id,
-      task: body.task || "regional_scene_generation",
-      prompt: body.prompt || "",
-      strength: body.strength,
-      assets: body.assets || [],
-      mask: body.mask || {},
-      output: body.output || {},
-      sourceImageDataUrl: body.sourceImageDataUrl || "",
-      maskDataUrl: body.maskDataUrl || "",
-      reason: body.reason || "preview"
-    })
+  const config = providerConfigFromRequest({ provider: "custom-http" }).custom;
+  const response = await callCustomEndpoint({
+    config,
+    payload: customRequestPayload(body)
   });
 
   const text = await response.text();
@@ -349,6 +415,118 @@ async function handleCustomRender(body) {
     message_cn: data.message_cn || data.message || "\u5ba2\u6237 API \u5df2\u8fd4\u56de\u3002",
     message_en: data.message_en || data.message || "Customer API returned a response."
   };
+}
+
+function providerConfigFromRequest(body = {}) {
+  return {
+    openai: {
+      baseUrl: String(body.baseUrl || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").trim(),
+      apiKey: String(body.apiKey || process.env.OPENAI_API_KEY || "").trim(),
+      model: String(body.model || process.env.OPENAI_IMAGE_MODEL || OPENAI_IMAGE_MODEL_DEFAULT).trim()
+    },
+    custom: {
+      url: String(body.baseUrl || process.env.DCC_CUSTOM_API_URL || "").trim(),
+      apiKey: String(body.apiKey || process.env.DCC_CUSTOM_API_KEY || "").trim(),
+      model: String(body.model || process.env.DCC_CUSTOM_API_MODEL || "").trim(),
+      authHeader: String(body.authHeader || process.env.DCC_CUSTOM_API_AUTH_HEADER || "authorization").trim(),
+      authScheme: String(body.authScheme || process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer").trim(),
+      method: String(body.method || process.env.DCC_CUSTOM_API_METHOD || "POST").trim().toUpperCase(),
+      headers: parseJsonEnv("DCC_CUSTOM_API_HEADERS")
+    }
+  };
+}
+
+function normalizeBaseUrl(value) {
+  return String(value || "https://api.openai.com/v1").replace(/\/+$/, "");
+}
+
+function customRequestPayload(body, isTest = false) {
+  return {
+    schema_version: body.schema_version,
+    session_id: body.session_id,
+    task: body.task || "regional_scene_generation",
+    prompt: body.prompt || "",
+    strength: body.strength,
+    assets: body.assets || [],
+    mask: body.mask || {},
+    output: body.output || {},
+    sourceImageDataUrl: body.sourceImageDataUrl || "",
+    maskDataUrl: body.maskDataUrl || "",
+    reason: body.reason || "preview",
+    dcc_capture_bridge: {
+      test: Boolean(isTest),
+      contract: "custom-http-json-v1"
+    }
+  };
+}
+
+async function callCustomEndpoint({ config, payload }) {
+  const headers = {
+    "content-type": "application/json",
+    ...(config.headers || {})
+  };
+  if (config.apiKey) {
+    headers[config.authHeader || "authorization"] = config.authScheme ? `${config.authScheme} ${config.apiKey}` : config.apiKey;
+  }
+
+  const method = config.method || "POST";
+  const url = method === "GET" ? withQuery(config.url, "dcc_test", payload.reason === "api-test" ? "1" : "0") : config.url;
+  return fetchWithTimeout(url, {
+    method,
+    headers,
+    body: method === "GET" ? undefined : JSON.stringify(payload)
+  });
+}
+
+function withQuery(value, key, queryValue) {
+  const url = new URL(value);
+  url.searchParams.set(key, queryValue);
+  return url.toString();
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function providerTestError(provider, status, text, fallback) {
+  const short = summarizeResponse(text) || fallback;
+  return {
+    ok: false,
+    provider,
+    status,
+    cn: "API \u8fde\u63a5\u5931\u8d25",
+    en: "API connection failed",
+    message_cn: `API \u8fd4\u56de ${status}: ${short}`,
+    message_en: `API returned ${status}: ${short}`
+  };
+}
+
+function providerTestException(provider, error) {
+  const text = String(error.message || error);
+  return {
+    ok: false,
+    provider,
+    cn: "API \u8fde\u63a5\u5931\u8d25",
+    en: "API connection failed",
+    message_cn: text,
+    message_en: text
+  };
+}
+
+function summarizeResponse(text) {
+  if (!text) return "";
+  try {
+    const data = JSON.parse(text);
+    return data.error?.message || data.message || JSON.stringify(data).slice(0, 240);
+  } catch {
+    return String(text).slice(0, 240);
+  }
 }
 
 function parseJsonEnv(name) {

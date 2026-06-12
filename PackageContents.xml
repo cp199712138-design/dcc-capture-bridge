@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage
+    SchemaVersion="1.0"
+    AutodeskProduct="3ds Max"
+    ProductType="Application"
+    Name="Perfect HD Screenshot Pro"
+    AppVersion="0.2.0"
+    FriendlyVersion="0.2.0"
+    Description="Viewport screenshot and high-resolution render helper for 3ds Max."
+    Author="Codex"
+    UpgradeCode="{4F1E11F7-8B68-4A8A-9F39-0B6F2F6EB7D1}">
+    <CompanyDetails Name="Codex" />
+    <Components Description="post-start-up scripts parts">
+        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2022" SeriesMax="2027" />
+        <ComponentEntry ModuleName="./Contents/scripts/startup.ms" />
+    </Components>
+</ApplicationPackage>

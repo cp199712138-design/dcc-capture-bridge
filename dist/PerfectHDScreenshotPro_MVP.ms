@@ -489,7 +489,7 @@ rollout PHDS_MainRollout "DCC Capture Bridge" width:500 height:720
             if scriptPath != undefined and scriptPath != "" do
             (
                 local scriptFolder = getFilenamePath scriptPath
-                localCanvas = pathConfig.normalizePath (pathConfig.appendPath scriptFolder "..\capture-canvas\index.html")
+                localCanvas = pathConfig.normalizePath (pathConfig.appendPath scriptFolder "..\\capture-canvas\\index.html")
             )
         )
         catch()

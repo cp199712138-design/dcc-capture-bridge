@@ -7,6 +7,7 @@ local Node server, and the local server calls the configured provider.
 
 ```text
 GET  /api/status
+POST /api/test-provider
 POST /api/realtime-render
 ```
 
@@ -19,7 +20,7 @@ OpenAI:
 ```text
 OPENAI_API_KEY=your_key
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_IMAGE_MODEL=gpt-image-1.5
+OPENAI_IMAGE_MODEL=gpt-image-2
 ```
 
 Custom customer API:
@@ -38,7 +39,8 @@ Do not commit `.env`.
 
 ## Custom API Request
 
-The local server sends JSON:
+The local server sends the same JSON shape for render requests and a smaller
+`connection_test` variant for `POST /api/test-provider`:
 
 ```json
 {
@@ -62,7 +64,11 @@ The local server sends JSON:
   },
   "sourceImageDataUrl": "data:image/png;base64,...",
   "maskDataUrl": "data:image/png;base64,...",
-  "reason": "preview"
+  "reason": "preview",
+  "dcc_capture_bridge": {
+    "test": false,
+    "contract": "custom-http-json-v1"
+  }
 }
 ```
 

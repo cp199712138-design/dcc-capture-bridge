@@ -22,7 +22,9 @@ Customer-testable features in this build:
 - brush, eraser, rectangle, circle, clear, undo, redo
 - prompt, live toggle, seed, ratio, strength, provider selector
 - local `/api/realtime-render` interface for future API and ComfyUI adapters
-- selectable and movable mask regions in Select mode
+- selectable, movable, resizable mask regions in Select mode
+- right-click layer menu: lock, ordering, duplicate, delete, flip, fit, fill
+- API Settings panel for OpenAI-compatible and custom HTTP image providers
 
 Run the local canvas:
 
@@ -42,6 +44,7 @@ http://127.0.0.1:8765/capture-canvas/index.html
 The browser never stores an API key. The local Node server exposes:
 
 - `GET /api/status`
+- `POST /api/test-provider`
 - `POST /api/realtime-render`
 
 The UI includes an API status panel and a `Test API` button. If OpenAI or
@@ -57,7 +60,7 @@ Enable OpenAI image editing by starting the server with:
 ```powershell
 $env:OPENAI_API_KEY="YOUR_KEY"
 $env:OPENAI_BASE_URL="https://api.openai.com/v1"
-$env:OPENAI_IMAGE_MODEL="gpt-image-1.5"
+$env:OPENAI_IMAGE_MODEL="gpt-image-2"
 node serve-static.mjs
 ```
 
@@ -95,6 +98,21 @@ or:
 ```
 
 Full request and response details are in `docs/API_ADAPTER.md`.
+
+## Verify Before Shipping
+
+Run the smoke checks from the project root:
+
+```powershell
+node capture-canvas/check-page.mjs
+node capture-canvas/simulate-flow.mjs
+node capture-canvas/test-api-contract.mjs
+node capture-canvas/browser-smoke.mjs
+```
+
+`browser-smoke.mjs` launches a clean headless Chrome profile with extensions
+disabled, loads the canvas, clicks the example, draws a region, opens the
+right-click layer menu, and duplicates the selected region.
 
 ## Product Direction
 

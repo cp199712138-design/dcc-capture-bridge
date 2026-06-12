@@ -36,6 +36,11 @@ const copy = {
     keySaved: "Key saved. Leave blank to keep it.",
     noKeySaved: "No key saved.",
     saved: "Saved to local .env.",
+    apiTestOk: "API connection passed",
+    apiTestFailed: "API connection failed",
+    apiTestLocal: "Local preview is active. Choose OpenAI or Custom API to test a remote provider.",
+    apiOpenAiSubtitle: "Configure base URL, API key, and image model.",
+    apiCustomSubtitle: "Configure a customer-owned compatible render endpoint.",
     apiLocal: "Local preview only",
     apiOpenAiReady: "OpenAI configured",
     apiCustomReady: "Custom API configured",
@@ -92,6 +97,19 @@ const copy = {
     circleHint: "Drag to create a circular region.",
     selected: "Region selected",
     selectedText: "Drag the selected mask region to move it.",
+    layerChanged: "Layer updated",
+    layerChangedText: "Selected region was updated.",
+    lockLayer: "Lock",
+    bringToFront: "Bring to front",
+    bringForward: "Bring forward",
+    sendBackward: "Send backward",
+    sendToBack: "Send to back",
+    duplicateLayer: "Duplicate",
+    deleteLayer: "Delete",
+    flipHorizontal: "Flip Horizontal",
+    flipVertical: "Flip Vertical",
+    fitScreen: "Fit to screen",
+    fillScreen: "Fill screen",
     noSelection: "No region selected",
     noSelectionText: "Click a mask region first, then drag to move it.",
     exampleLoaded: "Example loaded",
@@ -140,6 +158,11 @@ const copy = {
     keySaved: "\u5df2\u4fdd\u5b58 Key\uff0c\u7559\u7a7a\u4fdd\u6301\u4e0d\u53d8\u3002",
     noKeySaved: "\u8fd8\u6ca1\u6709\u4fdd\u5b58 Key\u3002",
     saved: "\u5df2\u4fdd\u5b58\u5230\u672c\u5730 .env\u3002",
+    apiTestOk: "API \u8fde\u63a5\u901a\u8fc7",
+    apiTestFailed: "API \u8fde\u63a5\u5931\u8d25",
+    apiTestLocal: "\u5f53\u524d\u662f\u672c\u5730\u9884\u89c8\u3002\u8bf7\u9009\u62e9 OpenAI \u6216\u81ea\u5b9a\u4e49 API \u518d\u6d4b\u8bd5\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u3002",
+    apiOpenAiSubtitle: "\u914d\u7f6e\u8bf7\u6c42\u5730\u5740\u3001API Key \u548c\u751f\u56fe\u6a21\u578b\u3002",
+    apiCustomSubtitle: "\u914d\u7f6e\u5ba2\u6237\u81ea\u6709\u7684\u517c\u5bb9\u751f\u56fe\u63a5\u53e3\u3002",
     apiLocal: "\u4ec5\u672c\u5730\u9884\u89c8",
     apiOpenAiReady: "OpenAI \u5df2\u914d\u7f6e",
     apiCustomReady: "\u81ea\u5b9a\u4e49 API \u5df2\u914d\u7f6e",
@@ -196,6 +219,19 @@ const copy = {
     circleHint: "\u62d6\u62fd\u521b\u5efa\u5706\u5f62\u533a\u57df\u3002",
     selected: "\u5df2\u9009\u4e2d\u533a\u57df",
     selectedText: "\u62d6\u52a8\u9009\u4e2d\u7684\u906e\u7f69\u533a\u57df\u5373\u53ef\u79fb\u52a8\u3002",
+    layerChanged: "\u56fe\u5c42\u5df2\u66f4\u65b0",
+    layerChangedText: "\u5df2\u66f4\u65b0\u9009\u4e2d\u533a\u57df\u3002",
+    lockLayer: "\u9501\u5b9a",
+    bringToFront: "\u7f6e\u4e8e\u9876\u5c42",
+    bringForward: "\u4e0a\u79fb\u4e00\u5c42",
+    sendBackward: "\u4e0b\u79fb\u4e00\u5c42",
+    sendToBack: "\u7f6e\u4e8e\u5e95\u5c42",
+    duplicateLayer: "\u590d\u5236",
+    deleteLayer: "\u5220\u9664",
+    flipHorizontal: "\u6c34\u5e73\u7ffb\u8f6c",
+    flipVertical: "\u5782\u76f4\u7ffb\u8f6c",
+    fitScreen: "\u9002\u5e94\u753b\u9762",
+    fillScreen: "\u586b\u5145\u753b\u9762",
     noSelection: "\u672a\u9009\u4e2d\u533a\u57df",
     noSelectionText: "\u5148\u70b9\u51fb\u4e00\u4e2a\u906e\u7f69\u533a\u57df\uff0c\u518d\u62d6\u52a8\u79fb\u52a8\u3002",
     exampleLoaded: "\u793a\u4f8b\u5df2\u52a0\u8f7d",
@@ -225,6 +261,10 @@ const state = {
   redoStack: [],
   selectedStrokeIndex: -1,
   movingSelection: false,
+  resizingSelection: false,
+  resizeHandle: "",
+  resizeOriginal: null,
+  resizeBounds: null,
   moveLast: null,
   drawing: false,
   draft: null,
@@ -245,6 +285,7 @@ const ui = {
   sourceCanvas: $("sourceCanvas"),
   resultCanvas: $("resultCanvas"),
   sourceEmpty: $("sourceEmpty"),
+  layerMenu: $("layerMenu"),
   assetInfo: $("assetInfo"),
   statusTitle: $("statusTitle"),
   statusText: $("statusText"),
@@ -396,11 +437,9 @@ function renderApiConfigForm() {
   ui.apiOpenAiTab.classList.toggle("active", isOpenAi);
   ui.apiCustomTab.classList.toggle("active", !isOpenAi);
   ui.apiProviderTitle.textContent = isOpenAi ? "OpenAI" : "Custom API";
-  ui.apiProviderSubtitle.textContent = isOpenAi
-    ? "Configure OpenAI-compatible image edit endpoint."
-    : "Configure a customer-owned API endpoint.";
+  ui.apiProviderSubtitle.textContent = isOpenAi ? tr("apiOpenAiSubtitle") : tr("apiCustomSubtitle");
   ui.apiBaseUrlInput.value = item.base_url || (isOpenAi ? "https://api.openai.com/v1" : "");
-  ui.apiModelInput.value = item.model || (isOpenAi ? "gpt-image-1.5" : "");
+  ui.apiModelInput.value = item.model || (isOpenAi ? "gpt-image-2" : "");
   ui.apiMethodInput.value = item.method || "POST";
   ui.apiMethodInput.disabled = isOpenAi;
   ui.apiAuthHeaderInput.value = item.auth_header || "authorization";
@@ -409,19 +448,25 @@ function renderApiConfigForm() {
   ui.apiAuthSchemeInput.disabled = isOpenAi;
   ui.apiKeyInput.value = "";
   ui.apiKeySavedText.textContent = item.key_saved ? tr("keySaved") : tr("noKeySaved");
-  ui.apiModalStatus.textContent = "Ready.";
+  ui.apiModalStatus.textContent = tr("ready");
+}
+
+function apiFormPayload(provider = state.apiConfigTab) {
+  const config = state.apiConfig || {};
+  const saved = provider === "openai" ? config.openai || {} : config.custom || {};
+  return {
+    provider,
+    baseUrl: (ui.apiBaseUrlInput.value || saved.base_url || "").trim(),
+    model: (ui.apiModelInput.value || saved.model || "").trim(),
+    apiKey: ui.apiKeyInput.value.trim(),
+    method: ui.apiMethodInput.value || saved.method || "POST",
+    authHeader: (ui.apiAuthHeaderInput.value || saved.auth_header || "authorization").trim(),
+    authScheme: (ui.apiAuthSchemeInput.value || saved.auth_scheme || "Bearer").trim(),
+  };
 }
 
 async function saveApiSettings() {
-  const payload = {
-    provider: state.apiConfigTab,
-    baseUrl: ui.apiBaseUrlInput.value.trim(),
-    model: ui.apiModelInput.value.trim(),
-    apiKey: ui.apiKeyInput.value.trim(),
-    method: ui.apiMethodInput.value,
-    authHeader: ui.apiAuthHeaderInput.value.trim(),
-    authScheme: ui.apiAuthSchemeInput.value.trim(),
-  };
+  const payload = apiFormPayload(state.apiConfigTab);
   ui.apiModalStatus.textContent = "Saving...";
   const response = await fetch("/api/config", {
     method: "POST",
@@ -435,6 +480,43 @@ async function saveApiSettings() {
   renderApiConfigForm();
   await checkApiStatus();
   ui.apiModalStatus.textContent = tr("saved");
+}
+
+async function testApiConnection(source = "panel") {
+  const provider = source === "modal" ? state.apiConfigTab : ui.providerSelect.value;
+  if (provider === "auto" || provider === "mock-local") {
+    const text = tr("apiTestLocal");
+    if (source === "modal") ui.apiModalStatus.textContent = text;
+    setApiState("local", "apiLocal");
+    setRequestState("local", "idle");
+    setStatus("apiLocal", "apiTestLocal", text);
+    return;
+  }
+
+  const payload = source === "modal" ? apiFormPayload(provider) : { provider };
+  if (source === "modal") ui.apiModalStatus.textContent = `${tr("checking")}...`;
+  setApiState("busy", "checking");
+  setRequestState("busy", "checking");
+
+  try {
+    const response = await fetch("/api/test-provider", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    const text = state.lang === "cn" ? data.message_cn || data.cn : data.message_en || data.en;
+    if (source === "modal") ui.apiModalStatus.textContent = text || (data.ok ? tr("apiTestOk") : tr("apiTestFailed"));
+    setApiState(data.ok ? "api" : "error", data.ok ? "apiTestOk" : "apiTestFailed");
+    setRequestState(data.ok ? "api" : "error", data.ok ? "apiTestOk" : "apiTestFailed");
+    setStatus(data.ok ? "apiTestOk" : "apiTestFailed", data.ok ? "apiTestOk" : "apiTestFailed", text || "");
+  } catch (error) {
+    const text = String(error.message || error);
+    if (source === "modal") ui.apiModalStatus.textContent = text;
+    setApiState("error", "apiTestFailed");
+    setRequestState("error", "apiTestFailed");
+    setStatus("apiTestFailed", "apiTestFailed", text);
+  }
 }
 
 function updateToolReadout() {
@@ -664,15 +746,76 @@ function strokeBounds(stroke) {
   };
 }
 
+function selectedStroke() {
+  return state.strokes[state.selectedStrokeIndex] || null;
+}
+
+function cloneStroke(stroke) {
+  return JSON.parse(JSON.stringify(stroke));
+}
+
+function transformPoint(point, bounds, target) {
+  const safeW = Math.max(1, bounds.w);
+  const safeH = Math.max(1, bounds.h);
+  return {
+    x: target.x + ((point.x - bounds.x) / safeW) * target.w,
+    y: target.y + ((point.y - bounds.y) / safeH) * target.h,
+  };
+}
+
+function transformStroke(stroke, transform) {
+  if (!stroke) return;
+  if (stroke.points) stroke.points = stroke.points.map(transform);
+  if (stroke.start) stroke.start = transform(stroke.start);
+  if (stroke.end) stroke.end = transform(stroke.end);
+}
+
+function scaleStrokeToBounds(stroke, fromBounds, toBounds) {
+  if (!stroke || !fromBounds || !toBounds) return;
+  const target = {
+    x: Math.min(toBounds.x, toBounds.x + toBounds.w),
+    y: Math.min(toBounds.y, toBounds.y + toBounds.h),
+    w: Math.max(1, Math.abs(toBounds.w)),
+    h: Math.max(1, Math.abs(toBounds.h)),
+  };
+  transformStroke(stroke, (point) => transformPoint(point, fromBounds, target));
+}
+
+function selectedHandleAt(point) {
+  const bounds = strokeBounds(selectedStroke());
+  if (!bounds) return "";
+  const handles = {
+    nw: { x: bounds.x, y: bounds.y },
+    ne: { x: bounds.x + bounds.w, y: bounds.y },
+    se: { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
+    sw: { x: bounds.x, y: bounds.y + bounds.h },
+  };
+  const hit = 12;
+  return Object.entries(handles).find(([, handle]) => Math.abs(point.x - handle.x) <= hit && Math.abs(point.y - handle.y) <= hit)?.[0] || "";
+}
+
+function boundsFromHandle(handle, original, point) {
+  const left = handle.includes("w") ? point.x : original.x;
+  const right = handle.includes("e") ? point.x : original.x + original.w;
+  const top = handle.includes("n") ? point.y : original.y;
+  const bottom = handle.includes("s") ? point.y : original.y + original.h;
+  return {
+    x: Math.min(left, right),
+    y: Math.min(top, bottom),
+    w: Math.max(8, Math.abs(right - left)),
+    h: Math.max(8, Math.abs(bottom - top)),
+  };
+}
+
 function drawSelectedOverlay(ctx) {
-  const stroke = state.strokes[state.selectedStrokeIndex];
+  const stroke = selectedStroke();
   const bounds = strokeBounds(stroke);
   if (!bounds) return;
   ctx.save();
   ctx.setLineDash([6, 5]);
   ctx.lineWidth = 2;
-  ctx.strokeStyle = "#07100d";
-  ctx.fillStyle = "rgba(7,16,13,.08)";
+  ctx.strokeStyle = stroke.locked ? "#d6b870" : "#07100d";
+  ctx.fillStyle = stroke.locked ? "rgba(214,184,112,.12)" : "rgba(7,16,13,.08)";
   if (stroke.kind === "circle") {
     const dx = stroke.end.x - stroke.start.x;
     const dy = stroke.end.y - stroke.start.y;
@@ -685,7 +828,9 @@ function drawSelectedOverlay(ctx) {
     ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
   }
   ctx.setLineDash([]);
-  ctx.fillStyle = "#88d4c0";
+  ctx.fillStyle = "#f7f9fb";
+  ctx.strokeStyle = "#07100d";
+  ctx.lineWidth = 1.5;
   const handles = [
     [bounds.x, bounds.y],
     [bounds.x + bounds.w, bounds.y],
@@ -693,9 +838,8 @@ function drawSelectedOverlay(ctx) {
     [bounds.x, bounds.y + bounds.h],
   ];
   handles.forEach(([x, y]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(x - 4, y - 4, 8, 8);
+    ctx.strokeRect(x - 4, y - 4, 8, 8);
   });
   ctx.restore();
 }
@@ -811,6 +955,10 @@ function resetMask() {
   state.draft = null;
   state.selectedStrokeIndex = -1;
   state.movingSelection = false;
+  state.resizingSelection = false;
+  state.resizeHandle = "";
+  state.resizeOriginal = null;
+  state.resizeBounds = null;
   state.moveLast = null;
   state.lastRequest = null;
   state.generatedImage = null;
@@ -819,7 +967,11 @@ function resetMask() {
 
 function setTool(tool) {
   state.tool = tool;
-  if (tool !== "select") state.movingSelection = false;
+  if (tool !== "select") {
+    state.movingSelection = false;
+    state.resizingSelection = false;
+  }
+  ui.sourceCanvas.style.cursor = tool === "select" ? "grab" : "none";
   updateToolReadout();
   const hintKey = {
     select: "selectHint",
@@ -881,6 +1033,111 @@ function translateStroke(stroke, dx, dy) {
     stroke.end.x += dx;
     stroke.end.y += dy;
   }
+}
+
+function fitBoundsIntoCanvas(fill = false) {
+  const stroke = selectedStroke();
+  const bounds = strokeBounds(stroke);
+  if (!stroke || !bounds) return;
+  const margin = fill ? 22 : Math.min(ui.sourceCanvas.clientWidth, ui.sourceCanvas.clientHeight) * 0.16;
+  const target = {
+    x: margin,
+    y: margin,
+    w: Math.max(24, ui.sourceCanvas.clientWidth - margin * 2),
+    h: Math.max(24, ui.sourceCanvas.clientHeight - margin * 2),
+  };
+  if (!fill) {
+    const scale = Math.min(target.w / Math.max(1, bounds.w), target.h / Math.max(1, bounds.h));
+    target.w = Math.max(24, bounds.w * scale);
+    target.h = Math.max(24, bounds.h * scale);
+    target.x = (ui.sourceCanvas.clientWidth - target.w) / 2;
+    target.y = (ui.sourceCanvas.clientHeight - target.h) / 2;
+  }
+  scaleStrokeToBounds(stroke, bounds, target);
+}
+
+function commitLayerChange(reason = "layer") {
+  state.generatedImage = null;
+  state.redoStack = [];
+  redrawMaskBitmap();
+  draw();
+  setStatus("layerChanged", "layerChangedText");
+  scheduleRealtimeRender(reason);
+}
+
+function moveSelectedLayer(toIndex) {
+  if (state.selectedStrokeIndex < 0) return;
+  const nextIndex = Math.max(0, Math.min(state.strokes.length - 1, toIndex));
+  if (nextIndex === state.selectedStrokeIndex) return;
+  const [stroke] = state.strokes.splice(state.selectedStrokeIndex, 1);
+  state.strokes.splice(nextIndex, 0, stroke);
+  state.selectedStrokeIndex = nextIndex;
+}
+
+function applyLayerAction(action) {
+  const stroke = selectedStroke();
+  const bounds = strokeBounds(stroke);
+  if (!stroke || !bounds) return;
+
+  if (action === "lock") {
+    stroke.locked = !stroke.locked;
+  } else if (action === "front") {
+    moveSelectedLayer(state.strokes.length - 1);
+  } else if (action === "forward") {
+    moveSelectedLayer(state.selectedStrokeIndex + 1);
+  } else if (action === "backward") {
+    moveSelectedLayer(state.selectedStrokeIndex - 1);
+  } else if (action === "back") {
+    moveSelectedLayer(0);
+  } else if (action === "duplicate") {
+    const duplicate = cloneStroke(stroke);
+    translateStroke(duplicate, 26, 26);
+    state.strokes.push(duplicate);
+    state.selectedStrokeIndex = state.strokes.length - 1;
+  } else if (action === "delete") {
+    state.strokes.splice(state.selectedStrokeIndex, 1);
+    state.selectedStrokeIndex = -1;
+  } else if (action === "flipX") {
+    transformStroke(stroke, (point) => ({ x: bounds.x + bounds.w - (point.x - bounds.x), y: point.y }));
+  } else if (action === "flipY") {
+    transformStroke(stroke, (point) => ({ x: point.x, y: bounds.y + bounds.h - (point.y - bounds.y) }));
+  } else if (action === "fit") {
+    fitBoundsIntoCanvas(false);
+  } else if (action === "fill") {
+    fitBoundsIntoCanvas(true);
+  }
+
+  hideLayerMenu();
+  commitLayerChange(action);
+}
+
+function showLayerMenu(event) {
+  if (!activeAsset()) return;
+  event.preventDefault();
+  const point = localPoint(event);
+  const hit = findStrokeAt(point);
+  if (hit >= 0) state.selectedStrokeIndex = hit;
+  if (state.selectedStrokeIndex < 0) {
+    hideLayerMenu();
+    setStatus("noSelection", "noSelectionText");
+    scheduleDraw();
+    return;
+  }
+
+  const width = 190;
+  const height = 336;
+  const x = Math.min(window.innerWidth - width - 10, Math.max(10, event.clientX + 8));
+  const y = Math.min(window.innerHeight - height - 10, Math.max(10, event.clientY + 8));
+  ui.layerMenu.style.left = `${x}px`;
+  ui.layerMenu.style.top = `${y}px`;
+  ui.layerMenu.classList.add("open");
+  ui.layerMenu.setAttribute("aria-hidden", "false");
+  scheduleDraw();
+}
+
+function hideLayerMenu() {
+  ui.layerMenu.classList.remove("open");
+  ui.layerMenu.setAttribute("aria-hidden", "true");
 }
 
 function sourceDataUrl() {
@@ -1117,6 +1374,7 @@ function handleFile(file) {
 }
 
 function beginStroke(e) {
+  hideLayerMenu();
   updateBrushCursor(e);
   if (!activeAsset()) return;
   e.preventDefault();
@@ -1124,11 +1382,23 @@ function beginStroke(e) {
   ui.sourceCanvas.setPointerCapture(e.pointerId);
   const p = localPoint(e);
   if (state.tool === "select") {
+    const handle = selectedHandleAt(p);
+    if (handle && selectedStroke() && !selectedStroke().locked) {
+      state.resizingSelection = true;
+      state.resizeHandle = handle;
+      state.resizeOriginal = cloneStroke(selectedStroke());
+      state.resizeBounds = strokeBounds(selectedStroke());
+      ui.sourceCanvas.style.cursor = `${handle}-resize`;
+      setStatus("selected", "selectedText");
+      scheduleDraw();
+      return;
+    }
     state.selectedStrokeIndex = findStrokeAt(p);
-    state.movingSelection = state.selectedStrokeIndex >= 0;
+    const stroke = selectedStroke();
+    state.movingSelection = state.selectedStrokeIndex >= 0 && !stroke?.locked;
     state.moveLast = p;
     ui.sourceCanvas.style.cursor = state.movingSelection ? "grabbing" : "grab";
-    setStatus(state.movingSelection ? "selected" : "noSelection", state.movingSelection ? "selectedText" : "noSelectionText");
+    setStatus(state.selectedStrokeIndex >= 0 ? "selected" : "noSelection", state.selectedStrokeIndex >= 0 ? "selectedText" : "noSelectionText");
     scheduleDraw();
     return;
   }
@@ -1156,6 +1426,17 @@ function beginStroke(e) {
 
 function extendStroke(e) {
   updateBrushCursor(e);
+  if (state.resizingSelection && state.selectedStrokeIndex >= 0) {
+    e.preventDefault();
+    const p = localPoint(e);
+    const target = boundsFromHandle(state.resizeHandle, state.resizeBounds, p);
+    state.strokes[state.selectedStrokeIndex] = cloneStroke(state.resizeOriginal);
+    scaleStrokeToBounds(state.strokes[state.selectedStrokeIndex], state.resizeBounds, target);
+    state.generatedImage = null;
+    redrawMaskBitmap();
+    scheduleDraw();
+    return;
+  }
   if (state.movingSelection && state.selectedStrokeIndex >= 0) {
     e.preventDefault();
     const p = localPoint(e);
@@ -1178,6 +1459,17 @@ function extendStroke(e) {
 function endStroke(e) {
   if (e && ui.sourceCanvas.hasPointerCapture?.(e.pointerId)) ui.sourceCanvas.releasePointerCapture(e.pointerId);
   let changed = false;
+  if (state.resizingSelection) {
+    state.resizingSelection = false;
+    state.resizeHandle = "";
+    state.resizeOriginal = null;
+    state.resizeBounds = null;
+    ui.sourceCanvas.style.cursor = "grab";
+    redrawMaskBitmap();
+    scheduleDraw();
+    scheduleRealtimeRender("resize");
+    return;
+  }
   if (state.movingSelection) {
     state.movingSelection = false;
     ui.sourceCanvas.style.cursor = "grab";
@@ -1199,6 +1491,13 @@ function endStroke(e) {
 }
 
 function updateBrushCursor(e) {
+  if (state.tool === "select") {
+    const point = localPoint(e);
+    const handle = selectedHandleAt(point);
+    ui.sourceCanvas.style.cursor = handle ? `${handle}-resize` : (findStrokeAt(point) >= 0 ? "grab" : "default");
+    ui.brushCursor.style.opacity = "0";
+    return;
+  }
   const boardRect = ui.board.getBoundingClientRect();
   ui.brushCursor.style.left = `${e.clientX - boardRect.left}px`;
   ui.brushCursor.style.top = `${e.clientY - boardRect.top}px`;
@@ -1294,8 +1593,7 @@ $("redoBtn")?.addEventListener("click", redoMask);
 $("previewBtn").addEventListener("click", updatePreview);
 $("openApiSettingsBtn").addEventListener("click", () => openApiSettings());
 $("testApiBtn").addEventListener("click", () => {
-  setStatus("previewQueued", "previewQueuedText");
-  requestRealtimeRender("api-test");
+  testApiConnection("panel");
 });
 ui.closeApiSettingsBtn.addEventListener("click", closeApiSettings);
 ui.apiModal.addEventListener("click", (event) => {
@@ -1316,9 +1614,7 @@ ui.saveApiSettingsBtn.addEventListener("click", () => {
 });
 ui.modalTestApiBtn.addEventListener("click", () => {
   ui.providerSelect.value = state.apiConfigTab;
-  closeApiSettings();
-  setStatus("previewQueued", "previewQueuedText");
-  requestRealtimeRender("api-test");
+  testApiConnection("modal");
 });
 $("importImageBtn").addEventListener("click", () => ui.imageInput.click());
 $("importImageNav").addEventListener("click", () => ui.imageInput.click());
@@ -1345,6 +1641,7 @@ ui.sourceCanvas.addEventListener("pointerdown", beginStroke);
 ui.sourceCanvas.addEventListener("pointermove", extendStroke);
 ui.sourceCanvas.addEventListener("pointerup", endStroke);
 ui.sourceCanvas.addEventListener("pointercancel", endStroke);
+ui.sourceCanvas.addEventListener("contextmenu", showLayerMenu);
 ui.sourceCanvas.addEventListener("pointerenter", updateBrushCursor);
 ui.sourceCanvas.addEventListener("pointerleave", () => {
   if (!state.drawing) {
@@ -1352,6 +1649,16 @@ ui.sourceCanvas.addEventListener("pointerleave", () => {
     scheduleDraw();
   }
   ui.brushCursor.style.opacity = "0";
+});
+
+document.querySelectorAll("[data-layer-action]").forEach((button) => {
+  button.addEventListener("click", () => applyLayerAction(button.dataset.layerAction));
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (!ui.layerMenu.classList.contains("open")) return;
+  if (ui.layerMenu.contains(event.target)) return;
+  hideLayerMenu();
 });
 
 ui.brushSize.addEventListener("input", () => syncBrushSize(ui.brushSize.value));
@@ -1400,6 +1707,7 @@ document.addEventListener("keydown", (e) => {
   if (key === "e") setTool("erase");
   if (key === "r") setTool("rect");
   if (key === "c") setTool("circle");
+  if (key === "delete" || key === "backspace") applyLayerAction("delete");
   if (e.ctrlKey && e.shiftKey && key === "z") redoMask();
   else if (e.ctrlKey && key === "z") undoMask();
   else if (e.ctrlKey && key === "y") redoMask();

@@ -44,7 +44,7 @@
     .app {
       height: 100dvh;
       display: grid;
-      grid-template-columns: 216px minmax(0,1fr);
+      grid-template-columns: 208px minmax(0,1fr);
       background:
         linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
         linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px),
@@ -346,15 +346,15 @@
 
     .floating {
       position: fixed;
-      left: calc(216px + (100vw - 216px) / 2);
-      bottom: 188px;
+      left: calc(208px + (100vw - 208px) / 2);
+      bottom: 178px;
       z-index: 13;
       transform: translateX(-50%);
       display: flex;
       align-items: center;
       gap: 7px;
       width: max-content;
-      max-width: calc(100vw - 244px);
+      max-width: calc(100vw - 236px);
       padding: 7px;
       border: 1px solid var(--line-2);
       border-radius: 15px;
@@ -393,10 +393,40 @@
     }
     .brush-cursor.erase { border-color: rgba(215,121,128,.96); }
     .brush-cursor.shape { border-style: dashed; }
+    .layer-menu {
+      position: fixed;
+      z-index: 30;
+      width: 190px;
+      display: none;
+      padding: 7px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      background: rgba(9,10,12,.94);
+      color: var(--text);
+      box-shadow: 0 22px 70px rgba(0,0,0,.42);
+      backdrop-filter: blur(18px);
+    }
+    .layer-menu.open { display: grid; }
+    .layer-menu button {
+      min-height: 31px;
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 8px;
+      color: var(--text);
+      background: transparent;
+      padding: 0 8px;
+      text-align: left;
+      font-size: 12px;
+    }
+    .layer-menu button:hover { background: rgba(255,255,255,.08); }
+    .layer-menu .rule { height: 1px; margin: 6px 2px; background: rgba(255,255,255,.1); }
 
     .footer {
       position: fixed;
-      left: 216px;
+      left: 208px;
       right: 0;
       bottom: 0;
       z-index: 12;
@@ -408,7 +438,7 @@
       pointer-events: none;
     }
     .prompt {
-      width: min(760px, calc(100vw - 36px));
+      width: min(680px, calc(100vw - 36px));
       display: grid;
       gap: 9px;
       padding: 11px 12px;
@@ -453,7 +483,7 @@
       white-space: nowrap;
     }
     .status {
-      width: min(760px, calc(100vw - 36px));
+      width: min(680px, calc(100vw - 36px));
       margin-top: 7px;
       display: flex;
       align-items: center;
@@ -513,7 +543,7 @@
 
       <section class="section">
         <div class="section-title" data-i18n="controls">Controls</div>
-        <label class="field"><span data-i18n="provider">Provider</span><select id="providerSelect"><option value="auto">Auto</option><option value="mock-local">Mock</option><option value="openai">OpenAI</option><option value="custom-http">Custom API</option></select></label>
+        <label class="field"><span data-i18n="provider">Provider</span><select id="providerSelect"><option value="auto" data-i18n="providerAuto">Auto</option><option value="mock-local" data-i18n="providerMock">Mock</option><option value="openai">OpenAI</option><option value="custom-http" data-i18n="providerCustom">Custom API</option></select></label>
         <label class="field"><span data-i18n="brushSize">Brush size</span><input id="brushSize" type="range" min="8" max="120" value="42"></label>
         <label class="field"><span data-i18n="strength">Strength</span><input id="strength" type="range" min="0" max="100" value="62"></label>
       </section>
@@ -579,6 +609,21 @@
           <div class="readout"><strong id="toolModeText">Brush</strong><span id="brushSizeText">42 px</span></div>
         </div>
         <div class="brush-cursor" id="brushCursor"></div>
+        <div class="layer-menu" id="layerMenu" aria-hidden="true">
+          <button data-layer-action="lock"><span>□</span><span data-i18n="lockLayer">Lock</span></button>
+          <div class="rule"></div>
+          <button data-layer-action="front"><span>⇧</span><span data-i18n="bringToFront">Bring to front</span></button>
+          <button data-layer-action="forward"><span>⌃</span><span data-i18n="bringForward">Bring forward</span></button>
+          <button data-layer-action="backward"><span>⌄</span><span data-i18n="sendBackward">Send backward</span></button>
+          <button data-layer-action="back"><span>⇩</span><span data-i18n="sendToBack">Send to back</span></button>
+          <div class="rule"></div>
+          <button data-layer-action="duplicate"><span>⧉</span><span data-i18n="duplicateLayer">Duplicate</span></button>
+          <button data-layer-action="delete"><span>⌫</span><span data-i18n="deleteLayer">Delete</span></button>
+          <button data-layer-action="flipX"><span>⇄</span><span data-i18n="flipHorizontal">Flip Horizontal</span></button>
+          <button data-layer-action="flipY"><span>⇅</span><span data-i18n="flipVertical">Flip Vertical</span></button>
+          <button data-layer-action="fit"><span>▣</span><span data-i18n="fitScreen">Fit to screen</span></button>
+          <button data-layer-action="fill"><span>▣</span><span data-i18n="fillScreen">Fill screen</span></button>
+        </div>
       </section>
 
       <section class="footer">
