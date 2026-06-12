@@ -83,15 +83,37 @@ async function evaluate(client, expression) {
   return result.result.value;
 }
 
+async function evaluateWithRetry(client, expression, attempts = 5) {
+  let lastError;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await evaluate(client, expression);
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw lastError;
+}
+
 try {
   await waitForJson(`http://127.0.0.1:${port}/json/version`);
   const target = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(targetUrl)}`, { method: "PUT" }).then((response) => response.json());
   const client = await connect(target.webSocketDebuggerUrl);
   await client.send("Runtime.enable");
   await client.send("Page.enable");
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  await evaluateWithRetry(client, `new Promise((resolve) => {
+    const started = Date.now();
+    const tick = () => {
+      if (window.__DCC_CAPTURE_READY) resolve(true);
+      else if (Date.now() - started > 8000) resolve(false);
+      else setTimeout(tick, 160);
+    };
+    tick();
+  })`);
 
-  const report = await evaluate(client, `new Promise(async (resolve) => {
+  const report = await evaluateWithRetry(client, `new Promise(async (resolve) => {
     const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
     const eventAt = (type, x, y, button = 0) => new PointerEvent(type, {
       bubbles: true,

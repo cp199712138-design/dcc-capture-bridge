@@ -1867,3 +1867,4 @@ setTool("brush");
 updateI18n();
 fitAll();
 checkApiStatus();
+window.__DCC_CAPTURE_READY = true;
