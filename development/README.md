@@ -1,6 +1,6 @@
 # Development Plan
 
-This folder is the development control center for DCC Capture Bridge.
+This folder is the development control center for Instant Canvas.
 
 Use one feature folder per work pass. The goal is to keep product thinking,
 implementation notes, and acceptance checks separated so the project does not
@@ -27,4 +27,5 @@ Keep each folder small:
 - `README.md`: goal, current state, next work, key files, acceptance checks
 - optional short notes only when needed
 - no customer secrets, captures, renders, or large assets
+
 

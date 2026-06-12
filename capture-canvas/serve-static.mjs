@@ -85,7 +85,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`DCC Capture Canvas http://127.0.0.1:${port}/capture-canvas/index.html`);
+  console.log(`Instant Canvas http://127.0.0.1:${port}/capture-canvas/index.html`);
 });
 
 function sendJson(res, status, data) {
@@ -213,7 +213,7 @@ async function handleProviderTest(body) {
           schema_version: "0.2.0",
           session_id: "dcc_connection_test",
           task: "connection_test",
-          prompt: "DCC Capture Canvas connection test",
+          prompt: "Instant Canvas connection test",
           strength: 0,
           assets: [],
           mask: { type: "none", strokes: [] },
@@ -582,3 +582,4 @@ function chooseApiSize(ratio) {
   if (ratio === "4:5") return "1024x1536";
   return "1024x1024";
 }
+

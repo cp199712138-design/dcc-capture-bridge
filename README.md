@@ -1,4 +1,4 @@
-# DCC Capture Bridge
+# Instant Canvas
 
 Realtime DCC-to-AI capture canvas for 3ds Max / Blender evidence.
 
@@ -156,4 +156,5 @@ The older drag-and-drop 3ds Max MVP still exists under:
 dist/PerfectHDScreenshotPro_MVP.ms
 ```
 
-That path remains useful for capture-pack testing, but the main product direction is now the realtime DCC Capture Canvas.
+That path remains useful for capture-pack testing, but the main product direction is now the realtime Instant Canvas.
+

@@ -18,8 +18,9 @@ ready = (http.status = 200)
 On Error GoTo 0
 
 If Not ready Then
-  command = "cmd.exe /c start ""DCC Capture Canvas"" /D """ & here & """ /min """ & node & """ serve-static.mjs"
+  command = "cmd.exe /c start ""Instant Canvas"" /D """ & here & """ /min """ & node & """ serve-static.mjs"
   shell.Run command, 0, False
   WScript.Sleep 1500
 End If
 shell.Run "http://127.0.0.1:8765/index.html", 1, False
+

@@ -2,7 +2,7 @@ import { buildGenerationRequest, createSessionState, registerAsset } from "./cap
 
 const copy = {
   en: {
-    tagline: "Realtime DCC evidence board for AI product generation.",
+    tagline: "Realtime evidence canvas for AI product generation.",
     tools: "Tools",
     select: "Select",
     brush: "Brush",
@@ -50,7 +50,7 @@ const copy = {
     brushSize: "Brush size",
     strength: "Strength",
     safety: "Keys stay on the local server. The browser only sends canvas and mask data.",
-    subtitle: "minimal realtime edit prototype",
+    subtitle: "realtime AI edit canvas",
     inputCanvas: "Input canvas",
     editable: "editable",
     emptyTitle: "Drop evidence here",
@@ -126,7 +126,7 @@ const copy = {
     modelLabel: "Model: ",
   },
   cn: {
-    tagline: "\u9762\u5411 AI \u4ea7\u54c1\u751f\u6210\u7684 DCC \u5b9e\u65f6\u8bc1\u636e\u753b\u5e03\u3002",
+    tagline: "\u9762\u5411 AI \u4ea7\u54c1\u751f\u6210\u7684\u5373\u65f6\u8bc1\u636e\u753b\u5e03\u3002",
     tools: "\u5de5\u5177",
     select: "\u9009\u62e9",
     brush: "\u753b\u7b14",
@@ -174,7 +174,7 @@ const copy = {
     brushSize: "\u753b\u7b14\u5927\u5c0f",
     strength: "\u5f3a\u5ea6",
     safety: "\u5bc6\u94a5\u53ea\u7559\u5728\u672c\u5730\u670d\u52a1\u7aef\uff0c\u6d4f\u89c8\u5668\u53ea\u53d1\u9001\u753b\u5e03\u548c\u906e\u7f69\u6570\u636e\u3002",
-    subtitle: "\u6781\u7b80\u5b9e\u65f6\u7f16\u8f91\u539f\u578b",
+    subtitle: "\u5373\u65f6 AI \u7f16\u8f91\u753b\u5e03",
     inputCanvas: "\u8f93\u5165\u753b\u5e03",
     editable: "\u53ef\u7f16\u8f91",
     emptyTitle: "\u628a\u8bc1\u636e\u653e\u5230\u8fd9\u91cc",
@@ -618,7 +618,7 @@ async function testApiConnection(source = "panel") {
         const data = await callDirectCustomApi({
           schema_version: "0.2.0",
           task: "connection_test",
-          prompt: "DCC Capture Bridge connection test",
+          prompt: "Instant Canvas connection test",
           dcc_capture_bridge: { test: true, contract: "custom-http-json-v1" },
         }, payload);
         const text = state.lang === "cn" ? data.message_cn || data.message || "Custom API \u8fde\u63a5\u901a\u8fc7" : data.message_en || data.message || "Custom API connection passed";
@@ -1868,3 +1868,4 @@ updateI18n();
 fitAll();
 checkApiStatus();
 window.__DCC_CAPTURE_READY = true;
+

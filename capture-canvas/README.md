@@ -1,4 +1,4 @@
-# DCC Capture Canvas
+# Instant Canvas
 
 Realtime edit prototype for DCC evidence. The current build focuses on the Krea-style loop:
 
@@ -66,3 +66,4 @@ To make the repo public:
 4. Choose `Change repository visibility`.
 5. Select `Make public`.
 6. Complete GitHub's access confirmation and type the repository name if prompted.
+

@@ -107,7 +107,7 @@ This matters because 3ds Max and Blender users already have complex scenes, came
 
 The product should extract this certainty instead of asking users to rebuild it in a browser.
 
-## Product Direction For DCC Capture Bridge
+## Product Direction For Instant Canvas
 
 The future UI should become a local or web-based Capture Canvas:
 
@@ -162,3 +162,4 @@ The modern UI should not be forced into MAXScript rollout controls.
    - reference slots
    - future ComfyUI task buttons
 5. Later connect ComfyUI and Blender through adapters.
+
