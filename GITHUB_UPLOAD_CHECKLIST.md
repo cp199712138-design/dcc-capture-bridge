@@ -1,5 +1,48 @@
 # GitHub Upload Checklist
 
+## Instant Canvas Customer-Test Pass
+
+Before a customer-test upload, run:
+
+```powershell
+node capture-canvas/check-page.mjs --all
+```
+
+If a single command is not desired while debugging, the matching individual
+commands are:
+
+```powershell
+node capture-canvas/check-page.mjs
+node capture-canvas/simulate-flow.mjs
+node capture-canvas/test-api-contract.mjs
+node capture-canvas/browser-smoke.mjs
+```
+
+Use this real-key scan so placeholders are not treated as leaked secrets:
+
+```powershell
+rg 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
+```
+
+Allowed placeholders: `sk-...`, `test-key`, and empty values in `.env.example`.
+Do not upload `.env`, customer files, captures, renders, model files, or large
+temporary assets.
+
+Customer-test release notes should include:
+
+```text
+Build:
+Commit:
+URL:
+What is ready:
+What is preview-only:
+Provider/API setup required:
+Known limits:
+Verification run:
+Customer test steps:
+Rollback / previous build:
+```
+
 ## 上传前确认
 
 第一版先上传这些：

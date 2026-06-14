@@ -10,12 +10,17 @@ providers without editing the frontend.
 
 - Local server exposes `GET /api/status`, `POST /api/test-provider`, and
   `POST /api/realtime-render`.
+- Local server also exposes `GET /api/config` and `POST /api/config` for the API
+  Settings panel.
 - API Settings can save provider URL, model, and key into local `.env`.
 - OpenAI-compatible image edit path exists.
 - Custom HTTP JSON adapter exists.
 - Static demo can store customer Custom API settings in browser localStorage
-  and call that endpoint directly when CORS allows it.
-- `test-api-contract.mjs` validates custom API request/response shape.
+  and call that endpoint directly when CORS allows it. This is browser-local
+  customer testing, not production secret safety.
+- `test-api-contract.mjs` validates custom API request/response shape, missing
+  provider config, no-image custom responses, and OpenAI-compatible proxy error
+  visibility.
 
 ## Next Work
 
@@ -42,5 +47,7 @@ providers without editing the frontend.
 - Missing provider config returns an explicit message, not fake success.
 - Custom API receives `sourceImageDataUrl`, `maskDataUrl`, `prompt`, `strength`,
   `assets`, `mask`, `output`, and `dcc_capture_bridge.contract`.
+- Provider test/config responses do not echo saved secrets.
+- OpenAI-compatible proxy failures return visible status/message summaries.
 - Static demo without a server stays usable in local preview mode.
 - `node capture-canvas/test-api-contract.mjs` passes.

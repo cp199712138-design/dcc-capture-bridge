@@ -10,6 +10,7 @@ turn into one large mixed context.
 
 | Folder | Owns |
 | --- | --- |
+| `00-dispatch/` | Thread ownership, task dispatch, conflict control, final verification |
 | `01-ui-shell/` | Visual design, layout, bilingual UI, responsive behavior |
 | `02-canvas-editor/` | Brush, masks, selection, transform, layer menu |
 | `03-realtime-api/` | Local server, OpenAI-compatible API, custom API |

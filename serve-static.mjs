@@ -5,7 +5,7 @@ import { extname, join, normalize } from "node:path";
 
 const root = process.cwd();
 const port = Number(process.env.PORT || 8765);
-const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-2";
+const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-1";
 const TRANSPARENT_PIXEL_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 loadLocalEnv();
 const types = {
@@ -147,35 +147,44 @@ async function handleRealtimeRender(body) {
   form.set("mask", new Blob([Buffer.from(mask, "base64")], { type: "image/png" }), "mask.png");
 
   const openAiBase = String(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
-  const response = await fetch(`${openAiBase}/images/edits`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: form
-  });
+  let response;
+  try {
+    response = await fetch(`${openAiBase}/images/edits`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: form
+    });
+  } catch (error) {
+    return providerRequestException("openai", error);
+  }
 
-  const data = await response.json();
+  const text = await response.text();
+  const data = parseJsonResponse(text);
   if (!response.ok) {
+    const short = summarizeResponse(text) || "OpenAI API request failed.";
     return {
       ok: false,
       provider: "openai",
+      status: response.status,
       cn: "API \u9519\u8bef",
       en: "API Error",
-      message_cn: data.error?.message || "OpenAI API \u8bf7\u6c42\u5931\u8d25\u3002",
-      message_en: data.error?.message || "OpenAI API request failed."
+      message_cn: `API \u8fd4\u56de ${response.status}: ${short}`,
+      message_en: `API returned ${response.status}: ${short}`
     };
   }
 
-  const b64 = data.data?.[0]?.b64_json;
+  const imageDataUrl = extractImageDataUrl(data);
+  const short = imageDataUrl ? "" : summarizeResponse(text);
   return {
-    ok: Boolean(b64),
+    ok: Boolean(imageDataUrl),
     provider: "openai",
-    imageDataUrl: b64 ? `data:image/png;base64,${b64}` : "",
-    cn: b64 ? "API \u8f93\u51fa" : "\u6ca1\u6709\u56fe\u50cf",
-    en: b64 ? "API Output" : "No Image",
-    message_cn: b64 ? "API \u5df2\u8fd4\u56de\u56fe\u50cf\u3002" : "API \u6ca1\u6709\u8fd4\u56de\u56fe\u50cf\u6570\u636e\u3002",
-    message_en: b64 ? "API returned an image." : "API did not return image data."
+    imageDataUrl,
+    cn: imageDataUrl ? "API \u8f93\u51fa" : "\u6ca1\u6709\u56fe\u50cf",
+    en: imageDataUrl ? "API Output" : "No Image",
+    message_cn: imageDataUrl ? "API \u5df2\u8fd4\u56de\u56fe\u50cf\u3002" : `API \u6ca1\u6709\u8fd4\u56de\u56fe\u50cf\u6570\u636e\u3002${short ? ` ${short}` : ""}`,
+    message_en: imageDataUrl ? "API returned an image." : `API did not return image data.${short ? ` ${short}` : ""}`
   };
 }
 
@@ -194,6 +203,10 @@ async function handleProviderTest(body) {
       const text = await response.text();
       if (!response.ok) {
         return providerTestError("openai", response.status, text, "OpenAI API key or model check failed.");
+      }
+      const data = parseJsonResponse(text);
+      if (!data.id && !data.object) {
+        return providerTestError("openai", response.status, text, "OpenAI model check did not return JSON model metadata.");
       }
       return {
         ok: true,
@@ -381,18 +394,18 @@ async function handleCustomRender(body) {
   }
 
   const config = providerConfigFromRequest({ provider: "custom-http" }).custom;
-  const response = await callCustomEndpoint({
-    config,
-    payload: customRequestPayload(body)
-  });
+  let response;
+  try {
+    response = await callCustomEndpoint({
+      config,
+      payload: customRequestPayload(body)
+    });
+  } catch (error) {
+    return providerRequestException("custom-http", error);
+  }
 
   const text = await response.text();
-  let data = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { message: text };
-  }
+  const data = parseJsonResponse(text);
 
   if (!response.ok) {
     return {
@@ -406,12 +419,24 @@ async function handleCustomRender(body) {
   }
 
   const imageDataUrl = extractImageDataUrl(data);
+  if (!imageDataUrl) {
+    const short = summarizeResponse(text) || "Custom API returned no image data.";
+    return {
+      ok: false,
+      provider: "custom-http",
+      imageDataUrl: "",
+      cn: "\u81ea\u5b9a\u4e49 API \u6ca1\u6709\u56fe\u50cf",
+      en: "Custom API returned no image",
+      message_cn: `\u5ba2\u6237 API \u5df2\u54cd\u5e94\uff0c\u4f46\u6ca1\u6709\u8fd4\u56de imageDataUrl \u6216 b64_json: ${short}`,
+      message_en: `Customer API responded but did not return imageDataUrl or b64_json: ${short}`
+    };
+  }
   return {
     ok: true,
     provider: "custom-http",
     imageDataUrl,
-    cn: imageDataUrl ? "\u81ea\u5b9a\u4e49 API \u8f93\u51fa" : "\u81ea\u5b9a\u4e49 API \u5df2\u54cd\u5e94",
-    en: imageDataUrl ? "Custom API Output" : "Custom API Response",
+    cn: "\u81ea\u5b9a\u4e49 API \u8f93\u51fa",
+    en: "Custom API Output",
     message_cn: data.message_cn || data.message || "\u5ba2\u6237 API \u5df2\u8fd4\u56de\u3002",
     message_en: data.message_en || data.message || "Customer API returned a response."
   };
@@ -519,14 +544,46 @@ function providerTestException(provider, error) {
   };
 }
 
+function providerRequestException(provider, error) {
+  const text = String(error.message || error);
+  return {
+    ok: false,
+    provider,
+    cn: "API \u8bf7\u6c42\u5931\u8d25",
+    en: "API request failed",
+    message_cn: text,
+    message_en: text
+  };
+}
+
 function summarizeResponse(text) {
   if (!text) return "";
   try {
     const data = JSON.parse(text);
     return data.error?.message || data.message || JSON.stringify(data).slice(0, 240);
   } catch {
-    return String(text).slice(0, 240);
+    return summarizeHtmlText(text);
   }
+}
+
+function parseJsonResponse(text) {
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return { message: summarizeHtmlText(text) };
+  }
+}
+
+function summarizeHtmlText(text) {
+  return String(text)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
 }
 
 function parseJsonEnv(name) {
@@ -540,13 +597,14 @@ function parseJsonEnv(name) {
 }
 
 function extractImageDataUrl(data) {
-  const value = data.imageDataUrl || data.image_data_url || data.output_image || data.image_url || data.url;
+  const value = data.imageDataUrl || data.image_data_url || data.output_image || data.image_url || data.url || data.data?.[0]?.imageDataUrl || data.data?.[0]?.image_data_url;
   if (typeof value === "string" && value.startsWith("data:image/")) return value;
-  const b64 = data.b64_json || data.image_base64 || data.data?.[0]?.b64_json;
+  const b64 = data.b64_json || data.image_base64 || data.imageBase64 || data.data?.[0]?.b64_json || data.data?.[0]?.image_base64 || data.data?.[0]?.imageBase64;
   return b64 ? `data:image/png;base64,${b64}` : "";
 }
 
 function loadLocalEnv() {
+  if (process.env.DCC_SKIP_DOTENV === "1") return;
   loadEnvFile(join(root, ".env"));
 }
 
@@ -584,8 +642,8 @@ function stripDataUrl(value) {
 }
 
 function chooseApiSize(ratio) {
-  if (ratio === "16:9") return "1536x1024";
-  if (ratio === "4:5") return "1024x1536";
+  if (ratio === "3:2") return "1536x1024";
+  if (ratio === "2:3") return "1024x1536";
   return "1024x1024";
 }
 

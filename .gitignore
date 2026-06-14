@@ -18,6 +18,7 @@ renders/
 outputs/
 screenshots/
 captures/
+.superpowers/
 
 # Generated asset folders
 models/
@@ -31,3 +32,8 @@ Desktop.ini
 .DS_Store
 .vscode/
 .idea/
+
+# Local scratch files
+*.bak
+*.tmp
+*.zip
