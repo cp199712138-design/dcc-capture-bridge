@@ -21,6 +21,7 @@ struct DCC_3dsMaxAdapterStruct
 
     fn grabViewport alpha:false gamma:true =
     (
+        -- Viewport pixel evidence only; this is not true high-resolution render output.
         local bmp = undefined
         try
         (
@@ -70,6 +71,7 @@ struct DCC_3dsMaxAdapterStruct
 
     fn renderBeautyAsset filePath width height showVfb:false =
     (
+        -- Renderer output path; quality depends on the active 3ds Max Render Setup.
         local bmp = undefined
         try
         (

@@ -143,21 +143,21 @@
     }
     .modal.open { display: grid; }
     .api-panel {
-      width: min(1040px, 100%);
+      width: min(980px, 100%);
       max-height: min(760px, calc(100vh - 56px));
       display: grid;
       grid-template-columns: 260px minmax(0,1fr);
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 18px;
-      background: #f4f6f9;
-      color: #101827;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 14px;
+      background: #11151d;
+      color: var(--text);
       box-shadow: 0 30px 90px rgba(0,0,0,.5);
     }
     .api-side {
       padding: 20px;
-      border-right: 1px solid #dfe5ee;
-      background: #eef2f7;
+      border-right: 1px solid rgba(255,255,255,.1);
+      background: #0c0f14;
     }
     .api-main {
       min-width: 0;
@@ -165,7 +165,7 @@
       padding: 22px 24px 24px;
     }
     .api-panel h2 { margin: 0; font-size: 26px; letter-spacing: 0; }
-    .api-panel p { margin: 6px 0 0; color: #65758b; font-size: 13px; line-height: 1.5; }
+    .api-panel p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
     .api-platform {
       width: 100%;
       min-height: 58px;
@@ -174,28 +174,30 @@
       grid-template-columns: 34px 1fr;
       align-items: center;
       gap: 10px;
-      border: 1px solid #dfe5ee;
-      border-radius: 12px;
-      background: #fff;
-      color: #101827;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 11px;
+      background: rgba(255,255,255,.045);
+      color: var(--soft);
       padding: 8px 10px;
       text-align: left;
     }
-    .api-platform.active { border-color: #7aa897; background: #e7f5ef; }
+    .api-platform.active { color: var(--text); border-color: rgba(136,212,192,.55); background: rgba(136,212,192,.12); }
+    .api-platform small { color: var(--muted); }
     .api-platform b {
       width: 30px;
       height: 30px;
       display: grid;
       place-items: center;
-      border-radius: 9px;
-      background: #e9edf3;
+      border-radius: 8px;
+      color: #07100d;
+      background: var(--accent-2);
     }
     .api-form-card {
       margin-top: 18px;
       padding: 20px;
-      border: 1px solid #dfe5ee;
-      border-radius: 16px;
-      background: #fff;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 13px;
+      background: #151a23;
     }
     .api-row {
       display: grid;
@@ -203,18 +205,19 @@
       gap: 14px;
     }
     .api-field { display: grid; gap: 7px; margin-top: 14px; }
-    .api-field label { color: #65758b; font-size: 12px; font-weight: 800; }
+    .api-field label { color: var(--muted); font-size: 12px; font-weight: 800; }
     .api-field input, .api-field select {
       width: 100%;
       min-height: 44px;
-      border: 1px solid #dbe3ee;
-      border-radius: 11px;
-      color: #101827;
-      background: #f3f6fa;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      color: var(--text);
+      background: #0d1118;
       padding: 0 12px;
       font-weight: 700;
     }
-    .api-field small { color: #7d8ca3; }
+    .api-field select option { color: var(--text); background: #0d1118; }
+    .api-field small { color: var(--muted); }
     .api-buttons {
       margin-top: 18px;
       display: flex;
@@ -226,17 +229,17 @@
     .api-buttons div { display: flex; gap: 10px; flex-wrap: wrap; }
     .api-btn {
       min-height: 42px;
-      border: 1px solid #dbe3ee;
-      border-radius: 11px;
-      background: #fff;
-      color: #101827;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      background: rgba(255,255,255,.055);
+      color: var(--text);
       padding: 0 14px;
       font-weight: 900;
     }
-    .api-btn.primary { color: #fff; background: #101827; border-color: #101827; }
+    .api-btn.primary { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); }
     .api-status-line {
       margin-top: 12px;
-      color: #65758b;
+      color: var(--muted);
       font-size: 13px;
       font-weight: 700;
     }
@@ -280,6 +283,7 @@
       white-space: nowrap;
     }
     .pill.busy { color: #07100d; background: var(--warn); border-color: var(--warn); font-weight: 800; }
+    .pill.queued { color: #07100d; background: #d8c991; border-color: #d8c991; font-weight: 800; }
     .pill.api { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
     .pill.error { color: #fff; background: rgba(215,121,128,.24); border-color: rgba(215,121,128,.48); }
     .lang { display: flex; gap: 6px; }
@@ -293,7 +297,7 @@
       grid-template-columns: minmax(0,1fr) minmax(0,1fr);
       gap: 2px;
       background: #050608;
-      padding-bottom: 126px;
+      padding-bottom: 118px;
     }
     .pane { position: relative; overflow: hidden; background: var(--canvas); }
     .pane.output { background: var(--canvas-2); }
@@ -347,7 +351,7 @@
     .floating {
       position: fixed;
       left: calc(208px + (100vw - 208px) / 2);
-      bottom: 178px;
+      bottom: 122px;
       z-index: 13;
       transform: translateX(-50%);
       display: flex;
@@ -432,26 +436,28 @@
       z-index: 12;
       display: grid;
       place-items: start center;
-      padding: 10px 18px 16px;
+      padding: 8px 18px 12px;
       border-top: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(8,9,11,.2), rgba(8,9,11,.96) 20%, rgba(8,9,11,.98));
+      background: linear-gradient(180deg, rgba(8,9,11,0), rgba(8,9,11,.86) 38%, rgba(8,9,11,.96));
       pointer-events: none;
     }
     .prompt {
-      width: min(680px, calc(100vw - 36px));
+      width: min(760px, calc(100vw - 244px));
       display: grid;
-      gap: 9px;
-      padding: 11px 12px;
+      grid-template-columns: minmax(220px,1fr) max-content;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
       border: 1px solid var(--line-2);
-      border-radius: 16px;
+      border-radius: 13px;
       background: rgba(30,34,42,.94);
       box-shadow: var(--shadow);
       pointer-events: auto;
     }
     textarea {
       width: 100%;
-      min-height: 42px;
-      max-height: 72px;
+      min-height: 38px;
+      max-height: 54px;
       resize: none;
       border: 0;
       outline: none;
@@ -459,7 +465,7 @@
       background: transparent;
       line-height: 1.45;
     }
-    .prompt-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .prompt-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
     .chips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
     .chip {
       min-height: 28px;
@@ -482,9 +488,13 @@
       font-weight: 900;
       white-space: nowrap;
     }
+    .primary.danger {
+      color: #fff;
+      background: rgba(215,121,128,.86);
+    }
     .status {
-      width: min(680px, calc(100vw - 36px));
-      margin-top: 7px;
+      width: min(760px, calc(100vw - 244px));
+      margin-top: 6px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -503,13 +513,15 @@
       .main { min-height: 820px; }
       .footer { left: 0; }
       .floating { left: 50%; max-width: calc(100vw - 28px); }
+      .prompt, .status { width: min(760px, calc(100vw - 28px)); }
     }
     @media (max-width: 720px) {
       .rail { grid-template-columns: 1fr; }
       .main { grid-template-rows: auto minmax(640px,1fr) auto; }
       .top { align-items: flex-start; flex-direction: column; padding: 12px; }
       .workspace { grid-template-columns: 1fr; }
-      .floating { bottom: 220px; flex-wrap: wrap; justify-content: center; }
+      .floating { bottom: 180px; flex-wrap: wrap; justify-content: center; }
+      .prompt { grid-template-columns: 1fr; }
       .prompt-actions { align-items: stretch; flex-direction: column; }
       .primary { width: 100%; }
     }
@@ -570,8 +582,8 @@
           <span data-i18n="subtitle">realtime AI edit canvas</span>
         </div>
         <div class="top-actions">
-          <span class="pill" id="apiState">checking...</span>
-          <span class="pill" id="requestState">idle</span>
+          <span class="pill" id="apiState" aria-live="polite">checking...</span>
+          <span class="pill" id="requestState" aria-live="polite">idle</span>
           <div class="lang">
             <button data-lang="en">EN</button>
             <button class="active" data-lang="cn">CN</button>
@@ -635,6 +647,7 @@
               <button class="chip" id="aspectRatioChip">1:1</button>
               <button class="chip" id="seedChip">Seed 1284</button>
               <button class="chip active" id="liveChip">Live</button>
+              <button class="chip" id="downloadBtn" data-i18n="download">Download</button>
               <button class="chip" id="examplesChip" data-i18n="example">Example</button>
             </div>
             <button class="primary" id="previewBtn" data-i18n="generate">Generate</button>
@@ -646,14 +659,14 @@
   </div>
 
   <input id="imageInput" type="file" accept="image/*">
-  <input id="modelInput" type="file" accept=".glb,.gltf,.obj,.fbx,.stl,.usdz">
+  <input id="modelInput" type="file" accept=".obj,.stl">
   <div class="modal" id="apiModal" aria-hidden="true">
     <section class="api-panel" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
       <aside class="api-side">
         <h2 id="apiModalTitle" data-i18n="apiSettingsTitle">API Settings</h2>
         <p data-i18n="apiSettingsSubtitle">Save provider URL, model, and key to local .env. Keys are never shown after saving.</p>
-        <button class="api-platform active" id="apiOpenAiTab" data-api-tab="openai"><b>OA</b><span><strong>OpenAI</strong><br><small>Images API</small></span></button>
-        <button class="api-platform" id="apiCustomTab" data-api-tab="custom-http"><b>LT</b><span><strong>Custom API</strong><br><small>Compatible endpoint</small></span></button>
+        <button class="api-platform active" id="apiOpenAiTab" data-api-tab="openai"><b>OA</b><span><strong data-i18n="apiOpenAiTitle">OpenAI</strong><br><small data-i18n="apiOpenAiMeta">Images API</small></span></button>
+        <button class="api-platform" id="apiCustomTab" data-api-tab="custom-http"><b>LT</b><span><strong data-i18n="apiCustomTitle">Custom API</strong><br><small data-i18n="apiCustomMeta">Compatible endpoint</small></span></button>
       </aside>
       <div class="api-main">
         <div class="api-form-card">
@@ -695,7 +708,7 @@
               <button class="api-btn primary" id="saveApiSettingsBtn" data-i18n="save">Save</button>
             </div>
           </div>
-          <div class="api-status-line" id="apiModalStatus">Ready.</div>
+          <div class="api-status-line" id="apiModalStatus" data-i18n="ready">Ready</div>
         </div>
       </div>
     </section>

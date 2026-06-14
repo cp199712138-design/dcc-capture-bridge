@@ -1,4 +1,5 @@
 import { buildGenerationRequest, createSessionState, registerAsset } from "./capture-core.mjs";
+import { createModelViewer, parseModelFile } from "./model-viewer.mjs";
 
 const copy = {
   en: {
@@ -24,6 +25,10 @@ const copy = {
     apiSettings: "API Settings",
     apiSettingsTitle: "API Settings",
     apiSettingsSubtitle: "Save provider URL, model, and key to local .env. Keys are never shown after saving.",
+    apiOpenAiTitle: "OpenAI",
+    apiOpenAiMeta: "Images API",
+    apiCustomTitle: "Custom API",
+    apiCustomMeta: "Compatible endpoint",
     apiBaseUrl: "Base URL",
     apiModel: "Image model",
     apiMethod: "Method",
@@ -36,6 +41,7 @@ const copy = {
     keySaved: "Key saved. Leave blank to keep it.",
     noKeySaved: "No key saved.",
     saved: "Saved to local .env.",
+    saving: "Saving",
     apiTestOk: "API connection passed",
     apiTestFailed: "API connection failed",
     apiTestLocal: "Local preview is active. Choose OpenAI or Custom API to test a remote provider.",
@@ -64,16 +70,22 @@ const copy = {
     localPreview: "Local preview",
     apiOutput: "API output",
     apiError: "API error",
+    noImage: "No image",
     rendering: "Rendering",
+    queued: "Queued",
+    cancelled: "Cancelled",
+    cancel: "Cancel",
+    download: "Download",
+    noOutputToDownload: "No output to download yet.",
     idle: "Idle",
     checking: "Checking",
     noKey: "No API key configured; using local preview.",
     importedImage: "Image imported",
     importedImageText: "Paint or select the region you want to edit.",
     importedModel: "Model imported",
-    importedModelText: "Model evidence is registered now; real 3D viewing comes in the next adapter step.",
+    importedModelText: "OBJ/STL model is ready as a rotatable 3D preview.",
     unsupported: "Unsupported format",
-    unsupportedText: "Import an image or a common 3D model file.",
+    unsupportedText: "Import an image, OBJ, or STL file.",
     maskCleared: "Mask cleared",
     maskClearedText: "The source stays; only the edit region was cleared.",
     nothingClear: "There is no mask to clear.",
@@ -81,6 +93,10 @@ const copy = {
     redo: "Redo",
     previewQueued: "Preview queued",
     previewQueuedText: "Requesting output from the current canvas, mask, and prompt.",
+    previewNoMaskText: "No mask is drawn, so Generate will treat the loaded image as the edit target.",
+    renderCancelled: "Render cancelled",
+    renderCancelledText: "The current queued or running request was stopped.",
+    renderRestartedText: "Previous request was cancelled. Sending the latest canvas now.",
     outputUpdated: "Realtime output updated",
     outputUpdatedText: "The right canvas uses the API result.",
     live: "Live",
@@ -148,6 +164,10 @@ const copy = {
     apiSettings: "API \u8bbe\u7f6e",
     apiSettingsTitle: "API \u8bbe\u7f6e",
     apiSettingsSubtitle: "\u4fdd\u5b58\u5e73\u53f0\u5730\u5740\u3001\u6a21\u578b\u548c Key \u5230\u672c\u5730 .env\u3002Key \u4fdd\u5b58\u540e\u4e0d\u4f1a\u56de\u663e\u3002",
+    apiOpenAiTitle: "OpenAI",
+    apiOpenAiMeta: "\u56fe\u50cf\u63a5\u53e3",
+    apiCustomTitle: "\u81ea\u5b9a\u4e49 API",
+    apiCustomMeta: "\u517c\u5bb9\u7aef\u70b9",
     apiBaseUrl: "\u8bf7\u6c42\u5730\u5740",
     apiModel: "\u751f\u56fe\u6a21\u578b",
     apiMethod: "\u8bf7\u6c42\u65b9\u6cd5",
@@ -160,6 +180,7 @@ const copy = {
     keySaved: "\u5df2\u4fdd\u5b58 Key\uff0c\u7559\u7a7a\u4fdd\u6301\u4e0d\u53d8\u3002",
     noKeySaved: "\u8fd8\u6ca1\u6709\u4fdd\u5b58 Key\u3002",
     saved: "\u5df2\u4fdd\u5b58\u5230\u672c\u5730 .env\u3002",
+    saving: "\u4fdd\u5b58\u4e2d",
     apiTestOk: "API \u8fde\u63a5\u901a\u8fc7",
     apiTestFailed: "API \u8fde\u63a5\u5931\u8d25",
     apiTestLocal: "\u5f53\u524d\u662f\u672c\u5730\u9884\u89c8\u3002\u8bf7\u9009\u62e9 OpenAI \u6216\u81ea\u5b9a\u4e49 API \u518d\u6d4b\u8bd5\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u3002",
@@ -188,16 +209,22 @@ const copy = {
     localPreview: "\u672c\u5730\u9884\u89c8",
     apiOutput: "API \u8f93\u51fa",
     apiError: "API \u9519\u8bef",
+    noImage: "\u6ca1\u6709\u56fe\u50cf",
     rendering: "\u751f\u6210\u4e2d",
+    queued: "\u5df2\u6392\u961f",
+    cancelled: "\u5df2\u53d6\u6d88",
+    cancel: "\u53d6\u6d88",
+    download: "\u4e0b\u8f7d",
+    noOutputToDownload: "\u5f53\u524d\u8fd8\u6ca1\u6709\u53ef\u4e0b\u8f7d\u7684\u8f93\u51fa\u3002",
     idle: "\u7a7a\u95f2",
     checking: "\u68c0\u67e5\u4e2d",
     noKey: "\u672a\u914d\u7f6e API key\uff0c\u5f53\u524d\u4f7f\u7528\u672c\u5730\u9884\u89c8\u3002",
     importedImage: "\u56fe\u7247\u5df2\u5bfc\u5165",
     importedImageText: "\u73b0\u5728\u53ef\u4ee5\u6d82\u62b9\u6216\u6846\u9009\u8981\u4fee\u6539\u7684\u533a\u57df\u3002",
     importedModel: "\u6a21\u578b\u5df2\u5bfc\u5165",
-    importedModelText: "\u5f53\u524d\u7248\u672c\u5148\u6ce8\u518c\u6a21\u578b\u8bc1\u636e\uff0c\u771f\u6b63 3D \u67e5\u770b\u5668\u653e\u5230\u4e0b\u4e00\u6b65\u9002\u914d\u3002",
+    importedModelText: "OBJ/STL \u6a21\u578b\u5df2\u4f5c\u4e3a\u53ef\u65cb\u8f6c 3D \u9884\u89c8\u5c31\u7eea\u3002",
     unsupported: "\u683c\u5f0f\u4e0d\u652f\u6301",
-    unsupportedText: "\u8bf7\u5bfc\u5165\u56fe\u7247\u6216\u5e38\u89c1 3D \u6a21\u578b\u6587\u4ef6\u3002",
+    unsupportedText: "\u8bf7\u5bfc\u5165\u56fe\u7247\u3001OBJ \u6216 STL \u6587\u4ef6\u3002",
     maskCleared: "\u906e\u7f69\u5df2\u6e05\u7a7a",
     maskClearedText: "\u5e95\u56fe\u4fdd\u7559\uff0c\u53ea\u6e05\u7a7a\u7f16\u8f91\u533a\u57df\u3002",
     nothingClear: "\u5f53\u524d\u6ca1\u6709\u53ef\u6e05\u7a7a\u7684\u906e\u7f69\u3002",
@@ -205,6 +232,10 @@ const copy = {
     redo: "\u91cd\u505a",
     previewQueued: "\u9884\u89c8\u5df2\u6392\u961f",
     previewQueuedText: "\u6b63\u5728\u6839\u636e\u5f53\u524d\u753b\u5e03\u3001\u906e\u7f69\u548c\u63d0\u793a\u8bcd\u8bf7\u6c42\u8f93\u51fa\u3002",
+    previewNoMaskText: "\u5f53\u524d\u6ca1\u6709\u906e\u7f69\uff0c\u751f\u6210\u4f1a\u628a\u5df2\u52a0\u8f7d\u56fe\u7247\u4f5c\u4e3a\u6574\u5f20\u7f16\u8f91\u5bf9\u8c61\u3002",
+    renderCancelled: "\u751f\u6210\u5df2\u53d6\u6d88",
+    renderCancelledText: "\u5df2\u505c\u6b62\u5f53\u524d\u6392\u961f\u6216\u8fd0\u884c\u4e2d\u7684\u8bf7\u6c42\u3002",
+    renderRestartedText: "\u4e0a\u4e00\u6b21\u8bf7\u6c42\u5df2\u53d6\u6d88\uff0c\u6b63\u5728\u53d1\u9001\u6700\u65b0\u753b\u5e03\u3002",
     outputUpdated: "\u5b9e\u65f6\u8f93\u51fa\u5df2\u66f4\u65b0",
     outputUpdatedText: "\u53f3\u4fa7\u753b\u5e03\u6765\u81ea API \u8fd4\u56de\u7ed3\u679c\u3002",
     live: "\u5b9e\u65f6",
@@ -274,6 +305,8 @@ const state = {
   draft: null,
   liveEnabled: true,
   renderTimer: 0,
+  renderQueued: false,
+  rendering: false,
   renderSeq: 0,
   renderController: null,
   lastRequest: null,
@@ -331,6 +364,7 @@ const ui = {
   closeApiSettingsBtn: $("closeApiSettingsBtn"),
   saveApiSettingsBtn: $("saveApiSettingsBtn"),
   modalTestApiBtn: $("modalTestApiBtn"),
+  previewBtn: $("previewBtn"),
 };
 
 const sctx = ui.sourceCanvas.getContext("2d");
@@ -340,6 +374,16 @@ const maskCtx = maskCanvas.getContext("2d");
 const fxCanvas = document.createElement("canvas");
 const fxCtx = fxCanvas.getContext("2d");
 const STATIC_API_CONFIG_KEY = "dcc-capture-static-api-config";
+const modelViewer = createModelViewer();
+
+modelViewer.attach(ui.sourceCanvas, {
+  onChange: () => {
+    state.generatedImage = null;
+    scheduleDraw();
+    scheduleRealtimeRender("preview");
+  },
+  shouldHandlePointer: () => Boolean(state.model && state.tool === "select" && state.strokes.length === 0),
+});
 
 function tr(key) {
   return (copy[state.lang] && copy[state.lang][key]) || copy.en[key] || key;
@@ -351,7 +395,10 @@ function setStatus(titleKey, textKey, textOverride = "") {
 }
 
 function setApiState(kind, labelKey) {
-  ui.apiState.textContent = tr(labelKey);
+  const text = `${state.lang === "cn" ? "API\uff1a" : "API: "}${tr(labelKey)}`;
+  ui.apiState.textContent = text;
+  ui.apiState.title = text;
+  ui.apiState.dataset.state = kind;
   ui.apiState.classList.toggle("busy", kind === "busy");
   ui.apiState.classList.toggle("error", kind === "error");
   ui.apiState.classList.toggle("api", kind === "api");
@@ -359,10 +406,21 @@ function setApiState(kind, labelKey) {
 }
 
 function setRequestState(kind, labelKey) {
-  ui.requestState.textContent = tr(labelKey);
+  const text = `${state.lang === "cn" ? "\u751f\u6210\uff1a" : "Render: "}${tr(labelKey)}`;
+  ui.requestState.textContent = text;
+  ui.requestState.title = text;
+  ui.requestState.dataset.state = kind;
   ui.requestState.classList.toggle("busy", kind === "busy");
+  ui.requestState.classList.toggle("queued", kind === "queued");
   ui.requestState.classList.toggle("error", kind === "error");
   ui.requestState.classList.toggle("api", kind === "api");
+}
+
+function updatePreviewButton() {
+  const canCancel = state.renderQueued || state.rendering;
+  ui.previewBtn.textContent = canCancel ? tr("cancel") : tr("generate");
+  ui.previewBtn.classList.toggle("danger", canCancel);
+  ui.previewBtn.title = canCancel ? tr("renderCancelledText") : tr("generate");
 }
 
 function activeAsset() {
@@ -394,6 +452,7 @@ function updateI18n() {
   });
   updateToolReadout();
   updateChips();
+  updatePreviewButton();
   setStatus("ready", "readyText");
   if (!activeAsset()) ui.assetInfo.textContent = state.lang === "cn" ? "\u7b49\u5f85\u5bfc\u5165\u3002" : "Waiting.";
   setApiState(ui.apiState.classList.contains("api") ? "api" : "local", ui.apiState.classList.contains("api") ? "apiOutput" : "localPreview");
@@ -467,7 +526,7 @@ async function loadApiConfig() {
     state.apiConfig = {
       static_demo: true,
       ...stored,
-      openai: { base_url: "https://api.openai.com/v1", model: "gpt-image-2", ...(stored.openai || {}) },
+      openai: { base_url: "https://api.openai.com/v1", model: "gpt-image-1", ...(stored.openai || {}) },
       custom: { method: "POST", auth_header: "authorization", auth_scheme: "Bearer", ...(stored.custom || {}) },
     };
     enterStaticDemoMode();
@@ -499,7 +558,7 @@ function renderApiConfigForm() {
   ui.apiProviderTitle.textContent = isOpenAi ? "OpenAI" : "Custom API";
   ui.apiProviderSubtitle.textContent = isOpenAi ? tr("apiOpenAiSubtitle") : tr("apiCustomSubtitle");
   ui.apiBaseUrlInput.value = item.base_url || (isOpenAi ? "https://api.openai.com/v1" : "");
-  ui.apiModelInput.value = item.model || (isOpenAi ? "gpt-image-2" : "");
+  ui.apiModelInput.value = item.model || (isOpenAi ? "gpt-image-1" : "");
   ui.apiMethodInput.value = item.method || "POST";
   ui.apiMethodInput.disabled = isOpenAi;
   ui.apiAuthHeaderInput.value = item.auth_header || "authorization";
@@ -527,7 +586,7 @@ function apiFormPayload(provider = state.apiConfigTab) {
 
 async function saveApiSettings() {
   const payload = apiFormPayload(state.apiConfigTab);
-  ui.apiModalStatus.textContent = "Saving...";
+  ui.apiModalStatus.textContent = `${tr("saving")}...`;
   try {
     const response = await fetch("/api/config", {
       method: "POST",
@@ -698,20 +757,29 @@ function scheduleDraw() {
 }
 
 function scheduleRealtimeRender(reason = "edit") {
-  if (!state.liveEnabled || !activeAsset()) return;
+  const manual = reason === "preview" || reason === "api-test";
+  if ((!state.liveEnabled && !manual) || !activeAsset()) return;
+  state.renderQueued = true;
+  setRequestState("queued", "queued");
+  setStatus("previewQueued", state.image && !state.strokes.length ? "previewNoMaskText" : "previewQueuedText");
+  updatePreviewButton();
+  if (reason === "stroke-draft" && state.renderTimer) return;
   window.clearTimeout(state.renderTimer);
-  state.renderTimer = window.setTimeout(() => requestRealtimeRender(reason), reason === "preview" ? 0 : 620);
+  state.renderTimer = window.setTimeout(() => requestRealtimeRender(reason), reason === "stroke-draft" ? 260 : manual ? 0 : 620);
 }
 
-function roundedRect(ctx, x, y, w, h, r) {
-  const radius = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + w, y, x + w, y + h, radius);
-  ctx.arcTo(x + w, y + h, x, y + h, radius);
-  ctx.arcTo(x, y + h, x, y, radius);
-  ctx.arcTo(x, y, x + w, y, radius);
-  ctx.closePath();
+function cancelRealtimeRender() {
+  window.clearTimeout(state.renderTimer);
+  state.renderTimer = 0;
+  state.renderQueued = false;
+  state.rendering = false;
+  state.renderSeq += 1;
+  if (state.renderController) state.renderController.abort();
+  state.renderController = null;
+  setRequestState("local", "cancelled");
+  setStatus("renderCancelled", "renderCancelledText");
+  updatePreviewButton();
+  draw();
 }
 
 function imageRect(canvas, img) {
@@ -739,34 +807,7 @@ function placeholder(ctx, canvas, title, subtitle) {
 function drawModel(ctx, canvas) {
   const w = canvas.clientWidth || canvas.width;
   const h = canvas.clientHeight || canvas.height;
-  const cx = w / 2;
-  const cy = h / 2;
-
-  ctx.fillStyle = canvas === ui.sourceCanvas ? "#e7e8e3" : "#dce0de";
-  ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = "#263246";
-  ctx.strokeStyle = "#7aa2d8";
-  ctx.lineWidth = 2;
-  roundedRect(ctx, cx - 104, cy - 96, 208, 192, 24);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "#0a111b";
-  roundedRect(ctx, cx - 58, cy - 42, 116, 86, 12);
-  ctx.fill();
-  ctx.fillStyle = "#7adfc1";
-  ctx.beginPath();
-  ctx.arc(cx - 34, cy - 12, 10, 0, Math.PI * 2);
-  ctx.arc(cx + 34, cy - 12, 10, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#e1c35c";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(cx - 40, cy + 28);
-  ctx.quadraticCurveTo(cx, cy + 48, cx + 40, cy + 28);
-  ctx.stroke();
-  ctx.fillStyle = "#202733";
-  ctx.font = "700 16px Segoe UI, Microsoft YaHei, sans-serif";
-  ctx.fillText(state.model?.name || "model", 42, 62);
+  modelViewer.renderTo(ctx, w, h, state.model?.name || "model");
 }
 
 function drawStrokeOnContext(ctx, stroke) {
@@ -993,7 +1034,8 @@ function drawSource() {
     return;
   }
 
-  placeholder(sctx, ui.sourceCanvas, tr("waiting"), tr("waitingText"));
+  sctx.fillStyle = "#e7e8e3";
+  sctx.fillRect(0, 0, w, h);
 }
 
 function randomUnit(index) {
@@ -1040,12 +1082,14 @@ function drawResult() {
     rctx.fillRect(0, 0, w, h);
     const rect = imageRect(ui.resultCanvas, state.image);
     rctx.drawImage(state.image, rect.x, rect.y, rect.w, rect.h);
-    if (state.strokes.length) {
+    if (state.strokes.length || state.lastRequest) {
       fxCtx.clearRect(0, 0, w, h);
       drawPreviewEffect(fxCtx, w, h);
-      fxCtx.globalCompositeOperation = "destination-in";
-      fxCtx.drawImage(maskCanvas, 0, 0, w, h);
-      fxCtx.globalCompositeOperation = "source-over";
+      if (state.strokes.length) {
+        fxCtx.globalCompositeOperation = "destination-in";
+        fxCtx.drawImage(maskCanvas, 0, 0, w, h);
+        fxCtx.globalCompositeOperation = "source-over";
+      }
       rctx.drawImage(fxCanvas, 0, 0, w, h);
     }
     return;
@@ -1075,6 +1119,7 @@ function pushHistory(stroke) {
 }
 
 function resetMask() {
+  if (state.renderQueued || state.rendering) cancelRealtimeRender();
   state.strokes = [];
   state.redoStack = [];
   state.draft = null;
@@ -1279,7 +1324,8 @@ function sourceDataUrl() {
     const rect = imageRect(ui.sourceCanvas, state.image);
     ctx.drawImage(state.image, rect.x, rect.y, rect.w, rect.h);
   } else if (state.model) {
-    drawModel(ctx, { clientWidth: w, clientHeight: h });
+    const snapshot = modelViewer.snapshot(w, h, state.model.name);
+    ctx.drawImage(snapshot, 0, 0, w, h);
   } else {
     ctx.fillStyle = "#e7e8e3";
     ctx.fillRect(0, 0, w, h);
@@ -1319,13 +1365,23 @@ function loadGeneratedImage(dataUrl) {
 
 async function requestRealtimeRender(reason) {
   const isApiTest = reason === "api-test";
-  if (!activeAsset() && !isApiTest) return;
-  if (!state.strokes.length && reason !== "preview" && reason !== "example" && reason !== "api-test" && state.mode === "draw") return;
+  state.renderTimer = 0;
+  state.renderQueued = false;
+  if (!activeAsset() && !isApiTest) {
+    updatePreviewButton();
+    return;
+  }
+  if (!state.strokes.length && reason !== "preview" && reason !== "example" && reason !== "api-test" && state.mode === "draw") {
+    updatePreviewButton();
+    return;
+  }
 
   const seq = state.renderSeq + 1;
   state.renderSeq = seq;
+  const cancelledPrevious = state.rendering && state.renderController;
   if (state.renderController) state.renderController.abort();
   state.renderController = new AbortController();
+  state.rendering = true;
 
   state.lastRequest = buildGenerationRequest({
     state: state.session,
@@ -1341,6 +1397,8 @@ async function requestRealtimeRender(reason) {
 
   setApiState("busy", "rendering");
   setRequestState("busy", "rendering");
+  if (cancelledPrevious) setStatus("previewQueued", "renderRestartedText");
+  updatePreviewButton();
   const requestBody = {
     ...state.lastRequest,
     reason,
@@ -1357,6 +1415,9 @@ async function requestRealtimeRender(reason) {
     });
     const payload = await response.json();
     if (seq !== state.renderSeq) return;
+    state.rendering = false;
+    state.renderController = null;
+    updatePreviewButton();
 
     if (payload.imageDataUrl) {
       loadGeneratedImage(payload.imageDataUrl);
@@ -1368,11 +1429,13 @@ async function requestRealtimeRender(reason) {
 
     state.generatedImage = null;
     draw();
-    const isApi = payload.provider === "openai";
+    const isApi = payload.provider === "openai" || payload.provider === "custom-http";
     const isError = payload.ok === false;
-    setApiState(isError ? "error" : (isApi ? "api" : "local"), isError ? "apiMissing" : (isApi ? "apiOutput" : "localPreview"));
-    setRequestState(isError ? "error" : "local", isError ? "apiMissing" : "idle");
-    setStatus(isError ? "apiMissing" : "localPreview", isError ? "apiMissing" : "noKey", state.lang === "cn" ? payload.message_cn || tr("noKey") : payload.message_en || tr("noKey"));
+    const missingProvider = String(payload.provider || "").includes("missing");
+    const errorLabel = missingProvider ? "apiMissing" : (payload.imageDataUrl === "" ? "noImage" : "apiError");
+    setApiState(isError ? "error" : (isApi ? "api" : "local"), isError ? errorLabel : (isApi ? "apiOutput" : "localPreview"));
+    setRequestState(isError ? "error" : "local", isError ? errorLabel : "idle");
+    setStatus(isError ? errorLabel : "localPreview", isError ? errorLabel : "noKey", state.lang === "cn" ? payload.message_cn || tr("noKey") : payload.message_en || tr("noKey"));
   } catch (error) {
     if (error.name === "AbortError") return;
     if (ui.providerSelect.value === "custom-http") {
@@ -1381,6 +1444,9 @@ async function requestRealtimeRender(reason) {
         if (seq !== state.renderSeq) return;
         const imageDataUrl = payload.imageDataUrl || (payload.b64_json ? `data:image/png;base64,${payload.b64_json}` : "");
         if (imageDataUrl) {
+          state.rendering = false;
+          state.renderController = null;
+          updatePreviewButton();
           loadGeneratedImage(imageDataUrl);
           setApiState("api", "apiOutput");
           setRequestState("api", "apiOutput");
@@ -1389,6 +1455,9 @@ async function requestRealtimeRender(reason) {
         }
         throw new Error(state.lang === "cn" ? "Custom API \u672a\u8fd4\u56de imageDataUrl \u6216 b64_json\u3002" : "Custom API did not return imageDataUrl or b64_json.");
       } catch (directError) {
+        state.rendering = false;
+        state.renderController = null;
+        updatePreviewButton();
         state.generatedImage = null;
         draw();
         setApiState("error", "apiError");
@@ -1398,6 +1467,9 @@ async function requestRealtimeRender(reason) {
       }
     }
     state.generatedImage = null;
+    state.rendering = false;
+    state.renderController = null;
+    updatePreviewButton();
     enterStaticDemoMode();
   }
 }
@@ -1455,6 +1527,7 @@ function loadExampleAsset() {
   img.onload = () => {
     state.image = img;
     state.model = null;
+    modelViewer.clear();
     resetMask();
     state.session = registerAsset(createSessionState(), {
       kind: "image",
@@ -1478,6 +1551,7 @@ function loadImage(file) {
   img.onload = () => {
     state.image = img;
     state.model = null;
+    modelViewer.clear();
     resetMask();
     URL.revokeObjectURL(url);
     registerImage(file, img);
@@ -1488,20 +1562,30 @@ function loadImage(file) {
   img.src = url;
 }
 
-function loadModel(file) {
-  state.image = null;
-  state.model = { name: file.name, size: file.size };
-  resetMask();
-  state.session = registerAsset(createSessionState(), {
-    kind: "model",
-    name: file.name,
-    size: file.size,
-    mime: file.type || "",
-    source: "browser",
-  });
-  ui.assetInfo.textContent = `${tr("modelLabel")}${file.name} / ${fileSize(file.size)}`;
-  setStatus("importedModel", "importedModelText");
-  draw();
+async function loadModel(file) {
+  try {
+    const geometry = await parseModelFile(file);
+    state.image = null;
+    state.model = { name: file.name, size: file.size, geometry };
+    modelViewer.setGeometry(geometry);
+    resetMask();
+    state.session = registerAsset(createSessionState(), {
+      kind: "model",
+      name: file.name,
+      size: file.size,
+      mime: file.type || "",
+      source: "browser",
+      format: geometry.format,
+      triangles: geometry.triangleCount,
+    });
+    ui.assetInfo.textContent = `${tr("modelLabel")}${file.name} / ${fileSize(file.size)}`;
+    setTool("select");
+    setStatus("importedModel", "importedModelText");
+    draw();
+    scheduleRealtimeRender("preview");
+  } catch (error) {
+    setStatus("unsupported", "unsupportedText", String(error.message || error));
+  }
 }
 
 function handleFile(file) {
@@ -1511,7 +1595,7 @@ function handleFile(file) {
     return;
   }
   const ext = file.name.split(".").pop().toLowerCase();
-  if (["glb", "gltf", "obj", "fbx", "stl", "usdz"].includes(ext)) {
+  if (["obj", "stl"].includes(ext)) {
     loadModel(file);
     return;
   }
@@ -1599,6 +1683,7 @@ function extendStroke(e) {
   else if (state.strokes.length) state.strokes[state.strokes.length - 1].points.push(p);
   redrawMaskBitmap();
   scheduleDraw();
+  if (state.tool === "brush" || state.tool === "erase") scheduleRealtimeRender("stroke-draft");
 }
 
 function endStroke(e) {
@@ -1652,14 +1737,18 @@ function updateBrushCursor(e) {
 function updatePreview() {
   draw();
   scheduleRealtimeRender("preview");
-  setStatus("previewQueued", "previewQueuedText");
+  setStatus("previewQueued", state.image && !state.strokes.length ? "previewNoMaskText" : "previewQueuedText");
 }
 
 function clearMask() {
   const hadMask = state.strokes.length > 0;
   resetMask();
+  state.lastRequest = null;
+  state.generatedImage = null;
   draw();
   setApiState("local", "localPreview");
+  setRequestState("local", "idle");
+  updatePreviewButton();
   setStatus("maskCleared", hadMask ? "maskClearedText" : "nothingClear");
 }
 
@@ -1688,9 +1777,21 @@ function redoMask() {
 }
 
 function cycleAspectRatio() {
-  state.aspectRatio = state.aspectRatio === "1:1" ? "16:9" : state.aspectRatio === "16:9" ? "4:5" : "1:1";
+  state.aspectRatio = state.aspectRatio === "1:1" ? "3:2" : state.aspectRatio === "3:2" ? "2:3" : "1:1";
   updateChips();
   scheduleRealtimeRender("ratio");
+}
+
+function downloadOutput() {
+  if (!state.generatedImage && !activeAsset()) {
+    setStatus("apiError", "apiError", tr("noOutputToDownload"));
+    return;
+  }
+  draw();
+  const link = document.createElement("a");
+  link.href = ui.resultCanvas.toDataURL("image/png");
+  link.download = `instant-canvas-${Date.now()}.png`;
+  link.click();
 }
 
 function nextSeed() {
@@ -1734,7 +1835,10 @@ document.querySelectorAll("[data-tool]").forEach((button) => {
 $("clearBtn").addEventListener("click", clearMask);
 $("undoBtn")?.addEventListener("click", undoMask);
 $("redoBtn")?.addEventListener("click", redoMask);
-$("previewBtn").addEventListener("click", updatePreview);
+$("previewBtn").addEventListener("click", () => {
+  if (state.renderQueued || state.rendering) cancelRealtimeRender();
+  else updatePreview();
+});
 $("openApiSettingsBtn").addEventListener("click", () => openApiSettings());
 $("testApiBtn").addEventListener("click", () => {
   testApiConnection("panel");
@@ -1829,6 +1933,7 @@ ui.liveChip.addEventListener("click", () => {
   setStatus(state.liveEnabled ? "liveOn" : "liveOff", state.liveEnabled ? "liveOnText" : "liveOffText");
   if (state.liveEnabled) scheduleRealtimeRender("live");
 });
+$("downloadBtn").addEventListener("click", downloadOutput);
 ui.providerSelect.addEventListener("change", () => scheduleRealtimeRender("provider"));
 ui.promptBox.addEventListener("input", () => {
   ui.promptBox.dataset.custom = "1";

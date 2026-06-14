@@ -52,13 +52,25 @@ struct DCC_CaptureSessionWriterStruct
         (
             f = createFile metaPath
             format "schema_version=%\n" version to:f
+            format "packet_version=instant_canvas.dcc_evidence.v1\n" to:f
             format "tool=DCC Capture Bridge\n" to:f
             format "dcc=%\n" dcc to:f
             format "adapter=%\n" adapterName to:f
             format "asset_type=viewport\n" to:f
+            format "capture_family=viewport_pixel_capture\n" to:f
             format "image_path=%\n" imagePath to:f
-            format "width=%\n" width to:f
-            format "height=%\n" height to:f
+            format "image_width=%\n" width to:f
+            format "image_height=%\n" height to:f
+            format "viewport_width=%\n" width to:f
+            format "viewport_height=%\n" height to:f
+            format "requested_width=\n" to:f
+            format "requested_height=\n" to:f
+            format "size_policy=actual_viewport_pixels\n" to:f
+            format "camera_or_viewport=active_viewport\n" to:f
+            format "selected_object_intent=unknown\n" to:f
+            format "material_notes=not_captured_in_mvp\n" to:f
+            format "quality_claim=viewport_pixels_only\n" to:f
+            format "drag_drop_mvp_compatible=true\n" to:f
             format "created_at=%\n" (timestamp()) to:f
             close f
             success metaPath

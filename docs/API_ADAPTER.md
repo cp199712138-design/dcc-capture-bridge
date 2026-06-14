@@ -7,6 +7,8 @@ local Node server, and the local server calls the configured provider.
 
 ```text
 GET  /api/status
+GET  /api/config
+POST /api/config
 POST /api/test-provider
 POST /api/realtime-render
 ```
@@ -20,7 +22,7 @@ OpenAI:
 ```text
 OPENAI_API_KEY=your_key
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_MODEL=gpt-image-1
 ```
 
 Custom customer API:
@@ -72,6 +74,10 @@ The local server sends the same JSON shape for render requests and a smaller
 }
 ```
 
+`POST /api/test-provider` uses the same contract marker and includes transparent
+test image/mask data, but it is identified with `task: "connection_test"` and
+`dcc_capture_bridge.test: true`.
+
 ## Custom API Response
 
 Return one of these:
@@ -110,4 +116,5 @@ contract. Requirements:
 - OpenAI-compatible keys should use the local/hosted server proxy instead of
   static direct mode
 
-This mode is intended for customer testing, not final production security.
+This mode is browser-local customer testing, not production secret safety. Do
+not use static direct mode for keys that must remain server-side.

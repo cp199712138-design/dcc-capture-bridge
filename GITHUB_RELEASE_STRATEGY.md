@@ -1,5 +1,49 @@
 # GitHub Release Strategy
 
+## Instant Canvas Customer-Test Build
+
+当前网页主线按客户测试版处理：
+
+```text
+source branch -> smoke pass -> GitHub push -> GitHub Pages/customer URL
+```
+
+发布前必须确认：
+
+```powershell
+node capture-canvas/check-page.mjs --all
+```
+
+若需要分项定位，使用：
+
+```powershell
+node capture-canvas/check-page.mjs
+node capture-canvas/simulate-flow.mjs
+node capture-canvas/test-api-contract.mjs
+node capture-canvas/browser-smoke.mjs
+```
+
+客户测试版 release notes 固定结构：
+
+```text
+Build:
+Commit:
+URL:
+Ready:
+Preview-only:
+Provider/API setup:
+Known limits:
+Verification:
+Customer steps:
+Rollback:
+```
+
+Secret scan 只拦截真实 key，不拦截 `sk-...` 占位符：
+
+```powershell
+rg 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
+```
+
 ## 目标
 
 后续代码会变多，但不能变乱，也不能让用户每次手动找一堆文件。
