@@ -12,6 +12,8 @@ const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
 const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
 const moduleScriptSrcs = [...html.matchAll(/<script\s+type="module"\s+src="([^"]+)"/g)].map((match) => match[1]);
 const app = readFileSync(new URL("./app.mjs", import.meta.url), "utf8");
+const apiClient = readFileSync(new URL("./api-client.mjs", import.meta.url), "utf8");
+const browserCode = `${app}\n${apiClient}`;
 const core = readFileSync(new URL("./capture-core.mjs", import.meta.url), "utf8");
 const localServer = readFileSync(new URL("./serve-static.mjs", import.meta.url), "utf8");
 const packageServer = readFileSync(new URL("../serve-static.mjs", import.meta.url), "utf8");
@@ -25,6 +27,7 @@ for (const script of inlineScripts) {
 }
 
 new vm.Script(app.replace(/^import .*$/gm, ""));
+new vm.Script(apiClient.replace(/export\s+/g, ""));
 new vm.Script(core.replace(/export\s+/g, ""));
 
 const visibleDefaultText = [...html.matchAll(/>([^<>]+)</g)]
@@ -74,13 +77,13 @@ const report = {
   hasBoardRelativeBrushCursor: app.includes("board.getBoundingClientRect()") && app.includes("e.clientX - boardRect.left") && app.includes("e.clientY - boardRect.top"),
   hasExampleCanvas: app.includes("loadExampleAsset") && app.includes("example-chair.png"),
   hasSeedAndRatio: app.includes("nextSeed") && app.includes("cycleAspectRatio"),
-  hasRealtimeApiClient: app.includes("/api/realtime-render") && app.includes("scheduleRealtimeRender") && app.includes("sourceImageDataUrl") && app.includes("maskDataUrl"),
+  hasRealtimeApiClient: browserCode.includes("/api/realtime-render") && app.includes("scheduleRealtimeRender") && app.includes("sourceImageDataUrl") && app.includes("maskDataUrl"),
   hasRealtimeApiServer: localServer.includes("/api/realtime-render") && localServer.includes("OPENAI_API_KEY") && packageServer.includes("/api/realtime-render"),
-  hasProviderTestEndpoint: app.includes("/api/test-provider") && localServer.includes("/api/test-provider") && packageServer.includes("/api/test-provider"),
-  hasStaticDemoFallback: app.includes("STATIC_API_CONFIG_KEY") && app.includes("enterStaticDemoMode") && app.includes("callDirectCustomApi"),
+  hasProviderTestEndpoint: browserCode.includes("/api/test-provider") && localServer.includes("/api/test-provider") && packageServer.includes("/api/test-provider"),
+  hasStaticDemoFallback: browserCode.includes("STATIC_API_CONFIG_KEY") && app.includes("enterStaticDemoMode") && browserCode.includes("callDirectCustomApi"),
   hasCustomApiAdapter: html.includes('value="custom-http"') && localServer.includes("DCC_CUSTOM_API_URL") && packageServer.includes("DCC_CUSTOM_API_URL"),
   hasApiTestUi: html.includes('id="apiSummary"') && html.includes('id="testApiBtn"') && app.includes('reason === "api-test"'),
-  hasApiSettingsUi: html.includes('id="apiModal"') && app.includes("saveApiSettings") && app.includes("/api/config") && app.includes("openApiSettings"),
+  hasApiSettingsUi: html.includes('id="apiModal"') && app.includes("saveApiSettings") && browserCode.includes("/api/config") && app.includes("openApiSettings"),
   hasEnvLoader: localServer.includes("loadLocalEnv") && packageServer.includes("loadLocalEnv") && localServer.includes('join(root, ".env")'),
   hasExplicitMissingProvider: localServer.includes("openai-missing") && localServer.includes("custom-http-missing") && packageServer.includes("openai-missing"),
   hasMovableSelection: app.includes("findStrokeAt") && app.includes("translateStroke") && app.includes("movingSelection") && app.includes("drawSelectedOverlay"),
@@ -115,6 +118,7 @@ function findRealApiKeys() {
   const sources = [
     ["capture-canvas/index.html", html],
     ["capture-canvas/app.mjs", app],
+    ["capture-canvas/api-client.mjs", apiClient],
     ["capture-canvas/serve-static.mjs", localServer],
     ["serve-static.mjs", packageServer],
     [".env.example", envExample],

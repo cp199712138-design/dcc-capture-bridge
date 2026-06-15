@@ -41,8 +41,12 @@ Rollback:
 Secret scan 只拦截真实 key，不拦截 `sk-...` 占位符：
 
 ```powershell
-rg 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
+rg --pcre2 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
 ```
+
+This repair round ships browser Instant Canvas only. Keep 3ds Max and Blender
+as frozen follow-up work unless their existing files create a repository safety
+or documentation problem.
 
 ## 目标
 

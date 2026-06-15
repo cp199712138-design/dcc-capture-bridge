@@ -33,6 +33,7 @@ Audit and repair provider behavior:
 - OpenAI-compatible proxy errors are visible to the user
 
 Make only focused API/server/doc fixes.
+Do not change the DCC evidence packet in this round unless a browser API test proves the existing packet is unusable.
 
 ## Verification
 

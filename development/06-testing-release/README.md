@@ -41,7 +41,7 @@ browser profile or machine.
 Use a real-key pattern, not a plain `sk-` search:
 
 ```powershell
-rg 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
+rg --pcre2 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
 ```
 
 Allowed placeholders include `sk-...`, `test-key`, empty `.env.example` values,
@@ -49,6 +49,10 @@ and documentation that explains key setup. Real customer or developer secrets
 must never be committed.
 
 ## Customer-Test Release Notes
+
+This repair round is browser-only. Mark 3ds Max and Blender as frozen follow-up
+areas unless a repository safety check or customer-test note requires mentioning
+their current preview files.
 
 Use this structure for each customer-test handoff:
 
@@ -70,6 +74,7 @@ Rollback / previous build:
 - Save release notes per customer-test build.
 - Add a small pre-push checklist for secrets and large assets.
 - Keep temporary clone/test output outside committed source.
+- Revisit 3ds Max and Blender only after the browser Instant Canvas pass is stable.
 
 ## Key Files
 

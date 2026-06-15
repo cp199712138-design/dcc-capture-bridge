@@ -24,12 +24,13 @@ Primary files:
 
 ## First Assignment
 
-Audit the current UI against the Product Design brief:
+Repair the browser product surface before adding features:
 
 - dark, dense, Krea-style, production-tool feel
 - no mixed Chinese/English labels in either mode
 - toolbar and prompt panel do not overlap at desktop sizes
 - API Settings reads as a serious customer settings surface
+- first viewport clearly communicates an editable realtime canvas, not a generic screenshot plugin
 
 Make only small UI repairs that are clearly inside this scope.
 

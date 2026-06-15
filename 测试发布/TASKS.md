@@ -32,6 +32,8 @@ Create a reliable test-and-release pass:
 - ensure secret scan guidance does not flag placeholders as real keys
 - prepare release notes structure for a customer-test build
 
+This round verifies the browser Instant Canvas only. 3ds Max and Blender remain listed as frozen follow-up areas unless they block repository safety or customer-test documentation.
+
 ## Verification
 
 Run:

@@ -32,6 +32,7 @@ Audit and repair the canvas interaction path:
 - duplicate/delete/order/flip actions visibly update the selected region
 
 Make the smallest repair that improves a verified issue.
+Do not add new 3ds Max or Blender capture behavior in this round.
 
 ## Verification
 

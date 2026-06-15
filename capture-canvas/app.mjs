@@ -1,4 +1,5 @@
 import { buildGenerationRequest, createSessionState, registerAsset } from "./capture-core.mjs";
+import { callDirectCustomApi, fetchApiConfig, postApiConfig, postProviderTest, postRealtimeRender, saveStaticApiConfig, staticApiConfigWithDefaults } from "./api-client.mjs";
 import { createModelViewer, parseModelFile } from "./model-viewer.mjs";
 
 const copy = {
@@ -373,7 +374,6 @@ const maskCanvas = document.createElement("canvas");
 const maskCtx = maskCanvas.getContext("2d");
 const fxCanvas = document.createElement("canvas");
 const fxCtx = fxCanvas.getContext("2d");
-const STATIC_API_CONFIG_KEY = "dcc-capture-static-api-config";
 const modelViewer = createModelViewer();
 
 modelViewer.attach(ui.sourceCanvas, {
@@ -488,47 +488,11 @@ function enterStaticDemoMode(text = tr("staticDemoText")) {
   draw();
 }
 
-function loadStaticApiConfig() {
-  try {
-    return JSON.parse(localStorage.getItem(STATIC_API_CONFIG_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveStaticApiConfig(payload) {
-  const current = loadStaticApiConfig();
-  const providerKey = payload.provider === "openai" ? "openai" : "custom";
-  const next = {
-    ...current,
-    static_demo: true,
-    [providerKey]: {
-      ...(current[providerKey] || {}),
-      base_url: payload.baseUrl,
-      model: payload.model,
-      method: payload.method,
-      auth_header: payload.authHeader,
-      auth_scheme: payload.authScheme,
-      key_saved: Boolean(payload.apiKey || current[providerKey]?.api_key),
-      api_key: payload.apiKey || current[providerKey]?.api_key || "",
-    },
-  };
-  localStorage.setItem(STATIC_API_CONFIG_KEY, JSON.stringify(next));
-  return next;
-}
-
 async function loadApiConfig() {
   try {
-    const response = await fetch("/api/config", { cache: "no-store" });
-    state.apiConfig = await response.json();
+    state.apiConfig = await fetchApiConfig();
   } catch {
-    const stored = loadStaticApiConfig();
-    state.apiConfig = {
-      static_demo: true,
-      ...stored,
-      openai: { base_url: "https://api.openai.com/v1", model: "gpt-image-1", ...(stored.openai || {}) },
-      custom: { method: "POST", auth_header: "authorization", auth_scheme: "Bearer", ...(stored.custom || {}) },
-    };
+    state.apiConfig = staticApiConfigWithDefaults();
     enterStaticDemoMode();
   }
   renderApiConfigForm();
@@ -588,13 +552,7 @@ async function saveApiSettings() {
   const payload = apiFormPayload(state.apiConfigTab);
   ui.apiModalStatus.textContent = `${tr("saving")}...`;
   try {
-    const response = await fetch("/api/config", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    if (!data.ok) throw new Error(data.message || "Save failed");
+    const data = await postApiConfig(payload);
     state.apiConfig = data.config;
     await checkApiStatus();
   } catch {
@@ -604,43 +562,6 @@ async function saveApiSettings() {
   ui.apiKeyInput.value = "";
   renderApiConfigForm();
   ui.apiModalStatus.textContent = tr("saved");
-}
-
-function directCustomConfig(payload = {}) {
-  const stored = loadStaticApiConfig();
-  const saved = stored.custom || state.apiConfig?.custom || {};
-  return {
-    provider: "custom-http",
-    baseUrl: payload.baseUrl || saved.base_url || "",
-    model: payload.model || saved.model || "",
-    apiKey: payload.apiKey || saved.api_key || "",
-    method: payload.method || saved.method || "POST",
-    authHeader: payload.authHeader || saved.auth_header || "authorization",
-    authScheme: payload.authScheme || saved.auth_scheme || "Bearer",
-  };
-}
-
-async function callDirectCustomApi(requestBody, payload = {}) {
-  const config = directCustomConfig(payload);
-  if (!config.baseUrl) throw new Error(state.lang === "cn" ? "\u8bf7\u5148\u586b\u5199 Custom API \u8bf7\u6c42\u5730\u5740\u3002" : "Set the Custom API URL first.");
-  const headers = { "content-type": "application/json" };
-  if (config.apiKey) headers[config.authHeader || "authorization"] = `${config.authScheme || "Bearer"} ${config.apiKey}`.trim();
-  const response = await fetch(config.baseUrl, {
-    method: config.method || "POST",
-    headers,
-    body: JSON.stringify({
-      ...requestBody,
-      model: config.model || requestBody.model || "",
-      dcc_capture_bridge: {
-        ...(requestBody.dcc_capture_bridge || {}),
-        static_demo_direct: true,
-        contract: "custom-http-json-v1",
-      },
-    }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || data.error || `HTTP ${response.status}`);
-  return data;
 }
 
 async function testApiConnection(source = "panel") {
@@ -660,12 +581,7 @@ async function testApiConnection(source = "panel") {
   setRequestState("busy", "checking");
 
   try {
-    const response = await fetch("/api/test-provider", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
+    const data = await postProviderTest(payload);
     const text = state.lang === "cn" ? data.message_cn || data.cn : data.message_en || data.en;
     if (source === "modal") ui.apiModalStatus.textContent = text || (data.ok ? tr("apiTestOk") : tr("apiTestFailed"));
     setApiState(data.ok ? "api" : "error", data.ok ? "apiTestOk" : "apiTestFailed");
@@ -679,7 +595,7 @@ async function testApiConnection(source = "panel") {
           task: "connection_test",
           prompt: "Instant Canvas connection test",
           dcc_capture_bridge: { test: true, contract: "custom-http-json-v1" },
-        }, payload);
+        }, payload, state.apiConfig, state.lang === "cn" ? "\u8bf7\u5148\u586b\u5199 Custom API \u8bf7\u6c42\u5730\u5740\u3002" : "Set the Custom API URL first.");
         const text = state.lang === "cn" ? data.message_cn || data.message || "Custom API \u8fde\u63a5\u901a\u8fc7" : data.message_en || data.message || "Custom API connection passed";
         if (source === "modal") ui.apiModalStatus.textContent = text;
         setApiState("api", "apiTestOk");
@@ -1407,13 +1323,7 @@ async function requestRealtimeRender(reason) {
   };
 
   try {
-    const response = await fetch("/api/realtime-render", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(requestBody),
-      signal: state.renderController.signal,
-    });
-    const payload = await response.json();
+    const payload = await postRealtimeRender(requestBody, state.renderController.signal);
     if (seq !== state.renderSeq) return;
     state.rendering = false;
     state.renderController = null;
@@ -1440,7 +1350,7 @@ async function requestRealtimeRender(reason) {
     if (error.name === "AbortError") return;
     if (ui.providerSelect.value === "custom-http") {
       try {
-        const payload = await callDirectCustomApi(requestBody);
+        const payload = await callDirectCustomApi(requestBody, {}, state.apiConfig, state.lang === "cn" ? "\u8bf7\u5148\u586b\u5199 Custom API \u8bf7\u6c42\u5730\u5740\u3002" : "Set the Custom API URL first.");
         if (seq !== state.renderSeq) return;
         const imageDataUrl = payload.imageDataUrl || (payload.b64_json ? `data:image/png;base64,${payload.b64_json}` : "");
         if (imageDataUrl) {
@@ -1695,17 +1605,13 @@ function endStroke(e) {
     state.resizeOriginal = null;
     state.resizeBounds = null;
     ui.sourceCanvas.style.cursor = "grab";
-    redrawMaskBitmap();
-    scheduleDraw();
-    scheduleRealtimeRender("resize");
+    commitLayerChange("resize");
     return;
   }
   if (state.movingSelection) {
     state.movingSelection = false;
     ui.sourceCanvas.style.cursor = "grab";
-    redrawMaskBitmap();
-    scheduleDraw();
-    scheduleRealtimeRender("move");
+    commitLayerChange("move");
     return;
   }
   if (state.draft) {

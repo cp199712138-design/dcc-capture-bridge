@@ -21,7 +21,7 @@ node capture-canvas/browser-smoke.mjs
 Use this real-key scan so placeholders are not treated as leaked secrets:
 
 ```powershell
-rg 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
+rg --pcre2 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
 ```
 
 Allowed placeholders: `sk-...`, `test-key`, and empty values in `.env.example`.
@@ -43,57 +43,41 @@ Customer test steps:
 Rollback / previous build:
 ```
 
-## 上传前确认
+## 本轮上传范围
 
-第一版先上传这些：
+当前 PR 先上传 Instant Canvas 浏览器客户测试内容：
 
 ```text
 README.md
-START_PLAN.md
-PRODUCT_UI_SYSTEM.md
-AI_PIPELINE_PLAN.md
-COMPETITOR_SCAN.md
-dist/PerfectHDScreenshotPro_MVP.ms
+capture-canvas/
+UI/
+Canvas/
+API/
+测试发布/
+development/00-dispatch/
+development/01-ui-shell/
+development/02-canvas-editor/
+development/03-realtime-api/
+development/06-testing-release/
+docs/API_ADAPTER.md
 ```
 
-可以暂时不上传：
+本轮冻结，不新增实现：
 
 ```text
-旧 PerfectHDScreenshot/
+3ds Max
+Blender
+```
+
+不要上传：
+
+```text
+.env
+customer files
 generated images
-临时测试输出
-ComfyUI 目录
-```
-
-## 第一版 README 要写清楚
-
-必须说明：
-
-- 这是 3ds Max MVP。
-- 直接拖入 `PerfectHDScreenshotPro_MVP.ms` 可以打开。
-- 默认英文，支持中文切换。
-- 当前只支持 Capture / Render。
-- ComfyUI / Blender / AI workflow 是后续计划。
-- 还没有经过大量 3ds Max 版本测试。
-
-## 发布包策略
-
-第一阶段只发布单文件：
-
-```text
-dist/PerfectHDScreenshotPro_MVP.ms
-```
-
-用户使用方式：
-
-```text
-Drag the .ms file into a 3ds Max viewport.
-```
-
-后续成熟再做：
-
-```text
-PerfectHDScreenshotPro.bundle
+temporary test output
+ComfyUI directory
+local captures/renders/models
 ```
 
 ## GitHub 仓库建议名

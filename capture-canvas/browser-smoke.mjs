@@ -261,6 +261,7 @@ try {
       }
       return darkPixels > 20;
     };
+    const rectsOverlap = (a, b) => Boolean(a && b && !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom));
     const eventAt = (type, x, y, button = 0) => new PointerEvent(type, {
       bubbles: true,
       cancelable: true,
@@ -299,6 +300,8 @@ try {
     await sleep(80);
     const menuOpen = document.querySelector("#layerMenu")?.classList.contains("open");
     const layerMenuText = document.querySelector("#layerMenu")?.textContent || "";
+    const promptRect = document.querySelector(".prompt")?.getBoundingClientRect();
+    const toolbarRect = document.querySelector(".floating")?.getBoundingClientRect();
     click('[data-layer-action="duplicate"]');
     await sleep(80);
     resolve({
@@ -312,11 +315,12 @@ try {
       statusText: document.querySelector("#statusText")?.textContent || "",
       promptVisible: !!document.querySelector("#prompt"),
       toolbarVisible: !!document.querySelector(".floating"),
+      promptToolbarOverlap: rectsOverlap(promptRect, toolbarRect),
     });
   })`, sessionId);
 
   client.close();
-  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake) {
+  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap) {
     throw new Error(`Browser smoke failed: ${JSON.stringify(report)}`);
   }
   console.log(JSON.stringify({ browser_smoke_ok: true, report }));
