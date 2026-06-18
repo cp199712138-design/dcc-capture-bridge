@@ -289,6 +289,36 @@ try {
       }
       return pixels;
     };
+    const countDarkPixelsInArea = (canvas, left, top, width, height) => {
+      const context = canvas.getContext("2d");
+      const x = Math.max(0, Math.floor(left));
+      const y = Math.max(0, Math.floor(top));
+      const w = Math.max(1, Math.min(Math.floor(width), canvas.width - x));
+      const h = Math.max(1, Math.min(Math.floor(height), canvas.height - y));
+      const sample = context.getImageData(x, y, w, h).data;
+      let pixels = 0;
+      for (let index = 0; index < sample.length; index += 4) {
+        const red = sample[index];
+        const green = sample[index + 1];
+        const blue = sample[index + 2];
+        const alpha = sample[index + 3];
+        if (alpha > 220 && red < 45 && green < 55 && blue < 60) pixels += 1;
+      }
+      return pixels;
+    };
+    const countDarkSelectionPixelsAround = (canvas, bounds) => (
+      countDarkPixelsInArea(canvas, bounds.x - 2, bounds.y - 2, bounds.w + 4, 7)
+      + countDarkPixelsInArea(canvas, bounds.x - 2, bounds.y + bounds.h - 5, bounds.w + 4, 7)
+      + countDarkPixelsInArea(canvas, bounds.x - 2, bounds.y - 2, 7, bounds.h + 4)
+      + countDarkPixelsInArea(canvas, bounds.x + bounds.w - 5, bounds.y - 2, 7, bounds.h + 4)
+    );
+    const toolActiveStateIsConsistent = (tool) => {
+      const buttons = [...document.querySelectorAll("[data-tool]")];
+      const expected = buttons.filter((button) => button.dataset.tool === tool);
+      return expected.length > 0
+        && expected.every((button) => button.classList.contains("active"))
+        && buttons.every((button) => (button.dataset.tool === tool) === button.classList.contains("active"));
+    };
     const hasCyanAt = (canvas, x, y) => countCyanMaskPixels(canvas, x, y, 32) > 40;
     const click = (selector) => document.querySelector(selector)?.click();
     const setFileInput = (input, file) => {
@@ -313,21 +343,35 @@ try {
     const canvas = document.querySelector("#sourceCanvas");
     const rect = canvas.getBoundingClientRect();
     click("#brushBtn");
+    const brushToolActiveConsistent = toolActiveStateIsConsistent("brush");
     const tapPoint = { x: rect.left + 610, y: rect.top + 260 };
     canvas.dispatchEvent(eventAt("pointerdown", tapPoint.x, tapPoint.y));
     canvas.dispatchEvent(eventAt("pointerup", tapPoint.x, tapPoint.y));
     await sleep(120);
     const brushClickMaskPixels = countCyanMaskPixels(canvas, tapPoint.x - rect.left, tapPoint.y - rect.top);
+    const brushSize = Number(document.querySelector("#brushSize")?.value || 44);
+    const brushPad = Math.max(10, brushSize / 2);
+    const brushClickBounds = {
+      x: tapPoint.x - rect.left - brushPad,
+      y: tapPoint.y - rect.top - brushPad,
+      w: brushPad * 2,
+      h: brushPad * 2,
+    };
+    const brushModeSelectionDarkPixels = countDarkSelectionPixelsAround(canvas, brushClickBounds);
     const pausedAutoStateAfterBrush = document.querySelector("#requestState")?.dataset.state || "";
     click("#rectTool");
     canvas.dispatchEvent(eventAt("pointerdown", rect.left + 300, rect.top + 220));
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 470, rect.top + 350));
     canvas.dispatchEvent(eventAt("pointerup", rect.left + 470, rect.top + 350));
     await sleep(80);
+    const rectModeSelectionDarkPixels = countDarkSelectionPixelsAround(canvas, { x: 300, y: 220, w: 170, h: 130 });
     const pausedAutoStateAfterRect = document.querySelector("#requestState")?.dataset.state || "";
     click("#selectTool");
+    const selectToolActiveConsistent = toolActiveStateIsConsistent("select");
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 380, rect.top + 290));
     canvas.dispatchEvent(eventAt("pointerdown", rect.left + 380, rect.top + 290));
+    await sleep(80);
+    const selectModeSelectionDarkPixels = countDarkSelectionPixelsAround(canvas, { x: 300, y: 220, w: 170, h: 130 });
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 430, rect.top + 320));
     canvas.dispatchEvent(eventAt("pointerup", rect.left + 430, rect.top + 320));
     await sleep(80);
@@ -409,6 +453,9 @@ try {
     click("#previewBtn");
     await sleep(220);
     const modelPreviewQueuedOrRendered = ["queued", "busy", "local", "api"].includes(document.querySelector("#requestState")?.dataset.state || "");
+    const mockPreviewUsesLocalState = document.querySelector("#apiState")?.dataset.state === "local"
+      && document.querySelector("#outputBadge")?.textContent !== "API 输出"
+      && document.querySelector("#outputBadge")?.textContent !== "API output";
     setFileInput(modelInput, new File(["v 0 0 0\\n"], "broken.obj", { type: "text/plain" }));
     await waitFor(() => /No renderable triangles|没有/.test(document.querySelector("#statusText")?.textContent || ""));
     const modelImportFailureHasFeedback = /No renderable triangles|没有/.test(document.querySelector("#statusText")?.textContent || "");
@@ -418,6 +465,11 @@ try {
       hasSourceCanvas: !!canvas,
       emptyCanvasHasDuplicateText,
       brushClickMaskPixels,
+      brushModeSelectionDarkPixels,
+      rectModeSelectionDarkPixels,
+      selectModeSelectionDarkPixels,
+      brushToolActiveConsistent,
+      selectToolActiveConsistent,
       pausedLiveAvoidsAutoQueue: !["queued", "busy"].includes(pausedAutoStateAfterBrush) && !["queued", "busy"].includes(pausedAutoStateAfterRect),
       movedRectHasNewPixels,
       movedRectNewPixelCount,
@@ -440,12 +492,13 @@ try {
       brushModeWheelIgnoredForModel,
       selectModeWheelZoomsModel,
       modelPreviewQueuedOrRendered,
+      mockPreviewUsesLocalState,
       modelImportFailureHasFeedback,
     });
   })`, sessionId);
 
   client.close();
-  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || !report.pausedLiveAvoidsAutoQueue || !report.movedRectHasNewPixels || !report.undoMoveRestoresOriginalPixels || !report.redoMoveRestoresMovedPixels || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap || !report.modelImported || !report.brushModeWheelIgnoredForModel || !report.selectModeWheelZoomsModel || !report.modelPreviewQueuedOrRendered || !report.modelImportFailureHasFeedback) {
+  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || report.brushModeSelectionDarkPixels > 16 || report.rectModeSelectionDarkPixels > 160 || report.selectModeSelectionDarkPixels < 24 || report.selectModeSelectionDarkPixels <= report.rectModeSelectionDarkPixels * 2 || !report.brushToolActiveConsistent || !report.selectToolActiveConsistent || !report.pausedLiveAvoidsAutoQueue || !report.movedRectHasNewPixels || !report.undoMoveRestoresOriginalPixels || !report.redoMoveRestoresMovedPixels || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap || !report.modelImported || !report.brushModeWheelIgnoredForModel || !report.selectModeWheelZoomsModel || !report.modelPreviewQueuedOrRendered || !report.mockPreviewUsesLocalState || !report.modelImportFailureHasFeedback) {
     throw new Error(`Browser smoke failed: ${JSON.stringify(report)}`);
   }
   console.log(JSON.stringify({ browser_smoke_ok: true, report }));

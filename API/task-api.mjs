@@ -31,21 +31,48 @@ export function createMockImageDataUrl(body = {}) {
   const sourceHash = hashString(body.sourceImageDataUrl || "");
   const maskHash = hashString(body.maskDataUrl || "");
   const promptHash = hashString(`${body.prompt || ""}|${body.task || ""}`);
-  const width = 32;
-  const height = 32;
+  const width = 256;
+  const height = 256;
   const rows = Buffer.alloc((width * 4 + 1) * height);
+  const baseA = softColor(sourceHash, promptHash);
+  const baseB = softColor(maskHash, sourceHash);
+  const accent = softColor(promptHash, maskHash);
+  const wash = softColor(sourceHash ^ maskHash ^ promptHash, promptHash);
+  const sourceCenter = [
+    0.18 + ((sourceHash & 255) / 255) * 0.64,
+    0.18 + (((sourceHash >>> 8) & 255) / 255) * 0.64
+  ];
+  const maskCenter = [
+    0.18 + ((maskHash & 255) / 255) * 0.64,
+    0.18 + (((maskHash >>> 8) & 255) / 255) * 0.64
+  ];
+  const promptCenter = [
+    0.18 + ((promptHash & 255) / 255) * 0.64,
+    0.18 + (((promptHash >>> 8) & 255) / 255) * 0.64
+  ];
 
   for (let y = 0; y < height; y++) {
     const row = y * (width * 4 + 1);
+    const ny = y / (height - 1);
     rows[row] = 0;
     for (let x = 0; x < width; x++) {
       const offset = row + 1 + x * 4;
-      const sourceBand = (sourceHash >>> ((x % 4) * 8)) & 255;
-      const maskBand = (maskHash >>> ((y % 4) * 8)) & 255;
-      const checker = ((x + (sourceHash & 7)) ^ (y + (maskHash & 7))) & 1;
-      rows[offset] = (sourceBand + x * 9 + y * 3) & 255;
-      rows[offset + 1] = (maskBand + y * 7 + (checker ? 80 : 18)) & 255;
-      rows[offset + 2] = (promptHash + x * 5 + y * 11 + (checker ? 30 : 120)) & 255;
+      const nx = x / (width - 1);
+      const diagonal = (nx + ny) * 0.5;
+      const sourceGlow = softSpot(nx, ny, sourceCenter[0], sourceCenter[1], 0.28);
+      const maskGlow = softSpot(nx, ny, maskCenter[0], maskCenter[1], 0.34);
+      const promptGlow = softSpot(nx, ny, promptCenter[0], promptCenter[1], 0.22);
+      const band = Math.max(0, 1 - Math.abs(ny - (0.22 + ((promptHash >>> 16) & 255) / 455)) * 5);
+      const panel = Math.max(0, 1 - Math.abs(nx - (0.28 + ((maskHash >>> 16) & 255) / 580)) * 6);
+      let color = mixColor(baseA, baseB, diagonal);
+      color = mixColor(color, wash, sourceGlow * 0.42);
+      color = mixColor(color, accent, promptGlow * 0.55);
+      color = mixColor(color, [246, 246, 238], band * 0.16);
+      color = mixColor(color, [230, 236, 244], panel * maskGlow * 0.26);
+      color = mixColor(color, [255, 255, 255], softSpot(nx, ny, 0.28, 0.18, 0.3) * 0.18);
+      rows[offset] = clampByte(color[0]);
+      rows[offset + 1] = clampByte(color[1]);
+      rows[offset + 2] = clampByte(color[2]);
       rows[offset + 3] = 255;
     }
   }
@@ -73,6 +100,33 @@ function hashString(value) {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+function softColor(hash, salt) {
+  return [
+    118 + (((hash >>> 0) & 255) * 0.34) + (((salt >>> 16) & 255) * 0.08),
+    126 + (((hash >>> 8) & 255) * 0.3) + (((salt >>> 8) & 255) * 0.08),
+    138 + (((hash >>> 16) & 255) * 0.28) + (((salt >>> 0) & 255) * 0.08)
+  ];
+}
+
+function softSpot(x, y, centerX, centerY, radius) {
+  const dx = x - centerX;
+  const dy = y - centerY;
+  return Math.max(0, 1 - (dx * dx + dy * dy) / (radius * radius));
+}
+
+function mixColor(a, b, amount) {
+  const t = Math.max(0, Math.min(1, amount));
+  return [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t
+  ];
+}
+
+function clampByte(value) {
+  return Math.max(0, Math.min(255, Math.round(value)));
 }
 
 function pngChunk(type, data) {

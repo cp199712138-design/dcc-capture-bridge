@@ -859,6 +859,16 @@ function selectedStroke() {
   return state.strokes[state.selectedStrokeIndex] || null;
 }
 
+function clearSelectionInteraction(clearSelection = false) {
+  if (clearSelection) state.selectedStrokeIndex = -1;
+  state.movingSelection = false;
+  state.resizingSelection = false;
+  state.resizeHandle = "";
+  state.resizeOriginal = null;
+  state.resizeBounds = null;
+  state.moveLast = null;
+}
+
 function cloneStroke(stroke) {
   return JSON.parse(JSON.stringify(stroke));
 }
@@ -949,6 +959,7 @@ function boundsFromHandle(handle, original, point) {
 }
 
 function drawSelectedOverlay(ctx) {
+  if (state.tool !== "select" && !state.movingSelection && !state.resizingSelection && !ui.layerMenu.classList.contains("open")) return;
   const stroke = selectedStroke();
   const bounds = strokeBounds(stroke);
   if (!bounds) return;
@@ -1088,7 +1099,7 @@ function draw() {
 function pushHistory(stroke) {
   if (!stroke) return;
   state.strokes.push(stroke);
-  state.selectedStrokeIndex = state.strokes.length - 1;
+  if (state.tool === "select") state.selectedStrokeIndex = state.strokes.length - 1;
   state.redoStack = [];
   redrawMaskBitmap();
 }
@@ -1115,8 +1126,10 @@ function resetMask() {
 function setTool(tool) {
   state.tool = tool;
   if (tool !== "select") {
-    state.movingSelection = false;
-    state.resizingSelection = false;
+    hideLayerMenu();
+    state.draft = null;
+    state.pendingHistory = null;
+    clearSelectionInteraction(true);
   }
   ui.sourceCanvas.style.cursor = tool === "select" ? "grab" : "none";
   updateToolReadout();
@@ -1392,10 +1405,11 @@ async function requestRealtimeRender(reason) {
     updatePreviewButton();
 
     if (payload.imageDataUrl) {
+      const remoteProvider = payload.provider === "openai" || payload.provider === "custom-http";
       loadGeneratedImage(payload.imageDataUrl);
-      setApiState("api", "apiOutput");
-      setRequestState("api", "apiOutput");
-      setStatus("outputUpdated", "outputUpdatedText");
+      setApiState(remoteProvider ? "api" : "local", remoteProvider ? "apiOutput" : "localPreview");
+      setRequestState(remoteProvider ? "api" : "local", remoteProvider ? "apiOutput" : "localPreview");
+      setStatus(remoteProvider ? "outputUpdated" : "localPreview", remoteProvider ? "outputUpdatedText" : "livePreviewText", remoteProvider ? "" : (state.lang === "cn" ? payload.message_cn || "" : payload.message_en || ""));
       return;
     }
 
@@ -1610,6 +1624,7 @@ function beginStroke(e) {
   }
 
   state.drawing = true;
+  clearSelectionInteraction(true);
   state.pendingHistory = createHistorySnapshot();
   if (state.tool === "brush" || state.tool === "erase") {
     state.eraseMaskBefore = state.tool === "erase" ? maskSignature() : "";

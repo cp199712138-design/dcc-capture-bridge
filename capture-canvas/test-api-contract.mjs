@@ -213,7 +213,15 @@ try {
   assert.equal(mockRender.ok, true);
   assert.equal(mockRender.provider, "mock-local");
   assertValidPngDataUrl(mockRender.imageDataUrl);
+  assertPngDimensions(mockRender.imageDataUrl, { minWidth: 256, minHeight: 256 });
   assert.notEqual(mockRender.imageDataUrl, transparentPixel);
+
+  const repeatedMock = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "mock-local",
+    prompt: "local fallback"
+  });
+  assert.equal(repeatedMock.imageDataUrl, mockRender.imageDataUrl);
 
   const sourceChangedMock = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
     ...renderRequest(),
@@ -236,6 +244,7 @@ try {
     assert.equal(item.ok, true);
     assert.equal(item.provider, "mock-local");
     assertValidPngDataUrl(item.imageDataUrl);
+    assertPngDimensions(item.imageDataUrl, { minWidth: 256, minHeight: 256 });
     assert.notEqual(item.imageDataUrl, mockRender.imageDataUrl);
   }
 
@@ -299,6 +308,15 @@ function assertValidPngDataUrl(value) {
   assert.match(value, /^data:image\/png;base64,/);
   const bytes = Buffer.from(stripDataUrl(value), "base64");
   assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+}
+
+function assertPngDimensions(value, { minWidth, minHeight }) {
+  const bytes = Buffer.from(stripDataUrl(value), "base64");
+  assert.equal(bytes.subarray(12, 16).toString("ascii"), "IHDR");
+  const width = bytes.readUInt32BE(16);
+  const height = bytes.readUInt32BE(20);
+  assert.ok(width >= minWidth, `expected PNG width >= ${minWidth}, got ${width}`);
+  assert.ok(height >= minHeight, `expected PNG height >= ${minHeight}, got ${height}`);
 }
 
 function installTestLocalStorage() {

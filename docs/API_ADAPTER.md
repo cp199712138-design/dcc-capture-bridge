@@ -17,6 +17,12 @@ POST /api/realtime-render
 
 Copy `.env.example` to `.env`, then restart the server.
 
+`mock-local` is the zero-cost preview provider used when no real provider is
+configured, or when it is selected directly. It returns a deterministic local
+placeholder image so the UI and API contract can be demonstrated without
+spending credits or calling a cloud service. It is not a real AI renderer and
+should not be presented as final generation quality.
+
 OpenAI:
 
 ```text
