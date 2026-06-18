@@ -98,7 +98,13 @@ export async function callDirectCustomApi(requestBody, payload = {}, apiConfig =
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.message || data.error || `HTTP ${response.status}`);
-  return data;
+  const imageDataUrl = normalizeImageDataUrl(data);
+  const normalized = imageDataUrl ? { ...data, imageDataUrl } : data;
+  const isConnectionTest = requestBody.task === "connection_test" || requestBody.dcc_capture_bridge?.test === true;
+  if (!isConnectionTest && !imageDataUrl) {
+    throw new Error(data.message || data.error?.message || "Custom API responded but did not return imageDataUrl or b64_json.");
+  }
+  return normalized;
 }
 
 export async function postRealtimeRender(requestBody, signal) {
@@ -109,4 +115,32 @@ export async function postRealtimeRender(requestBody, signal) {
     signal,
   });
   return response.json();
+}
+
+function normalizeImageDataUrl(data = {}) {
+  const value = firstString(
+    data.imageDataUrl,
+    data.image_data_url,
+    data.output_image,
+    data.image_url,
+    data.url,
+    data.data?.[0]?.imageDataUrl,
+    data.data?.[0]?.image_data_url
+  );
+  if (value?.startsWith("data:image/")) return value;
+
+  const b64 = firstString(
+    data.b64_json,
+    data.image_base64,
+    data.imageBase64,
+    data.data?.[0]?.b64_json,
+    data.data?.[0]?.image_base64,
+    data.data?.[0]?.imageBase64
+  );
+  if (!b64) return "";
+  return b64.startsWith("data:image/") ? b64 : `data:image/png;base64,${b64}`;
+}
+
+function firstString(...values) {
+  return values.find((value) => typeof value === "string" && value.trim()) || "";
 }

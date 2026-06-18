@@ -80,6 +80,15 @@ test image/mask data, but it is identified with `task: "connection_test"` and
 
 ## Custom API Response
 
+`POST /api/test-provider` checks connection only. A custom API may return any
+2xx JSON response for that connection test, even if it does not include an
+image.
+
+`POST /api/realtime-render` is render-ready only when the response includes an
+image. The local server and static direct mode normalize either supported shape
+to `imageDataUrl`; a 2xx render response with no image is treated as a clear
+render contract error.
+
 Return one of these:
 
 ```json

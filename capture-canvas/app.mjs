@@ -84,7 +84,7 @@ const copy = {
     importedImage: "Image imported",
     importedImageText: "Paint or select the region you want to edit.",
     importedModel: "Model imported",
-    importedModelText: "OBJ/STL model is ready as a rotatable 3D preview.",
+    importedModelText: "OBJ/STL model loaded. Use Select mode to orbit the 3D preview.",
     unsupported: "Unsupported format",
     unsupportedText: "Import an image, OBJ, or STL file.",
     maskCleared: "Mask cleared",
@@ -141,6 +141,7 @@ const copy = {
     livePreviewText: "Local simulated output appears here.",
     imageLabel: "Image: ",
     modelLabel: "Model: ",
+    modelStats: "triangles",
   },
   cn: {
     tagline: "\u9762\u5411 AI \u4ea7\u54c1\u751f\u6210\u7684\u5373\u65f6\u8bc1\u636e\u753b\u5e03\u3002",
@@ -223,7 +224,7 @@ const copy = {
     importedImage: "\u56fe\u7247\u5df2\u5bfc\u5165",
     importedImageText: "\u73b0\u5728\u53ef\u4ee5\u6d82\u62b9\u6216\u6846\u9009\u8981\u4fee\u6539\u7684\u533a\u57df\u3002",
     importedModel: "\u6a21\u578b\u5df2\u5bfc\u5165",
-    importedModelText: "OBJ/STL \u6a21\u578b\u5df2\u4f5c\u4e3a\u53ef\u65cb\u8f6c 3D \u9884\u89c8\u5c31\u7eea\u3002",
+    importedModelText: "OBJ/STL \u6a21\u578b\u5df2\u52a0\u8f7d\u3002\u5728\u9009\u62e9\u6a21\u5f0f\u4e0b\u62d6\u52a8\u53ef\u65cb\u8f6c 3D \u9884\u89c8\u3002",
     unsupported: "\u683c\u5f0f\u4e0d\u652f\u6301",
     unsupportedText: "\u8bf7\u5bfc\u5165\u56fe\u7247\u3001OBJ \u6216 STL \u6587\u4ef6\u3002",
     maskCleared: "\u906e\u7f69\u5df2\u6e05\u7a7a",
@@ -280,6 +281,7 @@ const copy = {
     livePreviewText: "\u8fd9\u91cc\u663e\u793a\u672c\u5730\u6a21\u62df\u8f93\u51fa\u3002",
     imageLabel: "\u56fe\u7247: ",
     modelLabel: "\u6a21\u578b: ",
+    modelStats: "\u4e09\u89d2\u9762",
   },
 };
 
@@ -304,6 +306,7 @@ const state = {
   moveLast: null,
   drawing: false,
   draft: null,
+  eraseMaskBefore: "",
   liveEnabled: true,
   renderTimer: 0,
   renderQueued: false,
@@ -738,11 +741,17 @@ function drawStrokeOnContext(ctx, stroke) {
 
   if (stroke.kind === "path" && stroke.points.length) {
     ctx.beginPath();
-    stroke.points.forEach((item, index) => {
-      if (index === 0) ctx.moveTo(item.x, item.y);
-      else ctx.lineTo(item.x, item.y);
-    });
-    ctx.stroke();
+    if (stroke.points.length === 1) {
+      const point = stroke.points[0];
+      ctx.arc(point.x, point.y, Math.max(1, stroke.size / 2), 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      stroke.points.forEach((item, index) => {
+        if (index === 0) ctx.moveTo(item.x, item.y);
+        else ctx.lineTo(item.x, item.y);
+      });
+      ctx.stroke();
+    }
   }
 
   if (stroke.kind === "rect") {
@@ -765,6 +774,22 @@ function drawStrokeOnContext(ctx, stroke) {
 function redrawMaskBitmap() {
   maskCtx.clearRect(0, 0, ui.sourceCanvas.clientWidth, ui.sourceCanvas.clientHeight);
   state.strokes.forEach((stroke) => drawStrokeOnContext(maskCtx, stroke));
+}
+
+function maskSignature() {
+  const { width, height } = maskCanvas;
+  if (!width || !height) return "0:0:0";
+  const data = maskCtx.getImageData(0, 0, width, height).data;
+  let coverage = 0;
+  let hash = 2166136261;
+  for (let index = 3; index < data.length; index += 4) {
+    const alpha = data[index];
+    if (!alpha) continue;
+    coverage += alpha;
+    hash ^= alpha + index;
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${width}:${height}:${coverage}:${hash >>> 0}`;
 }
 
 function drawMaskOverlay(ctx, w, h) {
@@ -1202,8 +1227,8 @@ function showLayerMenu(event) {
   event.preventDefault();
   const point = localPoint(event);
   const hit = findStrokeAt(point);
-  if (hit >= 0) state.selectedStrokeIndex = hit;
-  if (state.selectedStrokeIndex < 0) {
+  state.selectedStrokeIndex = hit;
+  if (hit < 0) {
     hideLayerMenu();
     setStatus("noSelection", "noSelectionText");
     scheduleDraw();
@@ -1486,9 +1511,12 @@ async function loadModel(file) {
       mime: file.type || "",
       source: "browser",
       format: geometry.format,
-      triangles: geometry.triangleCount,
+      triangleCount: geometry.triangleCount,
+      bounds: geometry.bounds,
+      center: geometry.center,
+      span: geometry.span,
     });
-    ui.assetInfo.textContent = `${tr("modelLabel")}${file.name} / ${fileSize(file.size)}`;
+    ui.assetInfo.textContent = `${tr("modelLabel")}${file.name} / ${geometry.triangleCount} ${tr("modelStats")} / ${fileSize(file.size)}`;
     setTool("select");
     setStatus("importedModel", "importedModelText");
     draw();
@@ -1544,6 +1572,7 @@ function beginStroke(e) {
 
   state.drawing = true;
   if (state.tool === "brush" || state.tool === "erase") {
+    state.eraseMaskBefore = state.tool === "erase" ? maskSignature() : "";
     pushHistory({
       kind: "path",
       mode: state.tool === "erase" ? "erase" : "brush",
@@ -1599,6 +1628,7 @@ function extendStroke(e) {
 function endStroke(e) {
   if (e && ui.sourceCanvas.hasPointerCapture?.(e.pointerId)) ui.sourceCanvas.releasePointerCapture(e.pointerId);
   let changed = false;
+  let activeStrokeIndex = -1;
   if (state.resizingSelection) {
     state.resizingSelection = false;
     state.resizeHandle = "";
@@ -1619,9 +1649,21 @@ function endStroke(e) {
     state.draft = null;
     changed = true;
   }
-  if (state.drawing) changed = true;
+  if (state.drawing) {
+    changed = true;
+    activeStrokeIndex = state.strokes.length - 1;
+  }
   state.drawing = false;
   redrawMaskBitmap();
+  const activeStroke = state.strokes[activeStrokeIndex];
+  if (activeStroke?.mode === "erase" && state.eraseMaskBefore === maskSignature()) {
+    state.strokes.splice(activeStrokeIndex, 1);
+    state.selectedStrokeIndex = -1;
+    changed = false;
+    setStatus("maskCleared", "nothingClear");
+    redrawMaskBitmap();
+  }
+  state.eraseMaskBefore = "";
   scheduleDraw();
   if (changed) scheduleRealtimeRender("stroke");
 }
@@ -1726,8 +1768,9 @@ async function checkApiStatus() {
   try {
     const response = await fetch("/api/status", { cache: "no-store" });
     const payload = await response.json();
-    const configured = payload.openai_configured || payload.custom_api_configured;
-    setApiState(configured ? "api" : "local", configured ? "apiOutput" : "localPreview");
+    const provider = ui.providerSelect.value;
+    const remoteSelected = (provider === "openai" && payload.openai_configured) || (provider === "custom-http" && payload.custom_api_configured);
+    setApiState(remoteSelected ? "api" : "local", remoteSelected ? "apiOutput" : "localPreview");
     updateApiSummary(payload);
   } catch {
     enterStaticDemoMode();

@@ -272,24 +272,59 @@ try {
       button,
       buttons: type === "pointerup" ? 0 : 1,
     });
+    const countCyanMaskPixels = (canvas, x, y, size = 80) => {
+      const context = canvas.getContext("2d");
+      const left = Math.max(0, Math.floor(x - size / 2));
+      const top = Math.max(0, Math.floor(y - size / 2));
+      const width = Math.min(size, canvas.width, Math.floor(canvas.clientWidth - left));
+      const height = Math.min(size, canvas.height, Math.floor(canvas.clientHeight - top));
+      const sample = context.getImageData(left, top, Math.max(1, width), Math.max(1, height)).data;
+      let pixels = 0;
+      for (let index = 0; index < sample.length; index += 4) {
+        const red = sample[index];
+        const green = sample[index + 1];
+        const blue = sample[index + 2];
+        const alpha = sample[index + 3];
+        if (alpha > 220 && green > red + 35 && green > blue + 8 && blue > red + 12) pixels += 1;
+      }
+      return pixels;
+    };
     const click = (selector) => document.querySelector(selector)?.click();
     const emptyOverlayVisible = getComputedStyle(document.querySelector("#sourceEmpty")).display !== "none";
     const emptyCanvasHasDuplicateText = emptyOverlayVisible && hasDarkPlaceholderText();
+    if (document.querySelector("#liveChip")?.classList.contains("active")) click("#liveChip");
     click("#exampleNav");
     await sleep(500);
-    click("#rectTool");
     const canvas = document.querySelector("#sourceCanvas");
     const rect = canvas.getBoundingClientRect();
+    click("#brushBtn");
+    const tapPoint = { x: rect.left + 610, y: rect.top + 260 };
+    canvas.dispatchEvent(eventAt("pointerdown", tapPoint.x, tapPoint.y));
+    canvas.dispatchEvent(eventAt("pointerup", tapPoint.x, tapPoint.y));
+    await sleep(120);
+    const brushClickMaskPixels = countCyanMaskPixels(canvas, tapPoint.x - rect.left, tapPoint.y - rect.top);
+    const pausedAutoStateAfterBrush = document.querySelector("#requestState")?.dataset.state || "";
+    click("#rectTool");
     canvas.dispatchEvent(eventAt("pointerdown", rect.left + 300, rect.top + 220));
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 470, rect.top + 350));
     canvas.dispatchEvent(eventAt("pointerup", rect.left + 470, rect.top + 350));
     await sleep(80);
+    const pausedAutoStateAfterRect = document.querySelector("#requestState")?.dataset.state || "";
     click("#selectTool");
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 380, rect.top + 290));
     canvas.dispatchEvent(eventAt("pointerdown", rect.left + 380, rect.top + 290));
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 430, rect.top + 320));
     canvas.dispatchEvent(eventAt("pointerup", rect.left + 430, rect.top + 320));
     await sleep(80);
+    canvas.dispatchEvent(new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.left + 80,
+      clientY: rect.top + 80,
+      button: 2,
+    }));
+    await sleep(80);
+    const emptyRightClickMenuOpen = document.querySelector("#layerMenu")?.classList.contains("open");
     canvas.dispatchEvent(new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
@@ -309,6 +344,9 @@ try {
       title: document.title,
       hasSourceCanvas: !!canvas,
       emptyCanvasHasDuplicateText,
+      brushClickMaskPixels,
+      pausedLiveAvoidsAutoQueue: !["queued", "busy"].includes(pausedAutoStateAfterBrush) && !["queued", "busy"].includes(pausedAutoStateAfterRect),
+      emptyRightClickMenuOpen,
       menuOpen,
       layerMenuHasMojibake: /[\u923b\u9204\u9231\u731d]/.test(layerMenuText),
       statusTitle: document.querySelector("#statusTitle")?.textContent || "",
@@ -320,7 +358,7 @@ try {
   })`, sessionId);
 
   client.close();
-  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap) {
+  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || !report.pausedLiveAvoidsAutoQueue || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap) {
     throw new Error(`Browser smoke failed: ${JSON.stringify(report)}`);
   }
   console.log(JSON.stringify({ browser_smoke_ok: true, report }));

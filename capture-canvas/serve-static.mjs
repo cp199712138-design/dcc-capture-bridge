@@ -2,6 +2,7 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import { createMockImageDataUrl, normalizeImageDataUrl } from "../API/task-api.mjs";
 
 const root = process.cwd();
 const port = Number(process.env.PORT || 8765);
@@ -108,9 +109,11 @@ async function handleRealtimeRender(body) {
   if (provider === "custom-http-missing") return missingCustomConfig();
   if (provider === "custom-http") return handleCustomRender(body);
   if (provider !== "openai") {
+    const imageDataUrl = createMockImageDataUrl(body);
     return {
       ok: true,
       provider: "mock-local",
+      imageDataUrl,
       cn: "\u672c\u5730\u9884\u89c8",
       en: "Local Preview",
       message_cn: "\u6ca1\u6709\u68c0\u6d4b\u5230 OPENAI_API_KEY\uff0c\u6240\u4ee5\u53f3\u4fa7\u4f7f\u7528\u672c\u5730\u5b9e\u65f6\u9884\u89c8\u3002\u914d\u7f6e key \u540e\u4f1a\u8d70 API\u3002",
@@ -348,8 +351,6 @@ function chooseRuntimeProvider(body) {
   if (requested === "mock-local") return "mock-local";
   if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL ? "custom-http" : "custom-http-missing";
   if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "openai-missing";
-  if (process.env.DCC_CUSTOM_API_URL) return "custom-http";
-  if (process.env.OPENAI_API_KEY) return "openai";
   return "mock-local";
 }
 
@@ -591,10 +592,7 @@ function parseJsonEnv(name) {
 }
 
 function extractImageDataUrl(data) {
-  const value = data.imageDataUrl || data.image_data_url || data.output_image || data.image_url || data.url || data.data?.[0]?.imageDataUrl || data.data?.[0]?.image_data_url;
-  if (typeof value === "string" && value.startsWith("data:image/")) return value;
-  const b64 = data.b64_json || data.image_base64 || data.imageBase64 || data.data?.[0]?.b64_json || data.data?.[0]?.image_base64 || data.data?.[0]?.imageBase64;
-  return b64 ? `data:image/png;base64,${b64}` : "";
+  return normalizeImageDataUrl(data);
 }
 
 function loadLocalEnv() {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
+import { callDirectCustomApi } from "./api-client.mjs";
 
 const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 const mockPort = 9876;
@@ -78,7 +79,7 @@ try {
 
   const status = await getJson(`http://127.0.0.1:${appPort}/api/status`);
   assert.equal(status.ok, true);
-  assert.equal(status.provider, "custom-http");
+  assert.equal(status.provider, "mock-local");
   assert.equal(status.custom_api_configured, true);
   assert.equal(status.custom_api_host, `127.0.0.1:${mockPort}`);
 
@@ -88,6 +89,10 @@ try {
   assert.equal(localStatus.openai_configured, false);
   assert.equal(localStatus.custom_api_configured, false);
   assert.equal(localStatus.has_api_key, false);
+
+  const openAiStatus = await getJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/status`);
+  assert.equal(openAiStatus.provider, "mock-local");
+  assert.equal(openAiStatus.openai_configured, true);
 
   const config = await getJson(`http://127.0.0.1:${appPort}/api/config`);
   assert.equal(config.ok, true);
@@ -116,12 +121,27 @@ try {
   assert.equal(b64Render.ok, true);
   assert.equal(b64Render.provider, "custom-http");
   assert.equal(b64Render.imageDataUrl, transparentPixel);
+  assertValidPngDataUrl(b64Render.imageDataUrl);
+
+  installTestLocalStorage();
+  const directB64Render = await callDirectCustomApi(renderRequest(), {
+    baseUrl: `http://127.0.0.1:${mockPort}/b64`
+  });
+  assert.equal(directB64Render.imageDataUrl, transparentPixel);
+  assertValidPngDataUrl(directB64Render.imageDataUrl);
 
   const missingImageRender = await postJson(`http://127.0.0.1:${missingImageAppPort}/api/realtime-render`, renderRequest());
   assert.equal(missingImageRender.ok, false);
   assert.equal(missingImageRender.provider, "custom-http");
   assert.equal(missingImageRender.imageDataUrl, "");
   assert.match(missingImageRender.message_en, /image/i);
+
+  await assert.rejects(
+    () => callDirectCustomApi(renderRequest(), {
+      baseUrl: `http://127.0.0.1:${mockPort}/missing-image`
+    }),
+    /image/i
+  );
 
   const htmlOpenAiRender = await postJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/realtime-render`, {
     ...renderRequest(),
@@ -134,11 +154,14 @@ try {
   assert.match(htmlOpenAiRender.message_en, /Bad Gateway|upstream unavailable/);
 
   const mockRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
     provider: "mock-local",
     prompt: "local fallback"
   });
   assert.equal(mockRender.ok, true);
   assert.equal(mockRender.provider, "mock-local");
+  assertValidPngDataUrl(mockRender.imageDataUrl);
+  assert.notEqual(mockRender.imageDataUrl, transparentPixel);
 
   const missingCustomRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
     provider: "custom-http",
@@ -193,6 +216,22 @@ function renderRequest() {
 
 function stripDataUrl(value) {
   return String(value).split(",")[1] || "";
+}
+
+function assertValidPngDataUrl(value) {
+  assert.match(value, /^data:image\/png;base64,/);
+  const bytes = Buffer.from(stripDataUrl(value), "base64");
+  assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+}
+
+function installTestLocalStorage() {
+  const items = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => items.has(key) ? items.get(key) : null,
+    setItem: (key, value) => items.set(key, String(value)),
+    removeItem: (key) => items.delete(key),
+    clear: () => items.clear()
+  };
 }
 
 function startApp(port, env = {}) {

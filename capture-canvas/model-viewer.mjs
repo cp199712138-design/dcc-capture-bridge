@@ -58,7 +58,7 @@ function parseBinaryStl(buffer) {
   return triangles;
 }
 
-function normalizeTriangles(triangles) {
+function measureTriangles(triangles) {
   const bounds = {
     minX: Infinity, minY: Infinity, minZ: Infinity,
     maxX: -Infinity, maxY: -Infinity, maxZ: -Infinity,
@@ -80,11 +80,16 @@ function normalizeTriangles(triangles) {
   const cz = (bounds.minZ + bounds.maxZ) / 2;
   const span = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY, bounds.maxZ - bounds.minZ, 1);
 
-  return triangles.map((tri) => tri.map((value, index) => {
-    if (index % 3 === 0) return (value - cx) / span;
-    if (index % 3 === 1) return (value - cy) / span;
-    return (value - cz) / span;
-  }));
+  return {
+    bounds,
+    center: { x: cx, y: cy, z: cz },
+    span,
+    triangles: triangles.map((tri) => tri.map((value, index) => {
+      if (index % 3 === 0) return (value - cx) / span;
+      if (index % 3 === 1) return (value - cy) / span;
+      return (value - cz) / span;
+    })),
+  };
 }
 
 export async function parseModelFile(file) {
@@ -101,7 +106,8 @@ export async function parseModelFile(file) {
     throw new Error("Only OBJ and STL model imports are supported.");
   }
 
-  triangles = normalizeTriangles(triangles.filter((tri) => tri.length === 9 && tri.every(Number.isFinite)));
+  const measured = measureTriangles(triangles.filter((tri) => tri.length === 9 && tri.every(Number.isFinite)));
+  triangles = measured.triangles;
   if (!triangles.length) throw new Error("No renderable triangles found in this model.");
 
   return {
@@ -109,6 +115,9 @@ export async function parseModelFile(file) {
     format: ext,
     triangles,
     triangleCount: triangles.length,
+    bounds: measured.bounds,
+    center: measured.center,
+    span: measured.span,
   };
 }
 
