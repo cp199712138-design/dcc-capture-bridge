@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
 import { callDirectCustomApi } from "./api-client.mjs";
 
 const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
@@ -13,16 +15,27 @@ const missingImageAppPort = 9880;
 const openAiHtmlAppPort = 9881;
 const customMissingKeyAppPort = 9882;
 const received = [];
+const savedOpenAiModel = "nanobanana-2-c";
 
 const mockApi = http.createServer(async (req, res) => {
   let raw = "";
   for await (const chunk of req) raw += chunk;
   const payload = raw && req.headers["content-type"]?.includes("application/json") ? JSON.parse(raw) : {};
-  received.push({ method: req.method, url: req.url, payload });
+  received.push({ method: req.method, url: req.url, headers: req.headers, raw, payload });
 
   if (req.url === "/v1/images/edits") {
     res.writeHead(502, { "content-type": "text/html; charset=utf-8" });
     res.end("<!doctype html><title>Bad Gateway</title><h1>upstream unavailable</h1>");
+    return;
+  }
+  if (req.url === `/saved-v1/images/edits`) {
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ data: [{ b64_json: stripDataUrl(transparentPixel) }] }));
+    return;
+  }
+  if (req.url === `/html-v1/models/${savedOpenAiModel}`) {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end("<!doctype html><title>You need JS</title><main>You need JS</main>");
     return;
   }
 
@@ -52,6 +65,8 @@ const mockApi = http.createServer(async (req, res) => {
 await new Promise((resolve) => mockApi.listen(mockPort, "127.0.0.1", resolve));
 
 const root = fileURLToPath(new URL("../", import.meta.url));
+const envPath = join(root, ".env");
+const envBackup = existsSync(envPath) ? readFileSync(envPath, "utf8") : null;
 const app = startApp(appPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/render`,
   DCC_CUSTOM_API_KEY: "test-custom-key",
@@ -263,6 +278,40 @@ try {
   assert.equal(missingOpenAiRender.ok, false);
   assert.equal(missingOpenAiRender.provider, "openai-missing");
 
+  const savedConfig = await postJson(`http://127.0.0.1:${localAppPort}/api/config`, {
+    provider: "openai",
+    baseUrl: `http://127.0.0.1:${mockPort}/saved-v1`,
+    model: savedOpenAiModel,
+    apiKey: "test-openai-key"
+  });
+  assert.equal(savedConfig.ok, true);
+  assert.equal(savedConfig.config.openai.model, savedOpenAiModel);
+
+  const savedOpenAiRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "openai"
+  });
+  assert.equal(savedOpenAiRender.ok, true);
+  assert.equal(savedOpenAiRender.provider, "openai");
+  assert.equal(savedOpenAiRender.imageDataUrl, transparentPixel);
+  const savedOpenAiRequest = received.find((item) => item.url === "/saved-v1/images/edits");
+  assert.ok(savedOpenAiRequest, "expected saved OpenAI-compatible render request");
+  assert.match(savedOpenAiRequest.raw, new RegExp(`name="model"[\\s\\S]*${savedOpenAiModel}`));
+  assert.doesNotMatch(savedOpenAiRequest.raw, /gpt-image-1/);
+
+  const htmlModelTest = await postJson(`http://127.0.0.1:${localAppPort}/api/test-provider`, {
+    provider: "openai",
+    baseUrl: `http://127.0.0.1:${mockPort}/html-v1`,
+    model: savedOpenAiModel,
+    apiKey: "test-openai-key"
+  });
+  assert.equal(htmlModelTest.ok, false);
+  assert.equal(htmlModelTest.provider, "openai");
+  assert.equal(htmlModelTest.status, 200);
+  assert.match(`${htmlModelTest.message_en} ${htmlModelTest.message_cn}`, /JSON/i);
+  assert.match(`${htmlModelTest.message_en} ${htmlModelTest.message_cn}`, /HTML/i);
+  assert.match(`${htmlModelTest.message_en} ${htmlModelTest.message_cn}`, /compatible/i);
+
   assert.ok(received.some((item) => item.payload.dcc_capture_bridge?.contract === "custom-http-json-v1"));
   assert.ok(received.some((item) => item.payload.dcc_capture_bridge?.test === true));
 
@@ -281,6 +330,7 @@ try {
   stopApp(openAiHtmlApp);
   stopApp(customMissingKeyApp);
   await new Promise((resolve) => mockApi.close(resolve));
+  restoreEnvFile();
 }
 
 function renderRequest() {
@@ -302,6 +352,14 @@ function renderRequest() {
 
 function stripDataUrl(value) {
   return String(value).split(",")[1] || "";
+}
+
+function restoreEnvFile() {
+  if (envBackup === null) {
+    if (existsSync(envPath)) unlinkSync(envPath);
+    return;
+  }
+  writeFileSync(envPath, envBackup, "utf8");
 }
 
 function assertValidPngDataUrl(value) {

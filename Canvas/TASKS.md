@@ -49,6 +49,11 @@ node capture-canvas/browser-smoke.mjs
 - Limited OBJ/STL preview wheel zoom to the same Select-mode gate used by model orbit, keeping brush/mask editing from changing the model camera.
 - Extended `browser-smoke` coverage for moved-region undo/redo, OBJ import, Select-mode model zoom, brush-mode wheel ignore, preview request state, and broken OBJ feedback.
 
+## 2026-06-18 API error output pass
+
+- OpenAI/Custom render failures now clear mock output and draw an explicit failed-result state on the right canvas while leaving the source canvas editable.
+- Extended `browser-smoke` to simulate an OpenAI `ok:false` response and assert the output badge/status do not present API success or local mock output as the result.
+
 ## Report Format
 
 ```text

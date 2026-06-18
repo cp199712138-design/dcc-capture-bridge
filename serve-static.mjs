@@ -141,21 +141,22 @@ async function handleRealtimeRender(body) {
     };
   }
 
+  const config = providerConfigFromRequest(body).openai;
   const form = new FormData();
-  form.set("model", process.env.OPENAI_IMAGE_MODEL || OPENAI_IMAGE_MODEL_DEFAULT);
+  form.set("model", config.model || OPENAI_IMAGE_MODEL_DEFAULT);
   form.set("prompt", prompt || "Render the selected region as a clean product scene while preserving the source structure.");
   form.set("size", chooseApiSize(body.aspectRatio));
   form.set("quality", "low");
   form.append("image[]", new Blob([Buffer.from(source, "base64")], { type: "image/png" }), "source.png");
   form.set("mask", new Blob([Buffer.from(mask, "base64")], { type: "image/png" }), "mask.png");
 
-  const openAiBase = String(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const openAiBase = normalizeBaseUrl(config.baseUrl || "https://api.openai.com/v1");
   let response;
   try {
     response = await fetch(`${openAiBase}/images/edits`, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        authorization: `Bearer ${config.apiKey}`
       },
       body: form
     });
@@ -207,9 +208,12 @@ async function handleProviderTest(body) {
       if (!response.ok) {
         return providerTestError("openai", response.status, text, "OpenAI API key or model check failed.");
       }
-      const data = parseJsonResponse(text);
+      const data = parseJsonStrict(text);
+      if (!data) {
+        return openAiCompatibleJsonError(response.status, text);
+      }
       if (!data.id && !data.object) {
-        return providerTestError("openai", response.status, text, "OpenAI model check did not return JSON model metadata.");
+        return openAiCompatibleJsonError(response.status, text);
       }
       return {
         ok: true,
@@ -356,8 +360,14 @@ function writeEnvUpdates(updates) {
 function chooseRuntimeProvider(body) {
   const requested = String(body.provider || "auto");
   if (requested === "mock-local") return "mock-local";
-  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL && process.env.DCC_CUSTOM_API_KEY ? "custom-http" : "custom-http-missing";
-  if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "openai-missing";
+  if (requested === "custom-http") {
+    const config = providerConfigFromRequest(body).custom;
+    return config.url && config.apiKey ? "custom-http" : "custom-http-missing";
+  }
+  if (requested === "openai") {
+    const config = providerConfigFromRequest(body).openai;
+    return config.apiKey ? "openai" : "openai-missing";
+  }
   return "mock-local";
 }
 
@@ -367,8 +377,8 @@ function missingOpenAiConfig() {
     provider: "openai-missing",
     cn: "OpenAI \u672a\u914d\u7f6e",
     en: "OpenAI Not Configured",
-    message_cn: "\u8bf7\u5728 .env \u6216\u547d\u4ee4\u884c\u8bbe\u7f6e OPENAI_API_KEY\uff0c\u7136\u540e\u91cd\u542f node serve-static.mjs\u3002",
-    message_en: "Set OPENAI_API_KEY in .env or your shell, then restart node serve-static.mjs."
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 OPENAI_API_KEY\uff0c\u6216\u5728 .env / \u547d\u4ee4\u884c\u8bbe\u7f6e\u3002",
+    message_en: "Save OPENAI_API_KEY in API Settings, or set it in .env / your shell."
   };
 }
 
@@ -378,8 +388,8 @@ function missingCustomConfig() {
     provider: "custom-http-missing",
     cn: "\u81ea\u5b9a\u4e49 API \u672a\u914d\u7f6e",
     en: "Custom API Not Configured",
-    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_URL \u548c DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
-    message_en: "Set DCC_CUSTOM_API_URL and DCC_CUSTOM_API_KEY in .env, then restart the server."
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 DCC_CUSTOM_API_URL \u548c DCC_CUSTOM_API_KEY\uff0c\u6216\u5728 .env \u8bbe\u7f6e\u3002",
+    message_en: "Save DCC_CUSTOM_API_URL and DCC_CUSTOM_API_KEY in API Settings, or set them in .env."
   };
 }
 
@@ -389,8 +399,8 @@ function missingCustomKeyConfig() {
     provider: "custom-http-missing",
     cn: "\u81ea\u5b9a\u4e49 API Key \u672a\u914d\u7f6e",
     en: "Custom API Key Not Configured",
-    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
-    message_en: "Set DCC_CUSTOM_API_KEY in .env, then restart the server."
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 DCC_CUSTOM_API_KEY\uff0c\u6216\u5728 .env \u8bbe\u7f6e\u3002",
+    message_en: "Save DCC_CUSTOM_API_KEY in API Settings, or set it in .env."
   };
 }
 
@@ -557,6 +567,19 @@ function providerTestException(provider, error) {
   };
 }
 
+function openAiCompatibleJsonError(status, text) {
+  const short = summarizeResponse(text) || "No response body.";
+  return {
+    ok: false,
+    provider: "openai",
+    status,
+    cn: "API \u7aef\u70b9\u4e0d\u517c\u5bb9",
+    en: "API endpoint is not compatible",
+    message_cn: `API \u8fd4\u56de ${status}\uff0c\u4f46 /models \u7aef\u70b9\u8fd4\u56de\u7684\u662f HTML \u6216\u975e OpenAI-compatible JSON model metadata\u3002\u6458\u8981: ${short}`,
+    message_en: `API returned ${status}, but the /models endpoint returned HTML or non OpenAI-compatible JSON model metadata. Summary: ${short}`
+  };
+}
+
 function providerRequestException(provider, error) {
   const text = String(error.message || error);
   return {
@@ -586,6 +609,16 @@ function parseJsonResponse(text) {
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return { message: summarizeHtmlText(text) };
+  }
+}
+
+function parseJsonStrict(text) {
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
   }
 }
 

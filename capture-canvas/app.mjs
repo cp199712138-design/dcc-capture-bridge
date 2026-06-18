@@ -294,6 +294,7 @@ const state = {
   image: null,
   model: null,
   generatedImage: null,
+  resultError: null,
   session: createSessionState(),
   strokes: [],
   historyStack: [],
@@ -407,7 +408,7 @@ function setApiState(kind, labelKey) {
   ui.apiState.classList.toggle("busy", kind === "busy");
   ui.apiState.classList.toggle("error", kind === "error");
   ui.apiState.classList.toggle("api", kind === "api");
-  ui.outputBadge.textContent = tr(kind === "api" ? "apiOutput" : "localPreview");
+  ui.outputBadge.textContent = tr(kind === "api" ? "apiOutput" : (kind === "error" ? "apiError" : "localPreview"));
 }
 
 function setRequestState(kind, labelKey) {
@@ -430,6 +431,10 @@ function updatePreviewButton() {
 
 function activeAsset() {
   return state.image || state.model;
+}
+
+function isRemoteProvider(provider = ui.providerSelect.value) {
+  return provider === "openai" || provider === "custom-http" || provider === "openai-missing" || provider === "custom-http-missing";
 }
 
 function fileSize(bytes) {
@@ -487,6 +492,7 @@ function enterStaticDemoMode(text = tr("staticDemoText")) {
   state.apiStatus = { static_demo: true };
   updateApiSummary(state.apiStatus);
   state.generatedImage = null;
+  state.resultError = null;
   setApiState("local", "localPreview");
   setRequestState("local", "idle");
   setStatus("staticDemo", "staticDemoText", text);
@@ -687,6 +693,14 @@ function scheduleRealtimeRender(reason = "edit") {
   if (reason === "stroke-draft" && state.renderTimer) return;
   window.clearTimeout(state.renderTimer);
   state.renderTimer = window.setTimeout(() => requestRealtimeRender(reason), reason === "stroke-draft" ? 260 : manual ? 0 : 620);
+}
+
+function handleProviderChange() {
+  state.generatedImage = null;
+  state.resultError = null;
+  if (isRemoteProvider()) state.lastRequest = null;
+  draw();
+  scheduleRealtimeRender("provider");
 }
 
 function cancelRealtimeRender() {
@@ -1050,10 +1064,44 @@ function drawPreviewEffect(ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
 }
 
+function drawResultError(ctx, w, h) {
+  ctx.fillStyle = "#dce0de";
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.globalAlpha = 0.32;
+  if (state.image) {
+    const rect = imageRect(ui.resultCanvas, state.image);
+    ctx.drawImage(state.image, rect.x, rect.y, rect.w, rect.h);
+  } else if (state.model) {
+    drawModel(ctx, ui.resultCanvas);
+  }
+  ctx.restore();
+
+  ctx.fillStyle = "rgba(255,255,255,.78)";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(190,64,64,.8)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(16, 16, Math.max(1, w - 32), Math.max(1, h - 32));
+  ctx.fillStyle = "#8f2424";
+  ctx.font = "700 18px Inter, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(tr(state.resultError?.titleKey || "apiError"), w / 2, Math.max(72, h / 2 - 12));
+  ctx.fillStyle = "#323842";
+  ctx.font = "14px Inter, Arial, sans-serif";
+  const text = state.resultError?.text || tr("apiError");
+  ctx.fillText(text.slice(0, 72), w / 2, Math.max(98, h / 2 + 16));
+}
+
 function drawResult() {
   const w = ui.resultCanvas.clientWidth;
   const h = ui.resultCanvas.clientHeight;
   rctx.clearRect(0, 0, w, h);
+
+  if (state.resultError) {
+    drawResultError(rctx, w, h);
+    return;
+  }
 
   if (state.generatedImage) {
     rctx.fillStyle = "#dce0de";
@@ -1068,7 +1116,7 @@ function drawResult() {
     rctx.fillRect(0, 0, w, h);
     const rect = imageRect(ui.resultCanvas, state.image);
     rctx.drawImage(state.image, rect.x, rect.y, rect.w, rect.h);
-    if (state.strokes.length || state.lastRequest) {
+    if (!isRemoteProvider() && (state.strokes.length || state.lastRequest)) {
       fxCtx.clearRect(0, 0, w, h);
       drawPreviewEffect(fxCtx, w, h);
       if (state.strokes.length) {
@@ -1083,7 +1131,7 @@ function drawResult() {
 
   if (state.model) {
     drawModel(rctx, ui.resultCanvas);
-    if (state.strokes.length || state.lastRequest) drawPreviewEffect(rctx, w, h);
+    if (!isRemoteProvider() && (state.strokes.length || state.lastRequest)) drawPreviewEffect(rctx, w, h);
     return;
   }
 
@@ -1348,6 +1396,7 @@ function editMaskDataUrl() {
 function loadGeneratedImage(dataUrl) {
   const img = new Image();
   img.onload = () => {
+    state.resultError = null;
     state.generatedImage = img;
     draw();
   };
@@ -1414,11 +1463,15 @@ async function requestRealtimeRender(reason) {
     }
 
     state.generatedImage = null;
-    draw();
-    const isApi = payload.provider === "openai" || payload.provider === "custom-http";
-    const isError = payload.ok === false;
+    const isApi = isRemoteProvider(payload.provider || requestBody.provider);
+    const isError = payload.ok === false || isApi;
     const missingProvider = String(payload.provider || "").includes("missing");
     const errorLabel = missingProvider ? "apiMissing" : (payload.imageDataUrl === "" ? "noImage" : "apiError");
+    state.resultError = isError ? {
+      titleKey: errorLabel,
+      text: state.lang === "cn" ? payload.message_cn || tr(errorLabel) : payload.message_en || tr(errorLabel),
+    } : null;
+    draw();
     setApiState(isError ? "error" : (isApi ? "api" : "local"), isError ? errorLabel : (isApi ? "apiOutput" : "localPreview"));
     setRequestState(isError ? "error" : "local", isError ? errorLabel : "idle");
     setStatus(isError ? errorLabel : "localPreview", isError ? errorLabel : "noKey", state.lang === "cn" ? payload.message_cn || tr("noKey") : payload.message_en || tr("noKey"));
@@ -1433,6 +1486,7 @@ async function requestRealtimeRender(reason) {
           state.rendering = false;
           state.renderController = null;
           updatePreviewButton();
+          state.resultError = null;
           loadGeneratedImage(imageDataUrl);
           setApiState("api", "apiOutput");
           setRequestState("api", "apiOutput");
@@ -1445,6 +1499,10 @@ async function requestRealtimeRender(reason) {
         state.renderController = null;
         updatePreviewButton();
         state.generatedImage = null;
+        state.resultError = {
+          titleKey: "apiError",
+          text: String(directError.message || directError),
+        };
         draw();
         setApiState("error", "apiError");
         setRequestState("error", "apiError");
@@ -1453,6 +1511,7 @@ async function requestRealtimeRender(reason) {
       }
     }
     state.generatedImage = null;
+    state.resultError = null;
     state.rendering = false;
     state.renderController = null;
     updatePreviewButton();
@@ -1934,7 +1993,7 @@ ui.liveChip.addEventListener("click", () => {
   if (state.liveEnabled) scheduleRealtimeRender("live");
 });
 $("downloadBtn").addEventListener("click", downloadOutput);
-ui.providerSelect.addEventListener("change", () => scheduleRealtimeRender("provider"));
+ui.providerSelect.addEventListener("change", handleProviderChange);
 ui.promptBox.addEventListener("input", () => {
   ui.promptBox.dataset.custom = "1";
   scheduleRealtimeRender("prompt");

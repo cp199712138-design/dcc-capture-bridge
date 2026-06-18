@@ -306,6 +306,19 @@ try {
       }
       return pixels;
     };
+    const countMockPreviewTintPixels = (canvas) => {
+      const context = canvas.getContext("2d");
+      const sample = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let pixels = 0;
+      for (let index = 0; index < sample.length; index += 16) {
+        const red = sample[index];
+        const green = sample[index + 1];
+        const blue = sample[index + 2];
+        const alpha = sample[index + 3];
+        if (alpha > 220 && green > red + 25 && green > blue + 4 && blue > red + 8) pixels += 1;
+      }
+      return pixels;
+    };
     const countDarkSelectionPixelsAround = (canvas, bounds) => (
       countDarkPixelsInArea(canvas, bounds.x - 2, bounds.y - 2, bounds.w + 4, 7)
       + countDarkPixelsInArea(canvas, bounds.x - 2, bounds.y + bounds.h - 5, bounds.w + 4, 7)
@@ -456,6 +469,34 @@ try {
     const mockPreviewUsesLocalState = document.querySelector("#apiState")?.dataset.state === "local"
       && document.querySelector("#outputBadge")?.textContent !== "API 输出"
       && document.querySelector("#outputBadge")?.textContent !== "API output";
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = String(input?.url || input || "");
+      if (url.includes("/api/realtime-render")) {
+        return new Response(JSON.stringify({
+          ok: false,
+          provider: "openai",
+          imageDataUrl: "",
+          message_cn: "OpenAI 测试错误",
+          message_en: "OpenAI test error",
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      return originalFetch(input, init);
+    };
+    const providerSelect = document.querySelector("#providerSelect");
+    providerSelect.value = "openai";
+    providerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    click("#previewBtn");
+    await waitFor(() => document.querySelector("#requestState")?.dataset.state === "error");
+    const apiErrorBadgeAvoidsSuccess = document.querySelector("#outputBadge")?.textContent !== "API 输出"
+      && document.querySelector("#outputBadge")?.textContent !== "API output";
+    const apiErrorBadgeShowsFailure = /API 错误|API error/.test(document.querySelector("#outputBadge")?.textContent || "");
+    const apiErrorTextVisible = /OpenAI 测试错误|OpenAI test error|API 错误|API error/.test([
+      document.querySelector("#statusTitle")?.textContent || "",
+      document.querySelector("#statusText")?.textContent || "",
+    ].join(" "));
+    const apiErrorClearsMockPreview = countMockPreviewTintPixels(document.querySelector("#resultCanvas")) < 500;
+    window.fetch = originalFetch;
     setFileInput(modelInput, new File(["v 0 0 0\\n"], "broken.obj", { type: "text/plain" }));
     await waitFor(() => /No renderable triangles|没有/.test(document.querySelector("#statusText")?.textContent || ""));
     const modelImportFailureHasFeedback = /No renderable triangles|没有/.test(document.querySelector("#statusText")?.textContent || "");
@@ -493,12 +534,16 @@ try {
       selectModeWheelZoomsModel,
       modelPreviewQueuedOrRendered,
       mockPreviewUsesLocalState,
+      apiErrorBadgeAvoidsSuccess,
+      apiErrorBadgeShowsFailure,
+      apiErrorTextVisible,
+      apiErrorClearsMockPreview,
       modelImportFailureHasFeedback,
     });
   })`, sessionId);
 
   client.close();
-  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || report.brushModeSelectionDarkPixels > 16 || report.rectModeSelectionDarkPixels > 160 || report.selectModeSelectionDarkPixels < 24 || report.selectModeSelectionDarkPixels <= report.rectModeSelectionDarkPixels * 2 || !report.brushToolActiveConsistent || !report.selectToolActiveConsistent || !report.pausedLiveAvoidsAutoQueue || !report.movedRectHasNewPixels || !report.undoMoveRestoresOriginalPixels || !report.redoMoveRestoresMovedPixels || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap || !report.modelImported || !report.brushModeWheelIgnoredForModel || !report.selectModeWheelZoomsModel || !report.modelPreviewQueuedOrRendered || !report.mockPreviewUsesLocalState || !report.modelImportFailureHasFeedback) {
+  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || report.brushModeSelectionDarkPixels > 16 || report.rectModeSelectionDarkPixels > 160 || report.selectModeSelectionDarkPixels < 24 || report.selectModeSelectionDarkPixels <= report.rectModeSelectionDarkPixels * 2 || !report.brushToolActiveConsistent || !report.selectToolActiveConsistent || !report.pausedLiveAvoidsAutoQueue || !report.movedRectHasNewPixels || !report.undoMoveRestoresOriginalPixels || !report.redoMoveRestoresMovedPixels || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap || !report.modelImported || !report.brushModeWheelIgnoredForModel || !report.selectModeWheelZoomsModel || !report.modelPreviewQueuedOrRendered || !report.mockPreviewUsesLocalState || !report.apiErrorBadgeAvoidsSuccess || !report.apiErrorBadgeShowsFailure || !report.apiErrorTextVisible || !report.apiErrorClearsMockPreview || !report.modelImportFailureHasFeedback) {
     throw new Error(`Browser smoke failed: ${JSON.stringify(report)}`);
   }
   console.log(JSON.stringify({ browser_smoke_ok: true, report }));

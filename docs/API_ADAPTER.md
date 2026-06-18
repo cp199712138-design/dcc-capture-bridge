@@ -15,7 +15,10 @@ POST /api/realtime-render
 
 ## Configure Providers
 
-Copy `.env.example` to `.env`, then restart the server.
+Copy `.env.example` to `.env`, then restart the server. Settings saved through
+`POST /api/config` are also applied to the current Node process immediately, so
+the next render uses the saved base URL, model, key, method, and auth headers
+without requiring another restart.
 
 `mock-local` is the zero-cost preview provider used when no real provider is
 configured, or when it is selected directly. It returns a deterministic local
@@ -30,6 +33,12 @@ OPENAI_API_KEY=your_key
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_IMAGE_MODEL=gpt-image-1
 ```
+
+For OpenAI-compatible providers, `POST /api/test-provider` checks
+`/models/{model}`. A 2xx response is accepted only when it is JSON model
+metadata, such as an object with `id` or `object`. A 2xx HTML page or other
+non-compatible JSON returns `ok:false` with an explicit JSON/HTML/compatible
+message and a short response summary.
 
 Custom customer API:
 
