@@ -58,6 +58,124 @@ function parseBinaryStl(buffer) {
   return triangles;
 }
 
+function componentSize(componentType) {
+  return {
+    5120: 1,
+    5121: 1,
+    5122: 2,
+    5123: 2,
+    5125: 4,
+    5126: 4,
+  }[componentType] || 0;
+}
+
+function componentCount(type) {
+  return {
+    SCALAR: 1,
+    VEC2: 2,
+    VEC3: 3,
+    VEC4: 4,
+    MAT2: 4,
+    MAT3: 9,
+    MAT4: 16,
+  }[type] || 0;
+}
+
+function readComponent(view, offset, componentType) {
+  if (componentType === 5120) return view.getInt8(offset);
+  if (componentType === 5121) return view.getUint8(offset);
+  if (componentType === 5122) return view.getInt16(offset, true);
+  if (componentType === 5123) return view.getUint16(offset, true);
+  if (componentType === 5125) return view.getUint32(offset, true);
+  if (componentType === 5126) return view.getFloat32(offset, true);
+  return NaN;
+}
+
+function dataUriBytes(uri) {
+  const match = String(uri || "").match(/^data:.*?;base64,(.+)$/);
+  if (!match) return null;
+  const binary = atob(match[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function readAccessor(gltf, buffers, accessorIndex) {
+  const accessor = gltf.accessors?.[accessorIndex];
+  const bufferView = gltf.bufferViews?.[accessor?.bufferView];
+  const buffer = buffers[bufferView?.buffer || 0];
+  const count = Number(accessor?.count || 0);
+  const components = componentCount(accessor?.type);
+  const size = componentSize(accessor?.componentType);
+  if (!accessor || !bufferView || !buffer || !count || !components || !size) return [];
+
+  const start = Number(bufferView.byteOffset || 0) + Number(accessor.byteOffset || 0);
+  const stride = Number(bufferView.byteStride || components * size);
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  const rows = [];
+  for (let row = 0; row < count; row += 1) {
+    const values = [];
+    const rowOffset = start + row * stride;
+    for (let component = 0; component < components; component += 1) {
+      values.push(readComponent(view, rowOffset + component * size, accessor.componentType));
+    }
+    rows.push(components === 1 ? values[0] : values);
+  }
+  return rows;
+}
+
+function gltfTriangles(gltf, buffers) {
+  const triangles = [];
+  for (const mesh of gltf.meshes || []) {
+    for (const primitive of mesh.primitives || []) {
+      if (primitive.mode !== undefined && primitive.mode !== 4) continue;
+      const positionAccessor = primitive.attributes?.POSITION;
+      if (positionAccessor === undefined) continue;
+      const positions = readAccessor(gltf, buffers, positionAccessor);
+      const indices = primitive.indices === undefined ? positions.map((_, index) => index) : readAccessor(gltf, buffers, primitive.indices);
+      for (let i = 0; i + 2 < indices.length; i += 3) {
+        const a = positions[indices[i]];
+        const b = positions[indices[i + 1]];
+        const c = positions[indices[i + 2]];
+        if (a && b && c) triangles.push([...a, ...b, ...c]);
+      }
+    }
+  }
+  return triangles;
+}
+
+async function parseGltf(text) {
+  const gltf = JSON.parse(text);
+  const buffers = [];
+  for (const buffer of gltf.buffers || []) {
+    const bytes = dataUriBytes(buffer.uri);
+    if (!bytes) throw new Error("glTF files must embed buffers as data URIs. Use GLB for external buffers.");
+    buffers.push(bytes);
+  }
+  return gltfTriangles(gltf, buffers);
+}
+
+function parseGlb(buffer) {
+  if (buffer.byteLength < 20) return [];
+  const view = new DataView(buffer);
+  if (view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2) return [];
+  const totalLength = Math.min(view.getUint32(8, true), buffer.byteLength);
+  let offset = 12;
+  let gltf = null;
+  let bin = null;
+  while (offset + 8 <= totalLength) {
+    const chunkLength = view.getUint32(offset, true);
+    const chunkType = view.getUint32(offset + 4, true);
+    const chunkOffset = offset + 8;
+    const chunk = new Uint8Array(buffer, chunkOffset, Math.min(chunkLength, totalLength - chunkOffset)).slice();
+    if (chunkType === 0x4e4f534a) gltf = JSON.parse(new TextDecoder().decode(chunk).trim());
+    if (chunkType === 0x004e4942) bin = chunk;
+    offset = chunkOffset + chunkLength;
+  }
+  if (!gltf || !bin) return [];
+  return gltfTriangles(gltf, [bin]);
+}
+
 function measureTriangles(triangles) {
   const bounds = {
     minX: Infinity, minY: Infinity, minZ: Infinity,
@@ -102,8 +220,12 @@ export async function parseModelFile(file) {
     const buffer = await file.arrayBuffer();
     triangles = parseBinaryStl(buffer);
     if (!triangles.length) triangles = parseAsciiStl(new TextDecoder().decode(buffer));
+  } else if (ext === "glb") {
+    triangles = parseGlb(await file.arrayBuffer());
+  } else if (ext === "gltf") {
+    triangles = await parseGltf(await file.text());
   } else {
-    throw new Error("Only OBJ and STL model imports are supported.");
+    throw new Error("Only OBJ, STL, GLB, and embedded glTF model imports are supported.");
   }
 
   const measured = measureTriangles(triangles.filter((tri) => tri.length === 9 && tri.every(Number.isFinite)));

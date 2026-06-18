@@ -16,6 +16,7 @@ const openAiHtmlAppPort = 9881;
 const customMissingKeyAppPort = 9882;
 const received = [];
 const savedOpenAiModel = "nanobanana-2-c";
+const savedCustomModel = "pai-single-image-model";
 
 const mockApi = http.createServer(async (req, res) => {
   let raw = "";
@@ -70,6 +71,7 @@ const envBackup = existsSync(envPath) ? readFileSync(envPath, "utf8") : null;
 const app = startApp(appPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/render`,
   DCC_CUSTOM_API_KEY: "test-custom-key",
+  DCC_CUSTOM_API_MODEL: savedCustomModel,
   DCC_CUSTOM_API_METHOD: "POST"
 });
 const localApp = startApp(localAppPort);
@@ -174,6 +176,9 @@ try {
   assert.equal(render.ok, true);
   assert.equal(render.provider, "custom-http");
   assert.equal(render.imageDataUrl, transparentPixel);
+  const customRenderRequest = received.find((item) => item.url === "/render" && item.payload.task === "regional_scene_generation");
+  assert.ok(customRenderRequest, "expected Custom API render request");
+  assert.equal(customRenderRequest.payload.model, savedCustomModel);
 
   const b64Render = await postJson(`http://127.0.0.1:${b64AppPort}/api/realtime-render`, renderRequest());
   assert.equal(b64Render.ok, true);

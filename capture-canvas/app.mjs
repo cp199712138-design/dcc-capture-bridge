@@ -84,9 +84,9 @@ const copy = {
     importedImage: "Image imported",
     importedImageText: "Paint or select the region you want to edit.",
     importedModel: "Model imported",
-    importedModelText: "OBJ/STL model loaded. Use Select mode to orbit the 3D preview.",
+    importedModelText: "OBJ/STL/GLB model loaded. Use Select mode to orbit the 3D preview.",
     unsupported: "Unsupported format",
-    unsupportedText: "Import an image, OBJ, or STL file.",
+    unsupportedText: "Import an image, OBJ, STL, GLB, or embedded glTF file.",
     maskCleared: "Mask cleared",
     maskClearedText: "The source stays; only the edit region was cleared.",
     nothingClear: "There is no mask to clear.",
@@ -101,11 +101,14 @@ const copy = {
     outputUpdated: "Realtime output updated",
     outputUpdatedText: "The right canvas uses the API result.",
     live: "Live",
+    manual: "Manual",
     paused: "Paused",
     liveOn: "Live enabled",
     liveOff: "Live paused",
     liveOnText: "Canvas changes will request output automatically.",
     liveOffText: "Canvas remains editable but will not request output automatically.",
+    remoteManual: "Remote provider uses manual Generate",
+    remoteManualText: "Cloud image APIs are single render calls here. Paint freely, then click Generate.",
     draw: "Draw",
     textOnly: "Text only",
     seed: "Seed ",
@@ -224,9 +227,9 @@ const copy = {
     importedImage: "\u56fe\u7247\u5df2\u5bfc\u5165",
     importedImageText: "\u73b0\u5728\u53ef\u4ee5\u6d82\u62b9\u6216\u6846\u9009\u8981\u4fee\u6539\u7684\u533a\u57df\u3002",
     importedModel: "\u6a21\u578b\u5df2\u5bfc\u5165",
-    importedModelText: "OBJ/STL \u6a21\u578b\u5df2\u52a0\u8f7d\u3002\u5728\u9009\u62e9\u6a21\u5f0f\u4e0b\u62d6\u52a8\u53ef\u65cb\u8f6c 3D \u9884\u89c8\u3002",
+    importedModelText: "OBJ/STL/GLB \u6a21\u578b\u5df2\u52a0\u8f7d\u3002\u5728\u9009\u62e9\u6a21\u5f0f\u4e0b\u62d6\u52a8\u53ef\u65cb\u8f6c 3D \u9884\u89c8\u3002",
     unsupported: "\u683c\u5f0f\u4e0d\u652f\u6301",
-    unsupportedText: "\u8bf7\u5bfc\u5165\u56fe\u7247\u3001OBJ \u6216 STL \u6587\u4ef6\u3002",
+    unsupportedText: "\u8bf7\u5bfc\u5165\u56fe\u7247\u3001OBJ\u3001STL\u3001GLB \u6216\u5185\u5d4c glTF \u6587\u4ef6\u3002",
     maskCleared: "\u906e\u7f69\u5df2\u6e05\u7a7a",
     maskClearedText: "\u5e95\u56fe\u4fdd\u7559\uff0c\u53ea\u6e05\u7a7a\u7f16\u8f91\u533a\u57df\u3002",
     nothingClear: "\u5f53\u524d\u6ca1\u6709\u53ef\u6e05\u7a7a\u7684\u906e\u7f69\u3002",
@@ -241,11 +244,14 @@ const copy = {
     outputUpdated: "\u5b9e\u65f6\u8f93\u51fa\u5df2\u66f4\u65b0",
     outputUpdatedText: "\u53f3\u4fa7\u753b\u5e03\u6765\u81ea API \u8fd4\u56de\u7ed3\u679c\u3002",
     live: "\u5b9e\u65f6",
+    manual: "\u624b\u52a8",
     paused: "\u6682\u505c",
     liveOn: "\u5b9e\u65f6\u5df2\u5f00\u542f",
     liveOff: "\u5b9e\u65f6\u5df2\u6682\u505c",
     liveOnText: "\u753b\u5e03\u53d8\u5316\u4f1a\u81ea\u52a8\u8bf7\u6c42\u8f93\u51fa\u3002",
     liveOffText: "\u753b\u5e03\u4ecd\u53ef\u7f16\u8f91\uff0c\u4f46\u4e0d\u4f1a\u81ea\u52a8\u8bf7\u6c42\u8f93\u51fa\u3002",
+    remoteManual: "\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u4f7f\u7528\u624b\u52a8\u751f\u6210",
+    remoteManualText: "\u4e91\u7aef\u56fe\u50cf API \u5728\u6b64\u5904\u662f\u5355\u6b21\u751f\u6210\u8bf7\u6c42\u3002\u5148\u7f16\u8f91\u753b\u5e03\uff0c\u518d\u70b9\u751f\u6210\u3002",
     draw: "\u7ed8\u5236",
     textOnly: "\u4ec5\u6587\u5b57",
     seed: "\u79cd\u5b50 ",
@@ -559,6 +565,28 @@ function apiFormPayload(provider = state.apiConfigTab) {
   };
 }
 
+function providerRequestConfig(provider) {
+  const config = state.apiConfig || {};
+  if (provider === "openai") {
+    const saved = config.openai || {};
+    return {
+      baseUrl: saved.base_url || "",
+      model: saved.model || "",
+    };
+  }
+  if (provider === "custom-http") {
+    const saved = config.custom || {};
+    return {
+      baseUrl: saved.base_url || "",
+      model: saved.model || "",
+      method: saved.method || "POST",
+      authHeader: saved.auth_header || "authorization",
+      authScheme: saved.auth_scheme || "Bearer",
+    };
+  }
+  return {};
+}
+
 async function saveApiSettings() {
   const payload = apiFormPayload(state.apiConfigTab);
   ui.apiModalStatus.textContent = `${tr("saving")}...`;
@@ -643,12 +671,14 @@ function updateToolReadout() {
 }
 
 function updateChips() {
+  const remote = isRemoteProvider();
   ui.drawModeChip.textContent = state.mode === "draw" ? tr("draw") : tr("textOnly");
   ui.drawModeChip.classList.toggle("active", state.mode === "draw");
   ui.aspectRatioChip.textContent = state.aspectRatio;
   ui.seedChip.textContent = `${tr("seed")}${state.seed}`;
-  ui.liveChip.textContent = state.liveEnabled ? tr("live") : tr("paused");
-  ui.liveChip.classList.toggle("active", state.liveEnabled);
+  ui.liveChip.textContent = remote ? tr("manual") : (state.liveEnabled ? tr("live") : tr("paused"));
+  ui.liveChip.classList.toggle("active", state.liveEnabled && !remote);
+  ui.liveChip.title = remote ? tr("remoteManualText") : "";
 }
 
 function fitVisibleCanvas(canvas) {
@@ -686,6 +716,13 @@ function scheduleDraw() {
 function scheduleRealtimeRender(reason = "edit") {
   const manual = reason === "preview" || reason === "api-test";
   if ((!state.liveEnabled && !manual) || !activeAsset()) return;
+  if (isRemoteProvider() && !manual) {
+    state.renderQueued = false;
+    setRequestState("local", "idle");
+    setStatus("remoteManual", "remoteManualText");
+    updatePreviewButton();
+    return;
+  }
   state.renderQueued = true;
   setRequestState("queued", "queued");
   setStatus("previewQueued", state.image && !state.strokes.length ? "previewNoMaskText" : "previewQueuedText");
@@ -699,6 +736,7 @@ function handleProviderChange() {
   state.generatedImage = null;
   state.resultError = null;
   if (isRemoteProvider()) state.lastRequest = null;
+  updateChips();
   draw();
   scheduleRealtimeRender("provider");
 }
@@ -1434,6 +1472,7 @@ async function requestRealtimeRender(reason) {
     mode: state.mode,
     aspectRatio: state.aspectRatio,
   });
+  Object.assign(state.lastRequest, providerRequestConfig(ui.providerSelect.value));
 
   setApiState("busy", "rendering");
   setRequestState("busy", "rendering");
@@ -1632,6 +1671,11 @@ async function loadModel(file) {
     draw();
     scheduleRealtimeRender("preview");
   } catch (error) {
+    state.image = null;
+    state.model = null;
+    modelViewer.clear();
+    resetMask();
+    draw();
     setStatus("unsupported", "unsupportedText", String(error.message || error));
   }
 }
@@ -1643,7 +1687,7 @@ function handleFile(file) {
     return;
   }
   const ext = file.name.split(".").pop().toLowerCase();
-  if (["obj", "stl"].includes(ext)) {
+  if (["obj", "stl", "glb", "gltf"].includes(ext)) {
     loadModel(file);
     return;
   }
@@ -1919,9 +1963,14 @@ ui.saveApiSettingsBtn.addEventListener("click", () => {
     ui.apiModalStatus.textContent = String(error.message || error);
   });
 });
-ui.modalTestApiBtn.addEventListener("click", () => {
+ui.modalTestApiBtn.addEventListener("click", async () => {
   ui.providerSelect.value = state.apiConfigTab;
-  testApiConnection("modal");
+  try {
+    await saveApiSettings();
+    await testApiConnection("modal");
+  } catch (error) {
+    ui.apiModalStatus.textContent = String(error.message || error);
+  }
 });
 $("importImageBtn").addEventListener("click", () => ui.imageInput.click());
 $("importImageNav").addEventListener("click", () => ui.imageInput.click());
@@ -1987,6 +2036,11 @@ ui.drawModeChip.addEventListener("click", () => {
 ui.aspectRatioChip.addEventListener("click", cycleAspectRatio);
 ui.seedChip.addEventListener("click", nextSeed);
 ui.liveChip.addEventListener("click", () => {
+  if (isRemoteProvider()) {
+    updateChips();
+    setStatus("remoteManual", "remoteManualText");
+    return;
+  }
   state.liveEnabled = !state.liveEnabled;
   updateChips();
   setStatus(state.liveEnabled ? "liveOn" : "liveOff", state.liveEnabled ? "liveOnText" : "liveOffText");

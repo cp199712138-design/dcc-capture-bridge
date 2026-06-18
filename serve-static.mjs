@@ -416,12 +416,12 @@ async function handleCustomRender(body) {
     };
   }
 
-  const config = providerConfigFromRequest({ provider: "custom-http" }).custom;
+  const config = providerConfigFromRequest({ ...body, provider: "custom-http" }).custom;
   let response;
   try {
     response = await callCustomEndpoint({
       config,
-      payload: customRequestPayload(body)
+      payload: customRequestPayload({ ...body, model: body.model || config.model })
     });
   } catch (error) {
     return providerRequestException("custom-http", error);
@@ -492,6 +492,7 @@ function customRequestPayload(body, isTest = false) {
   return {
     schema_version: body.schema_version,
     session_id: body.session_id,
+    model: body.model || "",
     task: body.task || "regional_scene_generation",
     prompt: body.prompt || "",
     strength: body.strength,

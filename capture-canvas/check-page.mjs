@@ -93,7 +93,7 @@ const report = {
   hasLiveChip: html.includes('id="liveChip"') && app.includes("liveEnabled"),
   hasModelViewerModule: Boolean(modelViewer) && modelViewer.includes("export async function parseModelFile") && modelViewer.includes("export function createModelViewer"),
   hasReal3DPreviewIntegration: app.includes('from "./model-viewer.mjs"') && app.includes("createModelViewer") && app.includes("parseModelFile(file)") && app.includes("modelViewer.snapshot"),
-  hasObjStlModelImport: html.includes('accept=".obj,.stl"') && app.includes('["obj", "stl"].includes(ext)'),
+  hasObjStlGlbModelImport: html.includes('accept=".obj,.stl,.glb,.gltf"') && app.includes('["obj", "stl", "glb", "gltf"].includes(ext)'),
   hasSecretPlaceholderGuidance: html.includes('placeholder="sk-..."') && envExample.includes("OPENAI_API_KEY="),
   hasNoRealApiKeys: findRealApiKeys().length === 0,
   hasNoVideoPlaceholder: !html.includes("outputVideoChip") && !app.includes("Video mode"),
