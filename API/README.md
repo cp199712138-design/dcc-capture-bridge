@@ -6,7 +6,7 @@
 
 - `mock-local`: 没有远端配置时的本地预览，不做真实 API 调用。
 - `openai`: 需要 `OPENAI_API_KEY`；缺失时返回 `openai-missing`，不能伪装成功。
-- `custom-http`: 需要 `DCC_CUSTOM_API_URL`；缺失时返回 `custom-http-missing`。
+- `custom-http`: 需要 `DCC_CUSTOM_API_URL` 和 `DCC_CUSTOM_API_KEY`；缺失时返回 `custom-http-missing`，不能伪装成功。
 - `POST /api/test-provider` 只返回连接状态、provider、host/model 和错误摘要，不返回 API key。
 
 ## Contract Fields

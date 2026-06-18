@@ -262,7 +262,7 @@ export function createModelViewer() {
     canvas.addEventListener("pointercancel", endDrag, true);
 
     canvas.addEventListener("wheel", (event) => {
-      if (!geometry) return;
+      if (!geometry || !shouldHandlePointer(event)) return;
       zoom = Math.max(0.45, Math.min(2.2, zoom - event.deltaY * 0.001));
       onChange();
       event.preventDefault();

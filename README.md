@@ -39,6 +39,11 @@ Open:
 http://127.0.0.1:8765/capture-canvas/index.html
 ```
 
+客户测试入口和发布前验收清单：
+
+- `测试发布/CUSTOMER_TEST.md`
+- `测试发布/RELEASE_ACCEPTANCE.md`
+
 ## Realtime API
 
 The browser never stores an API key. The local Node server exposes:

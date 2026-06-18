@@ -84,6 +84,10 @@ test image/mask data, but it is identified with `task: "connection_test"` and
 2xx JSON response for that connection test, even if it does not include an
 image.
 
+The local server only calls `custom-http` after both `DCC_CUSTOM_API_URL` and
+`DCC_CUSTOM_API_KEY` are configured. Missing URL or key returns an explicit
+configuration error instead of a simulated success.
+
 `POST /api/realtime-render` is render-ready only when the response includes an
 image. The local server and static direct mode normalize either supported shape
 to `imageDataUrl`; a 2xx render response with no image is treated as a clear
@@ -122,6 +126,7 @@ contract. Requirements:
 
 - the endpoint must allow browser CORS requests from the static demo domain
 - the customer accepts that their key is stored in their own browser localStorage
+- the Custom API URL and key must both be set before direct render calls are sent
 - OpenAI-compatible keys should use the local/hosted server proxy instead of
   static direct mode
 

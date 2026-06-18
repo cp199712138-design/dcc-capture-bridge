@@ -81,8 +81,9 @@ export function directCustomConfig(apiConfig, payload = {}) {
 export async function callDirectCustomApi(requestBody, payload = {}, apiConfig = {}, missingUrlMessage = "Set the Custom API URL first.") {
   const config = directCustomConfig(apiConfig, payload);
   if (!config.baseUrl) throw new Error(missingUrlMessage);
+  if (!config.apiKey) throw new Error("Set the Custom API key first.");
   const headers = { "content-type": "application/json" };
-  if (config.apiKey) headers[config.authHeader || "authorization"] = `${config.authScheme || "Bearer"} ${config.apiKey}`.trim();
+  headers[config.authHeader || "authorization"] = `${config.authScheme || "Bearer"} ${config.apiKey}`.trim();
   const response = await fetch(config.baseUrl, {
     method: config.method || "POST",
     headers,

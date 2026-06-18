@@ -34,6 +34,13 @@ Repair the browser product surface before adding features:
 
 Make only small UI repairs that are clearly inside this scope.
 
+## 2026-06-18 UI Surface Repair
+
+- Switched the HTML default first paint to Chinese-first labels, status text, prompt text, and tooltips so the default CN state does not flash obvious English UI copy before app hydration.
+- Clarified the destructive toolbar action as mask-only with `清空遮罩` / `清遮`.
+- Gave the sidebar, floating toolbar, prompt composer, and top status area a little more room so Generate, Live, provider/API status, and prompt chips wrap instead of crowding the canvas.
+- Kept existing control ids and app selectors unchanged; no API, Canvas, Blender, 3ds Max, or server files were edited.
+
 ## Verification
 
 Run:

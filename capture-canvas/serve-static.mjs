@@ -31,7 +31,7 @@ const server = http.createServer(async (req, res) => {
         provider,
         openai_configured: Boolean(process.env.OPENAI_API_KEY),
         openai_host: safeHost(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"),
-        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL),
+        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL && process.env.DCC_CUSTOM_API_KEY),
         custom_api_host: safeHost(process.env.DCC_CUSTOM_API_URL),
         has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY)
       });
@@ -222,6 +222,7 @@ async function handleProviderTest(body) {
 
   if (provider === "custom-http") {
     if (!config.custom.url) return missingCustomConfig();
+    if (!config.custom.apiKey) return missingCustomKeyConfig();
     try {
       const response = await callCustomEndpoint({
         config: config.custom,
@@ -349,7 +350,7 @@ function writeEnvUpdates(updates) {
 function chooseRuntimeProvider(body) {
   const requested = String(body.provider || "auto");
   if (requested === "mock-local") return "mock-local";
-  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL ? "custom-http" : "custom-http-missing";
+  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL && process.env.DCC_CUSTOM_API_KEY ? "custom-http" : "custom-http-missing";
   if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "openai-missing";
   return "mock-local";
 }
@@ -371,8 +372,19 @@ function missingCustomConfig() {
     provider: "custom-http-missing",
     cn: "\u81ea\u5b9a\u4e49 API \u672a\u914d\u7f6e",
     en: "Custom API Not Configured",
-    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_URL\uff0c\u53ef\u9009\u8bbe\u7f6e DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
-    message_en: "Set DCC_CUSTOM_API_URL in .env, optionally DCC_CUSTOM_API_KEY, then restart the server."
+    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_URL \u548c DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
+    message_en: "Set DCC_CUSTOM_API_URL and DCC_CUSTOM_API_KEY in .env, then restart the server."
+  };
+}
+
+function missingCustomKeyConfig() {
+  return {
+    ok: false,
+    provider: "custom-http-missing",
+    cn: "\u81ea\u5b9a\u4e49 API Key \u672a\u914d\u7f6e",
+    en: "Custom API Key Not Configured",
+    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
+    message_en: "Set DCC_CUSTOM_API_KEY in .env, then restart the server."
   };
 }
 

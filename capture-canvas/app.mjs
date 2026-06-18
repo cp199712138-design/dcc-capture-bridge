@@ -296,8 +296,10 @@ const state = {
   generatedImage: null,
   session: createSessionState(),
   strokes: [],
+  historyStack: [],
   redoStack: [],
   selectedStrokeIndex: -1,
+  pendingHistory: null,
   movingSelection: false,
   resizingSelection: false,
   resizeHandle: "",
@@ -861,6 +863,38 @@ function cloneStroke(stroke) {
   return JSON.parse(JSON.stringify(stroke));
 }
 
+function cloneStrokes() {
+  return state.strokes.map((stroke) => cloneStroke(stroke));
+}
+
+function createHistorySnapshot() {
+  return {
+    strokes: cloneStrokes(),
+    selectedStrokeIndex: state.selectedStrokeIndex,
+  };
+}
+
+function recordHistorySnapshot(before = state.pendingHistory) {
+  state.pendingHistory = null;
+  if (!before) return false;
+  const after = createHistorySnapshot();
+  if (JSON.stringify(before.strokes) === JSON.stringify(after.strokes) && before.selectedStrokeIndex === after.selectedStrokeIndex) {
+    return false;
+  }
+  state.historyStack.push({ before, after });
+  state.redoStack = [];
+  return true;
+}
+
+function restoreHistorySnapshot(snapshot) {
+  state.strokes = snapshot.strokes.map((stroke) => cloneStroke(stroke));
+  state.selectedStrokeIndex = Math.min(snapshot.selectedStrokeIndex, state.strokes.length - 1);
+  if (state.selectedStrokeIndex < 0) state.selectedStrokeIndex = -1;
+  state.generatedImage = null;
+  redrawMaskBitmap();
+  draw();
+}
+
 function transformPoint(point, bounds, target) {
   const safeW = Math.max(1, bounds.w);
   const safeH = Math.max(1, bounds.h);
@@ -1062,7 +1096,9 @@ function pushHistory(stroke) {
 function resetMask() {
   if (state.renderQueued || state.rendering) cancelRealtimeRender();
   state.strokes = [];
+  state.historyStack = [];
   state.redoStack = [];
+  state.pendingHistory = null;
   state.draft = null;
   state.selectedStrokeIndex = -1;
   state.movingSelection = false;
@@ -1167,9 +1203,9 @@ function fitBoundsIntoCanvas(fill = false) {
   scaleStrokeToBounds(stroke, bounds, target);
 }
 
-function commitLayerChange(reason = "layer") {
+function commitLayerChange(reason = "layer", before = state.pendingHistory) {
+  recordHistorySnapshot(before);
   state.generatedImage = null;
-  state.redoStack = [];
   redrawMaskBitmap();
   draw();
   setStatus("layerChanged", "layerChangedText");
@@ -1189,6 +1225,7 @@ function applyLayerAction(action) {
   const stroke = selectedStroke();
   const bounds = strokeBounds(stroke);
   if (!stroke || !bounds) return;
+  const before = createHistorySnapshot();
 
   if (action === "lock") {
     stroke.locked = !stroke.locked;
@@ -1219,7 +1256,7 @@ function applyLayerAction(action) {
   }
 
   hideLayerMenu();
-  commitLayerChange(action);
+  commitLayerChange(action, before);
 }
 
 function showLayerMenu(event) {
@@ -1551,6 +1588,7 @@ function beginStroke(e) {
   if (state.tool === "select") {
     const handle = selectedHandleAt(p);
     if (handle && selectedStroke() && !selectedStroke().locked) {
+      state.pendingHistory = createHistorySnapshot();
       state.resizingSelection = true;
       state.resizeHandle = handle;
       state.resizeOriginal = cloneStroke(selectedStroke());
@@ -1563,6 +1601,7 @@ function beginStroke(e) {
     state.selectedStrokeIndex = findStrokeAt(p);
     const stroke = selectedStroke();
     state.movingSelection = state.selectedStrokeIndex >= 0 && !stroke?.locked;
+    state.pendingHistory = state.movingSelection ? createHistorySnapshot() : null;
     state.moveLast = p;
     ui.sourceCanvas.style.cursor = state.movingSelection ? "grabbing" : "grab";
     setStatus(state.selectedStrokeIndex >= 0 ? "selected" : "noSelection", state.selectedStrokeIndex >= 0 ? "selectedText" : "noSelectionText");
@@ -1571,6 +1610,7 @@ function beginStroke(e) {
   }
 
   state.drawing = true;
+  state.pendingHistory = createHistorySnapshot();
   if (state.tool === "brush" || state.tool === "erase") {
     state.eraseMaskBefore = state.tool === "erase" ? maskSignature() : "";
     pushHistory({
@@ -1664,6 +1704,8 @@ function endStroke(e) {
     redrawMaskBitmap();
   }
   state.eraseMaskBefore = "";
+  if (changed) recordHistorySnapshot();
+  else state.pendingHistory = null;
   scheduleDraw();
   if (changed) scheduleRealtimeRender("stroke");
 }
@@ -1701,25 +1743,19 @@ function clearMask() {
 }
 
 function undoMask() {
-  const stroke = state.strokes.pop();
-  if (!stroke) return;
-  state.redoStack.push(stroke);
-  state.selectedStrokeIndex = -1;
-  state.generatedImage = null;
-  redrawMaskBitmap();
-  draw();
+  const entry = state.historyStack.pop();
+  if (!entry) return;
+  state.redoStack.push(entry);
+  restoreHistorySnapshot(entry.before);
   setStatus("undo", "maskClearedText");
   scheduleRealtimeRender("undo");
 }
 
 function redoMask() {
-  const stroke = state.redoStack.pop();
-  if (!stroke) return;
-  state.strokes.push(stroke);
-  state.selectedStrokeIndex = state.strokes.length - 1;
-  state.generatedImage = null;
-  redrawMaskBitmap();
-  draw();
+  const entry = state.redoStack.pop();
+  if (!entry) return;
+  state.historyStack.push(entry);
+  restoreHistorySnapshot(entry.after);
   setStatus("redo", "previewQueuedText");
   scheduleRealtimeRender("redo");
 }

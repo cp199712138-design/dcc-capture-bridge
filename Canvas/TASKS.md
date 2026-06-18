@@ -43,6 +43,12 @@ node capture-canvas/simulate-flow.mjs
 node capture-canvas/browser-smoke.mjs
 ```
 
+## 2026-06-18 Canvas+Browser-3D pass
+
+- Added undo/redo history snapshots for draw, move, resize, and layer-menu edits so transformed mask regions undo back to their prior geometry instead of deleting the last stroke.
+- Limited OBJ/STL preview wheel zoom to the same Select-mode gate used by model orbit, keeping brush/mask editing from changing the model camera.
+- Extended `browser-smoke` coverage for moved-region undo/redo, OBJ import, Select-mode model zoom, brush-mode wheel ignore, preview request state, and broken OBJ feedback.
+
 ## Report Format
 
 ```text

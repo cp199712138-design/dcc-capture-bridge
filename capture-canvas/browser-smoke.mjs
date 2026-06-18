@@ -289,7 +289,22 @@ try {
       }
       return pixels;
     };
+    const hasCyanAt = (canvas, x, y) => countCyanMaskPixels(canvas, x, y, 32) > 40;
     const click = (selector) => document.querySelector(selector)?.click();
+    const setFileInput = (input, file) => {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const waitFor = async (predicate, timeout = 2000) => {
+      const started = Date.now();
+      while (Date.now() - started < timeout) {
+        if (predicate()) return true;
+        await sleep(80);
+      }
+      return false;
+    };
     const emptyOverlayVisible = getComputedStyle(document.querySelector("#sourceEmpty")).display !== "none";
     const emptyCanvasHasDuplicateText = emptyOverlayVisible && hasDarkPlaceholderText();
     if (document.querySelector("#liveChip")?.classList.contains("active")) click("#liveChip");
@@ -316,6 +331,18 @@ try {
     canvas.dispatchEvent(eventAt("pointermove", rect.left + 430, rect.top + 320));
     canvas.dispatchEvent(eventAt("pointerup", rect.left + 430, rect.top + 320));
     await sleep(80);
+    const movedRectNewPixelCount = countCyanMaskPixels(canvas, 500, 365, 32);
+    const movedRectHasNewPixels = movedRectNewPixelCount > 40;
+    document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "z", ctrlKey: true }));
+    await sleep(80);
+    const undoOriginalPixelCount = countCyanMaskPixels(canvas, 315, 235, 32);
+    const undoMovedPixelCount = countCyanMaskPixels(canvas, 500, 365, 32);
+    const undoMoveRestoresOriginalPixels = undoOriginalPixelCount > 40 && undoMovedPixelCount <= 40;
+    document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "y", ctrlKey: true }));
+    await sleep(80);
+    const redoMovedPixelCount = countCyanMaskPixels(canvas, 500, 365, 32);
+    const redoOriginalPixelCount = countCyanMaskPixels(canvas, 315, 235, 32);
+    const redoMoveRestoresMovedPixels = redoMovedPixelCount > 40 && redoOriginalPixelCount <= 40;
     canvas.dispatchEvent(new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
@@ -339,6 +366,52 @@ try {
     const toolbarRect = document.querySelector(".floating")?.getBoundingClientRect();
     click('[data-layer-action="duplicate"]');
     await sleep(80);
+    const modelInput = document.querySelector("#modelInput");
+    const objSource = [
+      "v 0 0 0",
+      "v 1 0 0",
+      "v 0 1 0",
+      "v 0 0 1",
+      "f 1 2 3",
+      "f 1 2 4",
+      "f 1 3 4",
+      "f 2 3 4",
+    ].join("\\n");
+    setFileInput(modelInput, new File([objSource], "smoke-tetra.obj", { type: "text/plain" }));
+    await waitFor(() => /smoke-tetra\\.obj/.test(document.querySelector("#assetInfo")?.textContent || ""));
+    const modelAssetText = document.querySelector("#assetInfo")?.textContent || "";
+    const modelImported = /smoke-tetra\\.obj/.test(modelAssetText)
+      && /4\\s*(triangles|三角面)/i.test(modelAssetText);
+    click("#brushBtn");
+    await sleep(120);
+    const brushModeModelBeforeWheel = canvas.toDataURL("image/png");
+    canvas.dispatchEvent(new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.left + 420,
+      clientY: rect.top + 300,
+      deltaY: -520,
+    }));
+    await sleep(160);
+    const brushModeWheelIgnoredForModel = brushModeModelBeforeWheel === canvas.toDataURL("image/png");
+    click("#selectTool");
+    await sleep(120);
+    const selectModeModelBeforeWheel = canvas.toDataURL("image/png");
+    canvas.dispatchEvent(new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.left + 420,
+      clientY: rect.top + 300,
+      deltaY: -520,
+    }));
+    await sleep(160);
+    const selectModeWheelZoomsModel = selectModeModelBeforeWheel !== canvas.toDataURL("image/png");
+    click("#previewBtn");
+    await sleep(220);
+    const modelPreviewQueuedOrRendered = ["queued", "busy", "local", "api"].includes(document.querySelector("#requestState")?.dataset.state || "");
+    setFileInput(modelInput, new File(["v 0 0 0\\n"], "broken.obj", { type: "text/plain" }));
+    await waitFor(() => /No renderable triangles|没有/.test(document.querySelector("#statusText")?.textContent || ""));
+    const modelImportFailureHasFeedback = /No renderable triangles|没有/.test(document.querySelector("#statusText")?.textContent || "");
     resolve({
       ready: window.__DCC_CAPTURE_READY === true,
       title: document.title,
@@ -346,6 +419,14 @@ try {
       emptyCanvasHasDuplicateText,
       brushClickMaskPixels,
       pausedLiveAvoidsAutoQueue: !["queued", "busy"].includes(pausedAutoStateAfterBrush) && !["queued", "busy"].includes(pausedAutoStateAfterRect),
+      movedRectHasNewPixels,
+      movedRectNewPixelCount,
+      undoMoveRestoresOriginalPixels,
+      undoOriginalPixelCount,
+      undoMovedPixelCount,
+      redoMoveRestoresMovedPixels,
+      redoMovedPixelCount,
+      redoOriginalPixelCount,
       emptyRightClickMenuOpen,
       menuOpen,
       layerMenuHasMojibake: /[\u923b\u9204\u9231\u731d]/.test(layerMenuText),
@@ -354,11 +435,17 @@ try {
       promptVisible: !!document.querySelector("#prompt"),
       toolbarVisible: !!document.querySelector(".floating"),
       promptToolbarOverlap: rectsOverlap(promptRect, toolbarRect),
+      modelImported,
+      modelAssetText,
+      brushModeWheelIgnoredForModel,
+      selectModeWheelZoomsModel,
+      modelPreviewQueuedOrRendered,
+      modelImportFailureHasFeedback,
     });
   })`, sessionId);
 
   client.close();
-  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || !report.pausedLiveAvoidsAutoQueue || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap) {
+  if (!report.ready || !report.hasSourceCanvas || report.emptyCanvasHasDuplicateText || report.brushClickMaskPixels < 8 || !report.pausedLiveAvoidsAutoQueue || !report.movedRectHasNewPixels || !report.undoMoveRestoresOriginalPixels || !report.redoMoveRestoresMovedPixels || report.emptyRightClickMenuOpen || !report.promptVisible || !report.toolbarVisible || !report.menuOpen || report.layerMenuHasMojibake || report.promptToolbarOverlap || !report.modelImported || !report.brushModeWheelIgnoredForModel || !report.selectModeWheelZoomsModel || !report.modelPreviewQueuedOrRendered || !report.modelImportFailureHasFeedback) {
     throw new Error(`Browser smoke failed: ${JSON.stringify(report)}`);
   }
   console.log(JSON.stringify({ browser_smoke_ok: true, report }));

@@ -11,6 +11,7 @@ const localAppPort = 9878;
 const b64AppPort = 9879;
 const missingImageAppPort = 9880;
 const openAiHtmlAppPort = 9881;
+const customMissingKeyAppPort = 9882;
 const received = [];
 
 const mockApi = http.createServer(async (req, res) => {
@@ -53,21 +54,28 @@ await new Promise((resolve) => mockApi.listen(mockPort, "127.0.0.1", resolve));
 const root = fileURLToPath(new URL("../", import.meta.url));
 const app = startApp(appPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/render`,
+  DCC_CUSTOM_API_KEY: "test-custom-key",
   DCC_CUSTOM_API_METHOD: "POST"
 });
 const localApp = startApp(localAppPort);
 const b64App = startApp(b64AppPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/b64`,
+  DCC_CUSTOM_API_KEY: "test-custom-key",
   DCC_CUSTOM_API_METHOD: "POST"
 });
 const missingImageApp = startApp(missingImageAppPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/missing-image`,
+  DCC_CUSTOM_API_KEY: "test-custom-key",
   DCC_CUSTOM_API_METHOD: "POST"
 });
 const openAiHtmlApp = startApp(openAiHtmlAppPort, {
   OPENAI_API_KEY: "test-key",
   OPENAI_BASE_URL: `http://127.0.0.1:${mockPort}/v1`,
   OPENAI_IMAGE_MODEL: "test-image-model"
+});
+const customMissingKeyApp = startApp(customMissingKeyAppPort, {
+  DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/render`,
+  DCC_CUSTOM_API_METHOD: "POST"
 });
 
 try {
@@ -76,6 +84,7 @@ try {
   await waitForJson(`http://127.0.0.1:${b64AppPort}/api/status`);
   await waitForJson(`http://127.0.0.1:${missingImageAppPort}/api/status`);
   await waitForJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/status`);
+  await waitForJson(`http://127.0.0.1:${customMissingKeyAppPort}/api/status`);
 
   const status = await getJson(`http://127.0.0.1:${appPort}/api/status`);
   assert.equal(status.ok, true);
@@ -94,15 +103,34 @@ try {
   assert.equal(openAiStatus.provider, "mock-local");
   assert.equal(openAiStatus.openai_configured, true);
 
+  const customMissingKeyStatus = await getJson(`http://127.0.0.1:${customMissingKeyAppPort}/api/status`);
+  assert.equal(customMissingKeyStatus.ok, true);
+  assert.equal(customMissingKeyStatus.provider, "mock-local");
+  assert.equal(customMissingKeyStatus.custom_api_configured, false);
+  assert.equal(customMissingKeyStatus.custom_api_host, `127.0.0.1:${mockPort}`);
+
+  const autoWithOpenAiKey = await postJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "auto",
+    prompt: "auto should stay local"
+  });
+  assert.equal(autoWithOpenAiKey.ok, true);
+  assert.equal(autoWithOpenAiKey.provider, "mock-local");
+  assert.equal(received.filter((item) => item.url === "/v1/images/edits").length, 0);
+
   const config = await getJson(`http://127.0.0.1:${appPort}/api/config`);
   assert.equal(config.ok, true);
   assert.equal(config.custom.base_url, `http://127.0.0.1:${mockPort}/render`);
   assert.equal(config.custom.method, "POST");
-  assert.equal(config.custom.key_saved, false);
+  assert.equal(config.custom.key_saved, true);
 
   const test = await postJson(`http://127.0.0.1:${appPort}/api/test-provider`, { provider: "custom-http" });
   assert.equal(test.ok, true);
   assert.equal(test.provider, "custom-http");
+
+  const connectionWithoutImage = await postJson(`http://127.0.0.1:${missingImageAppPort}/api/test-provider`, { provider: "custom-http" });
+  assert.equal(connectionWithoutImage.ok, true);
+  assert.equal(connectionWithoutImage.provider, "custom-http");
 
   const mockTest = await postJson(`http://127.0.0.1:${appPort}/api/test-provider`, { provider: "mock-local" });
   assert.equal(mockTest.ok, false);
@@ -111,6 +139,21 @@ try {
   const openAiMissing = await postJson(`http://127.0.0.1:${appPort}/api/test-provider`, { provider: "openai" });
   assert.equal(openAiMissing.ok, false);
   assert.equal(openAiMissing.provider, "openai-missing");
+
+  const customMissingUrl = await postJson(`http://127.0.0.1:${localAppPort}/api/test-provider`, { provider: "custom-http" });
+  assert.equal(customMissingUrl.ok, false);
+  assert.equal(customMissingUrl.provider, "custom-http-missing");
+  assert.match(customMissingUrl.message_en, /DCC_CUSTOM_API_URL/i);
+
+  const customMissingKey = await postJson(`http://127.0.0.1:${customMissingKeyAppPort}/api/test-provider`, { provider: "custom-http" });
+  assert.equal(customMissingKey.ok, false);
+  assert.equal(customMissingKey.provider, "custom-http-missing");
+  assert.match(customMissingKey.message_en, /DCC_CUSTOM_API_KEY/i);
+
+  const customMissingKeyRender = await postJson(`http://127.0.0.1:${customMissingKeyAppPort}/api/realtime-render`, renderRequest());
+  assert.equal(customMissingKeyRender.ok, false);
+  assert.equal(customMissingKeyRender.provider, "custom-http-missing");
+  assert.match(customMissingKeyRender.message_en, /DCC_CUSTOM_API_KEY/i);
 
   const render = await postJson(`http://127.0.0.1:${appPort}/api/realtime-render`, renderRequest());
   assert.equal(render.ok, true);
@@ -125,7 +168,8 @@ try {
 
   installTestLocalStorage();
   const directB64Render = await callDirectCustomApi(renderRequest(), {
-    baseUrl: `http://127.0.0.1:${mockPort}/b64`
+    baseUrl: `http://127.0.0.1:${mockPort}/b64`,
+    apiKey: "test-custom-key"
   });
   assert.equal(directB64Render.imageDataUrl, transparentPixel);
   assertValidPngDataUrl(directB64Render.imageDataUrl);
@@ -138,9 +182,17 @@ try {
 
   await assert.rejects(
     () => callDirectCustomApi(renderRequest(), {
-      baseUrl: `http://127.0.0.1:${mockPort}/missing-image`
+      baseUrl: `http://127.0.0.1:${mockPort}/missing-image`,
+      apiKey: "test-custom-key"
     }),
     /image/i
+  );
+
+  await assert.rejects(
+    () => callDirectCustomApi(renderRequest(), {
+      baseUrl: `http://127.0.0.1:${mockPort}/render`
+    }),
+    /key/i
   );
 
   const htmlOpenAiRender = await postJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/realtime-render`, {
@@ -162,6 +214,30 @@ try {
   assert.equal(mockRender.provider, "mock-local");
   assertValidPngDataUrl(mockRender.imageDataUrl);
   assert.notEqual(mockRender.imageDataUrl, transparentPixel);
+
+  const sourceChangedMock = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "mock-local",
+    sourceImageDataUrl: "data:image/png;base64,c291cmNlLTI=",
+    prompt: "local fallback"
+  });
+  const maskChangedMock = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "mock-local",
+    maskDataUrl: "data:image/png;base64,bWFzay0y",
+    prompt: "local fallback"
+  });
+  const promptChangedMock = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "mock-local",
+    prompt: "different local fallback"
+  });
+  for (const item of [sourceChangedMock, maskChangedMock, promptChangedMock]) {
+    assert.equal(item.ok, true);
+    assert.equal(item.provider, "mock-local");
+    assertValidPngDataUrl(item.imageDataUrl);
+    assert.notEqual(item.imageDataUrl, mockRender.imageDataUrl);
+  }
 
   const missingCustomRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
     provider: "custom-http",
@@ -194,6 +270,7 @@ try {
   stopApp(b64App);
   stopApp(missingImageApp);
   stopApp(openAiHtmlApp);
+  stopApp(customMissingKeyApp);
   await new Promise((resolve) => mockApi.close(resolve));
 }
 
