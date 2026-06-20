@@ -14,6 +14,9 @@ providers without editing the frontend.
   Settings panel.
 - API Settings can save provider URL, model, and key into local `.env`.
 - OpenAI-compatible image edit path exists.
+- BFL FLUX.2 server-side provider exists as `bfl-flux2`; it uses
+  `BFL_API_KEY`, `BFL_BASE_URL`, `BFL_FAST_MODEL`, `BFL_FINAL_MODEL`, and
+  `BFL_FLEX_MODEL`. `/api/config` only reports `bfl.key_saved`, never the key.
 - Custom HTTP JSON adapter exists.
 - Static demo can store customer Custom API settings in browser localStorage
   and call that endpoint directly when CORS allows it. This is browser-local

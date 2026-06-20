@@ -7,6 +7,10 @@ import { createMockImageDataUrl, normalizeImageDataUrl } from "../API/task-api.m
 const root = process.cwd();
 const port = Number(process.env.PORT || 8765);
 const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-1";
+const BFL_BASE_URL_DEFAULT = "https://api.bfl.ai";
+const BFL_FAST_MODEL_DEFAULT = "flux-2-klein-9b";
+const BFL_FINAL_MODEL_DEFAULT = "flux-2-pro";
+const BFL_FLEX_MODEL_DEFAULT = "flux-2-flex";
 const TRANSPARENT_PIXEL_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 loadLocalEnv();
 const types = {
@@ -31,9 +35,11 @@ const server = http.createServer(async (req, res) => {
         provider,
         openai_configured: Boolean(process.env.OPENAI_API_KEY),
         openai_host: safeHost(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"),
+        bfl_configured: Boolean(process.env.BFL_API_KEY),
+        bfl_host: safeHost(process.env.BFL_BASE_URL || BFL_BASE_URL_DEFAULT),
         custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL && process.env.DCC_CUSTOM_API_KEY),
         custom_api_host: safeHost(process.env.DCC_CUSTOM_API_URL),
-        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY)
+        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY || process.env.BFL_API_KEY)
       });
       return;
     }
@@ -64,10 +70,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    let path = decodeURIComponent(url.pathname);
-    if (path.startsWith("/capture-canvas/")) path = path.slice("/capture-canvas".length) || "/index.html";
-    if (path === "/") path = "/index.html";
-    const file = normalize(join(root, path));
+    const requestPath = decodeURIComponent(url.pathname);
+    const relativePath = requestPath === "/" ? "capture-canvas/index.html" : requestPath.replace(/^\/+/, "");
+    let file = normalize(join(root, relativePath));
+    if (!existsSync(file) && relativePath.startsWith("capture-canvas/")) {
+      file = normalize(join(root, relativePath.slice("capture-canvas/".length)));
+    }
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Not found");
@@ -107,7 +115,9 @@ async function handleRealtimeRender(body) {
   const provider = chooseRuntimeProvider(body);
   if (provider === "openai-missing") return missingOpenAiConfig();
   if (provider === "custom-http-missing") return missingCustomConfig();
+  if (provider === "bfl-flux2-missing") return missingBflConfig();
   if (provider === "custom-http") return handleCustomRender(body);
+  if (provider === "bfl-flux2") return handleBflRender(body);
   if (provider !== "openai") {
     const imageDataUrl = createMockImageDataUrl(body);
     return {
@@ -262,6 +272,19 @@ async function handleProviderTest(body) {
     }
   }
 
+  if (provider === "bfl-flux2") {
+    if (!config.bfl.apiKey) return missingBflConfig();
+    return {
+      ok: true,
+      provider: "bfl-flux2",
+      host: safeHost(config.bfl.baseUrl),
+      cn: "BFL FLUX.2 \u914d\u7f6e\u5df2\u5c31\u7eea",
+      en: "BFL FLUX.2 configured",
+      message_cn: "BFL API key \u5df2\u4fdd\u5b58\uff0c\u672a\u8c03\u7528\u751f\u6210\u7aef\u70b9\u3002",
+      message_en: "BFL API key is saved. Generation endpoints were not called."
+    };
+  }
+
   return {
     ok: false,
     provider: "mock-local",
@@ -287,13 +310,20 @@ function getProviderConfig() {
       auth_scheme: process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer",
       method: process.env.DCC_CUSTOM_API_METHOD || "POST",
       key_saved: Boolean(process.env.DCC_CUSTOM_API_KEY)
+    },
+    bfl: {
+      base_url: process.env.BFL_BASE_URL || BFL_BASE_URL_DEFAULT,
+      fast_model: process.env.BFL_FAST_MODEL || BFL_FAST_MODEL_DEFAULT,
+      final_model: process.env.BFL_FINAL_MODEL || BFL_FINAL_MODEL_DEFAULT,
+      flex_model: process.env.BFL_FLEX_MODEL || BFL_FLEX_MODEL_DEFAULT,
+      key_saved: Boolean(process.env.BFL_API_KEY)
     }
   };
 }
 
 function saveProviderConfig(body) {
   const provider = String(body.provider || "");
-  if (provider !== "openai" && provider !== "custom-http") {
+  if (provider !== "openai" && provider !== "custom-http" && provider !== "bfl-flux2") {
     return { ok: false, message: "Unsupported provider" };
   }
 
@@ -302,13 +332,19 @@ function saveProviderConfig(body) {
     updates.OPENAI_BASE_URL = String(body.baseUrl || "https://api.openai.com/v1").trim();
     updates.OPENAI_IMAGE_MODEL = String(body.model || OPENAI_IMAGE_MODEL_DEFAULT).trim();
     if (String(body.apiKey || "").trim()) updates.OPENAI_API_KEY = String(body.apiKey).trim();
-  } else {
+  } else if (provider === "custom-http") {
     updates.DCC_CUSTOM_API_URL = String(body.baseUrl || "").trim();
     updates.DCC_CUSTOM_API_MODEL = String(body.model || "").trim();
     updates.DCC_CUSTOM_API_AUTH_HEADER = String(body.authHeader || "authorization").trim();
     updates.DCC_CUSTOM_API_AUTH_SCHEME = String(body.authScheme || "Bearer").trim();
     updates.DCC_CUSTOM_API_METHOD = String(body.method || "POST").trim();
     if (String(body.apiKey || "").trim()) updates.DCC_CUSTOM_API_KEY = String(body.apiKey).trim();
+  } else if (provider === "bfl-flux2") {
+    updates.BFL_BASE_URL = String(body.baseUrl || BFL_BASE_URL_DEFAULT).trim();
+    updates.BFL_FAST_MODEL = String(body.fastModel || BFL_FAST_MODEL_DEFAULT).trim();
+    updates.BFL_FINAL_MODEL = String(body.finalModel || BFL_FINAL_MODEL_DEFAULT).trim();
+    updates.BFL_FLEX_MODEL = String(body.flexModel || BFL_FLEX_MODEL_DEFAULT).trim();
+    if (String(body.apiKey || "").trim()) updates.BFL_API_KEY = String(body.apiKey).trim();
   }
 
   writeEnvUpdates(updates);
@@ -334,6 +370,11 @@ function writeEnvUpdates(updates) {
     "OPENAI_BASE_URL",
     "OPENAI_API_KEY",
     "OPENAI_IMAGE_MODEL",
+    "BFL_BASE_URL",
+    "BFL_API_KEY",
+    "BFL_FAST_MODEL",
+    "BFL_FINAL_MODEL",
+    "BFL_FLEX_MODEL",
     "DCC_CUSTOM_API_URL",
     "DCC_CUSTOM_API_KEY",
     "DCC_CUSTOM_API_MODEL",
@@ -361,6 +402,10 @@ function chooseRuntimeProvider(body) {
   if (requested === "openai") {
     const config = providerConfigFromRequest(body).openai;
     return config.apiKey ? "openai" : "openai-missing";
+  }
+  if (requested === "bfl-flux2") {
+    const config = providerConfigFromRequest(body).bfl;
+    return config.apiKey ? "bfl-flux2" : "bfl-flux2-missing";
   }
   return "mock-local";
 }
@@ -395,6 +440,17 @@ function missingCustomKeyConfig() {
     en: "Custom API Key Not Configured",
     message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 DCC_CUSTOM_API_KEY\uff0c\u6216\u5728 .env \u8bbe\u7f6e\u3002",
     message_en: "Save DCC_CUSTOM_API_KEY in API Settings, or set it in .env."
+  };
+}
+
+function missingBflConfig() {
+  return {
+    ok: false,
+    provider: "bfl-flux2-missing",
+    cn: "BFL FLUX.2 \u672a\u914d\u7f6e",
+    en: "BFL FLUX.2 Not Configured",
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 BFL_API_KEY\uff0c\u6216\u5728 .env / \u547d\u4ee4\u884c\u8bbe\u7f6e\u3002",
+    message_en: "Save BFL_API_KEY in API Settings, or set it in .env / your shell."
   };
 }
 
@@ -459,6 +515,107 @@ async function handleCustomRender(body) {
   };
 }
 
+async function handleBflRender(body) {
+  const config = providerConfigFromRequest(body).bfl;
+  if (!config.apiKey) return missingBflConfig();
+
+  const renderTier = String(body.renderTier || "fast_preview");
+  const model = chooseBflModel(config, renderTier);
+  const payload = {
+    prompt: String(body.prompt || "").trim(),
+    input_image: body.sourceImageDataUrl || undefined,
+    seed: Number.isFinite(Number(body.seed)) ? Number(body.seed) : undefined,
+    output_format: "png"
+  };
+
+  let response;
+  try {
+    response = await fetchWithTimeout(`${normalizeBaseUrl(config.baseUrl)}/v1/${encodeURIComponent(model)}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-key": config.apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    return providerRequestException("bfl-flux2", error);
+  }
+
+  const text = await response.text();
+  const data = parseJsonResponse(text);
+  if (!response.ok) {
+    return bflError(response.status, text, "BFL FLUX.2 submit failed.");
+  }
+  if (!data.polling_url) {
+    return bflError(response.status, text, "BFL FLUX.2 did not return polling_url.");
+  }
+
+  return pollBflResult(data.polling_url, config, { renderTier, model, submit: data });
+}
+
+async function pollBflResult(pollingUrl, config, meta = {}) {
+  let lastText = "";
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    let response;
+    try {
+      response = await fetchWithTimeout(resolveBflUrl(pollingUrl, config.baseUrl), {
+        headers: { "x-key": config.apiKey }
+      });
+    } catch (error) {
+      return providerRequestException("bfl-flux2", error);
+    }
+
+    lastText = await response.text();
+    const data = parseJsonResponse(lastText);
+    if (!response.ok) return bflError(response.status, lastText, "BFL FLUX.2 polling failed.");
+
+    const status = String(data.status || "").toLowerCase();
+    if (status === "failed" || status === "error") {
+      return bflError(response.status, lastText, "BFL FLUX.2 render failed.");
+    }
+    if (status === "ready") {
+      if (!data.result?.sample) return bflError(response.status, lastText, "BFL FLUX.2 returned no result.sample.");
+      return downloadBflSample(data.result.sample, config, meta);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return bflError(200, lastText, "BFL FLUX.2 polling timed out.");
+}
+
+async function downloadBflSample(sampleUrl, config, meta = {}) {
+  let response;
+  try {
+    response = await fetchWithTimeout(resolveBflUrl(sampleUrl, config.baseUrl), {
+      headers: { "x-key": config.apiKey }
+    });
+  } catch (error) {
+    return providerRequestException("bfl-flux2", error);
+  }
+  if (!response.ok) {
+    const text = await response.text();
+    return bflError(response.status, text, "BFL FLUX.2 sample download failed.");
+  }
+  const contentType = response.headers.get("content-type")?.split(";")[0] || "image/png";
+  const bytes = Buffer.from(await response.arrayBuffer());
+  return {
+    ok: true,
+    provider: "bfl-flux2",
+    renderTier: meta.renderTier || "fast_preview",
+    model: meta.model || "",
+    id: meta.submit?.id || "",
+    cost: meta.submit?.cost ?? null,
+    input_mp: meta.submit?.input_mp ?? null,
+    output_mp: meta.submit?.output_mp ?? null,
+    imageDataUrl: `data:${contentType};base64,${bytes.toString("base64")}`,
+    cn: "BFL FLUX.2 \u8f93\u51fa",
+    en: "BFL FLUX.2 Output",
+    message_cn: "BFL FLUX.2 \u5df2\u8fd4\u56de\u56fe\u50cf\u3002",
+    message_en: "BFL FLUX.2 returned an image."
+  };
+}
+
 function providerConfigFromRequest(body = {}) {
   return {
     openai: {
@@ -474,12 +631,29 @@ function providerConfigFromRequest(body = {}) {
       authScheme: String(body.authScheme || process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer").trim(),
       method: String(body.method || process.env.DCC_CUSTOM_API_METHOD || "POST").trim().toUpperCase(),
       headers: parseJsonEnv("DCC_CUSTOM_API_HEADERS")
+    },
+    bfl: {
+      baseUrl: String(body.baseUrl || process.env.BFL_BASE_URL || BFL_BASE_URL_DEFAULT).trim(),
+      apiKey: String(body.apiKey || process.env.BFL_API_KEY || "").trim(),
+      fastModel: String(body.fastModel || process.env.BFL_FAST_MODEL || BFL_FAST_MODEL_DEFAULT).trim(),
+      finalModel: String(body.finalModel || process.env.BFL_FINAL_MODEL || BFL_FINAL_MODEL_DEFAULT).trim(),
+      flexModel: String(body.flexModel || process.env.BFL_FLEX_MODEL || BFL_FLEX_MODEL_DEFAULT).trim()
     }
   };
 }
 
 function normalizeBaseUrl(value) {
   return String(value || "https://api.openai.com/v1").replace(/\/+$/, "");
+}
+
+function chooseBflModel(config, renderTier) {
+  if (renderTier === "final_render") return config.finalModel;
+  if (renderTier === "flex") return config.flexModel;
+  return config.fastModel;
+}
+
+function resolveBflUrl(value, baseUrl) {
+  return new URL(value, `${normalizeBaseUrl(baseUrl)}/`).toString();
 }
 
 function customRequestPayload(body, isTest = false) {
@@ -584,6 +758,20 @@ function providerRequestException(provider, error) {
     en: "API request failed",
     message_cn: text,
     message_en: text
+  };
+}
+
+function bflError(status, text, fallback) {
+  const short = summarizeResponse(text) || fallback;
+  return {
+    ok: false,
+    provider: "bfl-flux2",
+    status,
+    imageDataUrl: "",
+    cn: "BFL FLUX.2 \u9519\u8bef",
+    en: "BFL FLUX.2 Error",
+    message_cn: `BFL FLUX.2 \u8fd4\u56de ${status}: ${short}`,
+    message_en: `BFL FLUX.2 returned ${status}: ${short}`
   };
 }
 

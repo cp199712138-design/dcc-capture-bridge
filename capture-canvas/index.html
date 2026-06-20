@@ -496,6 +496,12 @@
       pointer-events: auto;
     }
     .chip.active { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
+    select.chip {
+      height: 28px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+    }
     .primary {
       min-height: 38px;
       border: 0;
@@ -574,7 +580,7 @@
 
       <section class="section">
         <div class="section-title" data-i18n="controls">控制</div>
-        <label class="field"><span data-i18n="provider">提供方</span><select id="providerSelect"><option value="auto" data-i18n="providerAuto">自动</option><option value="mock-local" data-i18n="providerMock">本地预览</option><option value="openai">OpenAI</option><option value="custom-http" data-i18n="providerCustom">自定义 API</option></select></label>
+        <label class="field"><span data-i18n="provider">提供方</span><select id="providerSelect"><option value="auto" data-i18n="providerAuto">自动</option><option value="mock-local" data-i18n="providerMock">本地预览</option><option value="openai">OpenAI</option><option value="custom-http" data-i18n="providerCustom">自定义 API</option><option value="bfl-flux2" data-i18n="providerBfl">FLUX.2</option></select></label>
         <label class="field"><span data-i18n="brushSize">画笔大小</span><input id="brushSize" type="range" min="8" max="120" value="42"></label>
         <label class="field"><span data-i18n="strength">强度</span><input id="strength" type="range" min="0" max="100" value="62"></label>
       </section>
@@ -663,6 +669,7 @@
           <div class="prompt-actions">
             <div class="chips">
               <button class="chip active" id="drawModeChip">绘制</button>
+              <select class="chip" id="renderTierSelect" title="渲染档位"><option value="fast_preview" data-i18n="tierFast">快速预览</option><option value="final_render" data-i18n="tierFinal">最终渲染</option><option value="flex" data-i18n="tierFlex">文字细节</option></select>
               <button class="chip" id="aspectRatioChip">1:1</button>
               <button class="chip" id="seedChip">种子 1284</button>
               <button class="chip active" id="liveChip">实时</button>
@@ -686,6 +693,7 @@
         <p data-i18n="apiSettingsSubtitle">保存平台地址、模型和 Key 到本地 .env。Key 保存后不会回显。</p>
         <button class="api-platform active" id="apiOpenAiTab" data-api-tab="openai"><b>OA</b><span><strong data-i18n="apiOpenAiTitle">OpenAI</strong><br><small data-i18n="apiOpenAiMeta">图像接口</small></span></button>
         <button class="api-platform" id="apiCustomTab" data-api-tab="custom-http"><b>自</b><span><strong data-i18n="apiCustomTitle">自定义 API</strong><br><small data-i18n="apiCustomMeta">兼容端点</small></span></button>
+        <button class="api-platform" id="apiBflTab" data-api-tab="bfl-flux2"><b>F2</b><span><strong data-i18n="apiBflTitle">BFL FLUX.2</strong><br><small data-i18n="apiBflMeta">快速/最终渲染</small></span></button>
       </aside>
       <div class="api-main">
         <div class="api-form-card">
@@ -703,6 +711,16 @@
             <div class="api-field">
               <label data-i18n="apiMethod">请求方法</label>
               <select id="apiMethodInput"><option value="POST">POST</option><option value="GET">GET</option></select>
+            </div>
+          </div>
+          <div class="api-row" id="apiBflModelRow" hidden>
+            <div class="api-field">
+              <label data-i18n="apiFastModel">快速模型</label>
+              <input id="apiFastModelInput" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="api-field">
+              <label data-i18n="apiFlexModel">文字细节模型</label>
+              <input id="apiFlexModelInput" autocomplete="off" spellcheck="false">
             </div>
           </div>
           <div class="api-field">

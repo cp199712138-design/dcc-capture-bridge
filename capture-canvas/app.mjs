@@ -22,6 +22,7 @@ const copy = {
     providerMock: "Mock",
     providerOpenai: "OpenAI",
     providerCustom: "Custom API",
+    providerBfl: "FLUX.2",
     apiHelp: "Set .env, restart the server, then test the provider.",
     apiSettings: "API Settings",
     apiSettingsTitle: "API Settings",
@@ -30,8 +31,12 @@ const copy = {
     apiOpenAiMeta: "Images API",
     apiCustomTitle: "Custom API",
     apiCustomMeta: "Compatible endpoint",
+    apiBflTitle: "BFL FLUX.2",
+    apiBflMeta: "fast/final render",
     apiBaseUrl: "Base URL",
     apiModel: "Image model",
+    apiFastModel: "Fast model",
+    apiFlexModel: "Flex model",
     apiMethod: "Method",
     apiKey: "API Key",
     apiAuthHeader: "Auth header",
@@ -45,14 +50,16 @@ const copy = {
     saving: "Saving",
     apiTestOk: "API connection passed",
     apiTestFailed: "API connection failed",
-    apiTestLocal: "Local preview is active. Choose OpenAI or Custom API to test a remote provider.",
+    apiTestLocal: "Local preview is active. Choose OpenAI, Custom API, or FLUX.2 to test a remote provider.",
     staticDemo: "Static demo",
     staticDemoText: "Public demo mode is active. Canvas editing works, while cloud API calls require a local or hosted server.",
     apiOpenAiSubtitle: "Configure base URL, API key, and image model.",
     apiCustomSubtitle: "Configure a customer-owned compatible render endpoint.",
+    apiBflSubtitle: "Configure the official BFL FLUX.2 API. Keys stay on the local server.",
     apiLocal: "Local preview only",
     apiOpenAiReady: "OpenAI configured",
     apiCustomReady: "Custom API configured",
+    apiBflReady: "FLUX.2 configured",
     apiMissing: "Provider not configured",
     brushSize: "Brush size",
     strength: "Strength",
@@ -78,6 +85,7 @@ const copy = {
     cancel: "Cancel",
     download: "Download",
     noOutputToDownload: "No output to download yet.",
+    noAssetToGenerate: "Import an image or model before generating.",
     idle: "Idle",
     checking: "Checking",
     noKey: "No API key configured; using local preview.",
@@ -102,6 +110,9 @@ const copy = {
     outputUpdatedText: "The right canvas uses the API result.",
     live: "Live",
     manual: "Manual",
+    tierFast: "Fast preview",
+    tierFinal: "Final render",
+    tierFlex: "Text detail",
     paused: "Paused",
     liveOn: "Live enabled",
     liveOff: "Live paused",
@@ -165,6 +176,7 @@ const copy = {
     providerMock: "\u672c\u5730\u9884\u89c8",
     providerOpenai: "OpenAI",
     providerCustom: "\u81ea\u5b9a\u4e49 API",
+    providerBfl: "FLUX.2",
     apiHelp: "\u586b\u597d .env \u5e76\u91cd\u542f\u670d\u52a1\u540e\uff0c\u518d\u6d4b\u8bd5\u63d0\u4f9b\u65b9\u3002",
     apiSettings: "API \u8bbe\u7f6e",
     apiSettingsTitle: "API \u8bbe\u7f6e",
@@ -173,8 +185,12 @@ const copy = {
     apiOpenAiMeta: "\u56fe\u50cf\u63a5\u53e3",
     apiCustomTitle: "\u81ea\u5b9a\u4e49 API",
     apiCustomMeta: "\u517c\u5bb9\u7aef\u70b9",
+    apiBflTitle: "BFL FLUX.2",
+    apiBflMeta: "\u5feb\u901f/\u6700\u7ec8\u6e32\u67d3",
     apiBaseUrl: "\u8bf7\u6c42\u5730\u5740",
     apiModel: "\u751f\u56fe\u6a21\u578b",
+    apiFastModel: "\u5feb\u901f\u6a21\u578b",
+    apiFlexModel: "\u6587\u5b57\u7ec6\u8282\u6a21\u578b",
     apiMethod: "\u8bf7\u6c42\u65b9\u6cd5",
     apiKey: "API Key",
     apiAuthHeader: "\u9274\u6743\u5934",
@@ -188,14 +204,16 @@ const copy = {
     saving: "\u4fdd\u5b58\u4e2d",
     apiTestOk: "API \u8fde\u63a5\u901a\u8fc7",
     apiTestFailed: "API \u8fde\u63a5\u5931\u8d25",
-    apiTestLocal: "\u5f53\u524d\u662f\u672c\u5730\u9884\u89c8\u3002\u8bf7\u9009\u62e9 OpenAI \u6216\u81ea\u5b9a\u4e49 API \u518d\u6d4b\u8bd5\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u3002",
+    apiTestLocal: "\u5f53\u524d\u662f\u672c\u5730\u9884\u89c8\u3002\u8bf7\u9009\u62e9 OpenAI\u3001\u81ea\u5b9a\u4e49 API \u6216 FLUX.2 \u518d\u6d4b\u8bd5\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u3002",
     staticDemo: "\u9759\u6001\u6f14\u793a",
     staticDemoText: "\u5f53\u524d\u662f\u516c\u5f00\u9759\u6001\u6f14\u793a\u6a21\u5f0f\u3002\u753b\u5e03\u7f16\u8f91\u53ef\u7528\uff0c\u4e91\u7aef API \u9700\u8981\u672c\u5730\u6216\u7ebf\u4e0a\u670d\u52a1\u7aef\u3002",
     apiOpenAiSubtitle: "\u914d\u7f6e\u8bf7\u6c42\u5730\u5740\u3001API Key \u548c\u751f\u56fe\u6a21\u578b\u3002",
     apiCustomSubtitle: "\u914d\u7f6e\u5ba2\u6237\u81ea\u6709\u7684\u517c\u5bb9\u751f\u56fe\u63a5\u53e3\u3002",
+    apiBflSubtitle: "\u914d\u7f6e\u5b98\u65b9 BFL FLUX.2 API\u3002Key \u53ea\u7559\u5728\u672c\u5730\u670d\u52a1\u7aef\u3002",
     apiLocal: "\u4ec5\u672c\u5730\u9884\u89c8",
     apiOpenAiReady: "OpenAI \u5df2\u914d\u7f6e",
     apiCustomReady: "\u81ea\u5b9a\u4e49 API \u5df2\u914d\u7f6e",
+    apiBflReady: "FLUX.2 \u5df2\u914d\u7f6e",
     apiMissing: "\u63d0\u4f9b\u65b9\u672a\u914d\u7f6e",
     brushSize: "\u753b\u7b14\u5927\u5c0f",
     strength: "\u5f3a\u5ea6",
@@ -221,6 +239,7 @@ const copy = {
     cancel: "\u53d6\u6d88",
     download: "\u4e0b\u8f7d",
     noOutputToDownload: "\u5f53\u524d\u8fd8\u6ca1\u6709\u53ef\u4e0b\u8f7d\u7684\u8f93\u51fa\u3002",
+    noAssetToGenerate: "\u8bf7\u5148\u5bfc\u5165\u56fe\u7247\u6216\u6a21\u578b\uff0c\u518d\u70b9\u751f\u6210\u3002",
     idle: "\u7a7a\u95f2",
     checking: "\u68c0\u67e5\u4e2d",
     noKey: "\u672a\u914d\u7f6e API key\uff0c\u5f53\u524d\u4f7f\u7528\u672c\u5730\u9884\u89c8\u3002",
@@ -245,6 +264,9 @@ const copy = {
     outputUpdatedText: "\u53f3\u4fa7\u753b\u5e03\u6765\u81ea API \u8fd4\u56de\u7ed3\u679c\u3002",
     live: "\u5b9e\u65f6",
     manual: "\u624b\u52a8",
+    tierFast: "\u5feb\u901f\u9884\u89c8",
+    tierFinal: "\u6700\u7ec8\u6e32\u67d3",
+    tierFlex: "\u6587\u5b57\u7ec6\u8282",
     paused: "\u6682\u505c",
     liveOn: "\u5b9e\u65f6\u5df2\u5f00\u542f",
     liveOff: "\u5b9e\u65f6\u5df2\u6682\u505c",
@@ -295,6 +317,7 @@ const state = {
   lang: "cn",
   tool: "brush",
   mode: "draw",
+  renderTier: "fast_preview",
   aspectRatio: "1:1",
   seed: 1284,
   image: null,
@@ -357,6 +380,7 @@ const ui = {
   seedChip: $("seedChip"),
   liveChip: $("liveChip"),
   providerSelect: $("providerSelect"),
+  renderTierSelect: $("renderTierSelect"),
   apiSummary: $("apiSummary"),
   apiHelp: $("apiHelp"),
   testApiBtn: $("testApiBtn"),
@@ -364,10 +388,14 @@ const ui = {
   apiModal: $("apiModal"),
   apiOpenAiTab: $("apiOpenAiTab"),
   apiCustomTab: $("apiCustomTab"),
+  apiBflTab: $("apiBflTab"),
+  apiBflModelRow: $("apiBflModelRow"),
   apiProviderTitle: $("apiProviderTitle"),
   apiProviderSubtitle: $("apiProviderSubtitle"),
   apiBaseUrlInput: $("apiBaseUrlInput"),
   apiModelInput: $("apiModelInput"),
+  apiFastModelInput: $("apiFastModelInput"),
+  apiFlexModelInput: $("apiFlexModelInput"),
   apiMethodInput: $("apiMethodInput"),
   apiKeyInput: $("apiKeyInput"),
   apiKeySavedText: $("apiKeySavedText"),
@@ -440,7 +468,7 @@ function activeAsset() {
 }
 
 function isRemoteProvider(provider = ui.providerSelect.value) {
-  return provider === "openai" || provider === "custom-http" || provider === "openai-missing" || provider === "custom-http-missing";
+  return provider === "openai" || provider === "custom-http" || provider === "bfl-flux2" || provider === "openai-missing" || provider === "custom-http-missing" || provider === "bfl-flux2-missing";
 }
 
 function fileSize(bytes) {
@@ -465,6 +493,12 @@ function updateI18n() {
     if (option.value === "mock-local") option.textContent = tr("providerMock");
     if (option.value === "openai") option.textContent = tr("providerOpenai");
     if (option.value === "custom-http") option.textContent = tr("providerCustom");
+    if (option.value === "bfl-flux2") option.textContent = tr("providerBfl");
+  });
+  [...ui.renderTierSelect.options].forEach((option) => {
+    if (option.value === "fast_preview") option.textContent = tr("tierFast");
+    if (option.value === "final_render") option.textContent = tr("tierFinal");
+    if (option.value === "flex") option.textContent = tr("tierFlex");
   });
   updateToolReadout();
   updateChips();
@@ -484,10 +518,19 @@ function updateApiSummary(payload = {}) {
     ui.apiHelp.textContent = tr("staticDemoText");
     return;
   }
-  if (payload.openai_configured) {
+  const selectedProvider = ui.providerSelect?.value || "";
+  if (selectedProvider === "bfl-flux2" && payload.bfl_configured) {
+    ui.apiSummary.textContent = `${tr("apiBflReady")}${payload.bfl_host ? ` (${payload.bfl_host})` : ""}`;
+  } else if (selectedProvider === "custom-http" && payload.custom_api_configured) {
+    ui.apiSummary.textContent = `${tr("apiCustomReady")}${payload.custom_api_host ? ` (${payload.custom_api_host})` : ""}`;
+  } else if (selectedProvider === "openai" && payload.openai_configured) {
+    ui.apiSummary.textContent = tr("apiOpenAiReady");
+  } else if (payload.openai_configured) {
     ui.apiSummary.textContent = tr("apiOpenAiReady");
   } else if (payload.custom_api_configured) {
     ui.apiSummary.textContent = `${tr("apiCustomReady")}${payload.custom_api_host ? ` (${payload.custom_api_host})` : ""}`;
+  } else if (payload.bfl_configured) {
+    ui.apiSummary.textContent = `${tr("apiBflReady")}${payload.bfl_host ? ` (${payload.bfl_host})` : ""}`;
   } else {
     ui.apiSummary.textContent = tr("apiLocal");
   }
@@ -533,19 +576,24 @@ function closeApiSettings() {
 function renderApiConfigForm() {
   const config = state.apiConfig || {};
   const isOpenAi = state.apiConfigTab === "openai";
-  const item = isOpenAi ? config.openai || {} : config.custom || {};
+  const isBfl = state.apiConfigTab === "bfl-flux2";
+  const item = isOpenAi ? config.openai || {} : isBfl ? config.bfl || {} : config.custom || {};
   ui.apiOpenAiTab.classList.toggle("active", isOpenAi);
-  ui.apiCustomTab.classList.toggle("active", !isOpenAi);
-  ui.apiProviderTitle.textContent = isOpenAi ? "OpenAI" : "Custom API";
-  ui.apiProviderSubtitle.textContent = isOpenAi ? tr("apiOpenAiSubtitle") : tr("apiCustomSubtitle");
-  ui.apiBaseUrlInput.value = item.base_url || (isOpenAi ? "https://api.openai.com/v1" : "");
-  ui.apiModelInput.value = item.model || (isOpenAi ? "gpt-image-1" : "");
+  ui.apiCustomTab.classList.toggle("active", state.apiConfigTab === "custom-http");
+  ui.apiBflTab.classList.toggle("active", isBfl);
+  ui.apiProviderTitle.textContent = isOpenAi ? "OpenAI" : isBfl ? "BFL FLUX.2" : "Custom API";
+  ui.apiProviderSubtitle.textContent = isOpenAi ? tr("apiOpenAiSubtitle") : isBfl ? tr("apiBflSubtitle") : tr("apiCustomSubtitle");
+  ui.apiBaseUrlInput.value = item.base_url || (isOpenAi ? "https://api.openai.com/v1" : isBfl ? "https://api.bfl.ai" : "");
+  ui.apiModelInput.value = isBfl ? item.final_model || "flux-2-pro" : item.model || (isOpenAi ? "gpt-image-1" : "");
+  ui.apiFastModelInput.value = item.fast_model || "flux-2-klein-9b";
+  ui.apiFlexModelInput.value = item.flex_model || "flux-2-flex";
   ui.apiMethodInput.value = item.method || "POST";
-  ui.apiMethodInput.disabled = isOpenAi;
+  ui.apiMethodInput.disabled = isOpenAi || isBfl;
   ui.apiAuthHeaderInput.value = item.auth_header || "authorization";
   ui.apiAuthSchemeInput.value = item.auth_scheme || "Bearer";
-  ui.apiAuthHeaderInput.disabled = isOpenAi;
-  ui.apiAuthSchemeInput.disabled = isOpenAi;
+  ui.apiAuthHeaderInput.disabled = isOpenAi || isBfl;
+  ui.apiAuthSchemeInput.disabled = isOpenAi || isBfl;
+  ui.apiBflModelRow.hidden = !isBfl;
   ui.apiKeyInput.value = "";
   ui.apiKeySavedText.textContent = item.key_saved ? tr("keySaved") : tr("noKeySaved");
   ui.apiModalStatus.textContent = tr("ready");
@@ -553,11 +601,14 @@ function renderApiConfigForm() {
 
 function apiFormPayload(provider = state.apiConfigTab) {
   const config = state.apiConfig || {};
-  const saved = provider === "openai" ? config.openai || {} : config.custom || {};
+  const saved = provider === "openai" ? config.openai || {} : provider === "bfl-flux2" ? config.bfl || {} : config.custom || {};
   return {
     provider,
     baseUrl: (ui.apiBaseUrlInput.value || saved.base_url || "").trim(),
     model: (ui.apiModelInput.value || saved.model || "").trim(),
+    finalModel: (ui.apiModelInput.value || saved.final_model || "").trim(),
+    fastModel: (ui.apiFastModelInput.value || saved.fast_model || "").trim(),
+    flexModel: (ui.apiFlexModelInput.value || saved.flex_model || "").trim(),
     apiKey: ui.apiKeyInput.value.trim() || saved.api_key || "",
     method: ui.apiMethodInput.value || saved.method || "POST",
     authHeader: (ui.apiAuthHeaderInput.value || saved.auth_header || "authorization").trim(),
@@ -582,6 +633,16 @@ function providerRequestConfig(provider) {
       method: saved.method || "POST",
       authHeader: saved.auth_header || "authorization",
       authScheme: saved.auth_scheme || "Bearer",
+    };
+  }
+  if (provider === "bfl-flux2") {
+    const saved = config.bfl || {};
+    return {
+      baseUrl: saved.base_url || "",
+      fastModel: saved.fast_model || "",
+      finalModel: saved.final_model || "",
+      flexModel: saved.flex_model || "",
+      renderTier: state.renderTier,
     };
   }
   return {};
@@ -662,23 +723,32 @@ function updateToolReadout() {
   ui.toolModeText.textContent = tr(state.tool === "erase" ? "eraser" : state.tool);
   ui.brushSizeText.textContent = `${Number(ui.brushSize.value)} px`;
   ui.brushCursor.style.setProperty("--brush", `${Number(ui.brushSize.value)}px`);
+  const isShapeTool = state.tool === "rect" || state.tool === "circle";
   document.querySelectorAll("[data-tool]").forEach((node) => {
     node.classList.toggle("active", node.dataset.tool === state.tool);
   });
-  ui.sourceCanvas.style.cursor = state.tool === "select" ? "grab" : "none";
+  ui.sourceCanvas.style.cursor = state.tool === "select" ? "default" : isShapeTool ? "crosshair" : "none";
   ui.brushCursor.classList.toggle("erase", state.tool === "erase");
-  ui.brushCursor.classList.toggle("shape", state.tool === "rect" || state.tool === "circle");
+  ui.brushCursor.classList.toggle("shape", isShapeTool);
+  if (isShapeTool) ui.brushCursor.style.opacity = "0";
 }
 
 function updateChips() {
   const remote = isRemoteProvider();
   ui.drawModeChip.textContent = state.mode === "draw" ? tr("draw") : tr("textOnly");
   ui.drawModeChip.classList.toggle("active", state.mode === "draw");
+  ui.renderTierSelect.value = state.renderTier;
   ui.aspectRatioChip.textContent = state.aspectRatio;
   ui.seedChip.textContent = `${tr("seed")}${state.seed}`;
   ui.liveChip.textContent = remote ? tr("manual") : (state.liveEnabled ? tr("live") : tr("paused"));
   ui.liveChip.classList.toggle("active", state.liveEnabled && !remote);
   ui.liveChip.title = remote ? tr("remoteManualText") : "";
+}
+
+function handleRenderTierChange() {
+  state.renderTier = ui.renderTierSelect.value || "fast_preview";
+  setStatus("ready", state.renderTier === "final_render" ? "tierFinal" : state.renderTier === "flex" ? "tierFlex" : "tierFast");
+  updateChips();
 }
 
 function fitVisibleCanvas(canvas) {
@@ -1217,7 +1287,6 @@ function setTool(tool) {
     state.pendingHistory = null;
     clearSelectionInteraction(true);
   }
-  ui.sourceCanvas.style.cursor = tool === "select" ? "grab" : "none";
   updateToolReadout();
   const hintKey = {
     select: "selectHint",
@@ -1472,6 +1541,11 @@ async function requestRealtimeRender(reason) {
     mode: state.mode,
     aspectRatio: state.aspectRatio,
   });
+  state.lastRequest.renderTier = state.renderTier;
+  state.lastRequest.output = {
+    ...(state.lastRequest.output || {}),
+    renderTier: state.renderTier,
+  };
   Object.assign(state.lastRequest, providerRequestConfig(ui.providerSelect.value));
 
   setApiState("busy", "rendering");
@@ -1493,7 +1567,7 @@ async function requestRealtimeRender(reason) {
     updatePreviewButton();
 
     if (payload.imageDataUrl) {
-      const remoteProvider = payload.provider === "openai" || payload.provider === "custom-http";
+      const remoteProvider = payload.provider === "openai" || payload.provider === "custom-http" || payload.provider === "bfl-flux2";
       loadGeneratedImage(payload.imageDataUrl);
       setApiState(remoteProvider ? "api" : "local", remoteProvider ? "apiOutput" : "localPreview");
       setRequestState(remoteProvider ? "api" : "local", remoteProvider ? "apiOutput" : "localPreview");
@@ -1647,6 +1721,12 @@ function loadImage(file) {
 }
 
 async function loadModel(file) {
+  const previousAsset = {
+    image: state.image,
+    model: state.model,
+    session: state.session,
+    assetInfo: ui.assetInfo.textContent,
+  };
   try {
     const geometry = await parseModelFile(file);
     state.image = null;
@@ -1671,13 +1751,19 @@ async function loadModel(file) {
     draw();
     scheduleRealtimeRender("preview");
   } catch (error) {
-    state.image = null;
-    state.model = null;
-    modelViewer.clear();
-    resetMask();
+    restoreAssetAfterFailedModelImport(previousAsset);
     draw();
     setStatus("unsupported", "unsupportedText", String(error.message || error));
   }
+}
+
+function restoreAssetAfterFailedModelImport(previousAsset) {
+  state.image = previousAsset.image;
+  state.model = previousAsset.model;
+  state.session = previousAsset.session;
+  if (previousAsset.model) modelViewer.setGeometry(previousAsset.model.geometry);
+  else if (!previousAsset.image) modelViewer.clear();
+  ui.assetInfo.textContent = previousAsset.assetInfo || (state.lang === "cn" ? "\u7b49\u5f85\u5bfc\u5165\u3002" : "Waiting.");
 }
 
 function handleFile(file) {
@@ -1792,13 +1878,13 @@ function endStroke(e) {
     state.resizeHandle = "";
     state.resizeOriginal = null;
     state.resizeBounds = null;
-    ui.sourceCanvas.style.cursor = "grab";
+    ui.sourceCanvas.style.cursor = "default";
     commitLayerChange("resize");
     return;
   }
   if (state.movingSelection) {
     state.movingSelection = false;
-    ui.sourceCanvas.style.cursor = "grab";
+    ui.sourceCanvas.style.cursor = "default";
     commitLayerChange("move");
     return;
   }
@@ -1836,13 +1922,29 @@ function updateBrushCursor(e) {
     ui.brushCursor.style.opacity = "0";
     return;
   }
+  const isShapeTool = state.tool === "rect" || state.tool === "circle";
+  if (isShapeTool) {
+    ui.sourceCanvas.style.cursor = "crosshair";
+    ui.brushCursor.style.opacity = "0";
+    return;
+  }
   const boardRect = ui.board.getBoundingClientRect();
   ui.brushCursor.style.left = `${e.clientX - boardRect.left}px`;
   ui.brushCursor.style.top = `${e.clientY - boardRect.top}px`;
-  ui.brushCursor.style.opacity = activeAsset() && e.target === ui.sourceCanvas && state.tool !== "select" ? "1" : "0";
+  ui.brushCursor.style.opacity = activeAsset() && e.target === ui.sourceCanvas && state.tool !== "select" && !isShapeTool ? "1" : "0";
 }
 
 function updatePreview() {
+  if (!activeAsset()) {
+    state.renderQueued = false;
+    state.rendering = false;
+    updatePreviewButton();
+    setApiState("local", "localPreview");
+    setRequestState("local", "idle");
+    setStatus("waiting", "noAssetToGenerate");
+    draw();
+    return;
+  }
   draw();
   scheduleRealtimeRender("preview");
   setStatus("previewQueued", state.image && !state.strokes.length ? "previewNoMaskText" : "previewQueuedText");
@@ -1923,7 +2025,7 @@ async function checkApiStatus() {
     const response = await fetch("/api/status", { cache: "no-store" });
     const payload = await response.json();
     const provider = ui.providerSelect.value;
-    const remoteSelected = (provider === "openai" && payload.openai_configured) || (provider === "custom-http" && payload.custom_api_configured);
+    const remoteSelected = (provider === "openai" && payload.openai_configured) || (provider === "custom-http" && payload.custom_api_configured) || (provider === "bfl-flux2" && payload.bfl_configured);
     setApiState(remoteSelected ? "api" : "local", remoteSelected ? "apiOutput" : "localPreview");
     updateApiSummary(payload);
   } catch {
@@ -1958,6 +2060,10 @@ ui.apiCustomTab.addEventListener("click", () => {
   state.apiConfigTab = "custom-http";
   renderApiConfigForm();
 });
+ui.apiBflTab.addEventListener("click", () => {
+  state.apiConfigTab = "bfl-flux2";
+  renderApiConfigForm();
+});
 ui.saveApiSettingsBtn.addEventListener("click", () => {
   saveApiSettings().catch((error) => {
     ui.apiModalStatus.textContent = String(error.message || error);
@@ -1986,6 +2092,7 @@ $("examplesChip").addEventListener("click", () => {
 
 ui.imageInput.addEventListener("change", () => handleFile(ui.imageInput.files[0]));
 ui.modelInput.addEventListener("change", () => handleFile(ui.modelInput.files[0]));
+ui.renderTierSelect.addEventListener("change", handleRenderTierChange);
 
 document.addEventListener("dragover", (e) => e.preventDefault());
 document.addEventListener("drop", (e) => {

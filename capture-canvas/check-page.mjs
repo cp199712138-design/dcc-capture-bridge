@@ -13,6 +13,7 @@ const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m
 const moduleScriptSrcs = [...html.matchAll(/<script\s+type="module"\s+src="([^"]+)"/g)].map((match) => match[1]);
 const app = readFileSync(new URL("./app.mjs", import.meta.url), "utf8");
 const apiClient = readFileSync(new URL("./api-client.mjs", import.meta.url), "utf8");
+const checkPage = readFileSync(new URL("./check-page.mjs", import.meta.url), "utf8");
 const browserCode = `${app}\n${apiClient}`;
 const core = readFileSync(new URL("./capture-core.mjs", import.meta.url), "utf8");
 const localServer = readFileSync(new URL("./serve-static.mjs", import.meta.url), "utf8");
@@ -82,6 +83,12 @@ const report = {
   hasProviderTestEndpoint: browserCode.includes("/api/test-provider") && localServer.includes("/api/test-provider") && packageServer.includes("/api/test-provider"),
   hasStaticDemoFallback: browserCode.includes("STATIC_API_CONFIG_KEY") && app.includes("enterStaticDemoMode") && browserCode.includes("callDirectCustomApi"),
   hasCustomApiAdapter: html.includes('value="custom-http"') && localServer.includes("DCC_CUSTOM_API_URL") && packageServer.includes("DCC_CUSTOM_API_URL"),
+  hasBflFluxProvider: html.includes('value="bfl-flux2"') && localServer.includes("BFL_API_KEY") && packageServer.includes("BFL_API_KEY") && envExample.includes("BFL_FAST_MODEL=flux-2-klein-9b"),
+  hasRenderTierUi: html.includes('id="renderTierSelect"') && app.includes("renderTier:") && app.includes("fast_preview") && app.includes("final_render"),
+  hasEmptyGenerateGuard: app.includes("noAssetToGenerate") && app.includes("if (!activeAsset())") && app.includes("setRequestState(\"local\", \"idle\")"),
+  hasShapeCursorSplit: app.includes("const isShapeTool") && app.includes('ui.sourceCanvas.style.cursor = "crosshair"') && app.includes("!isShapeTool"),
+  hasModelImportFailurePreservesAsset: app.includes("restoreAssetAfterFailedModelImport") && app.includes("previousAsset"),
+  hasAllRunsModelImport: checkPage.includes('["node", ["capture-canvas/test-model-import.mjs"]]'),
   hasApiTestUi: html.includes('id="apiSummary"') && html.includes('id="testApiBtn"') && app.includes('reason === "api-test"'),
   hasApiSettingsUi: html.includes('id="apiModal"') && app.includes("saveApiSettings") && browserCode.includes("/api/config") && app.includes("openApiSettings"),
   hasEnvLoader: localServer.includes("loadLocalEnv") && packageServer.includes("loadLocalEnv") && localServer.includes('join(root, ".env")'),
@@ -132,6 +139,7 @@ function runAllChecks() {
   const commands = [
     ["node", ["capture-canvas/check-page.mjs"]],
     ["node", ["capture-canvas/simulate-flow.mjs"]],
+    ["node", ["capture-canvas/test-model-import.mjs"]],
     ["node", ["capture-canvas/test-api-contract.mjs"]],
     ["node", ["capture-canvas/browser-smoke.mjs"]],
   ];

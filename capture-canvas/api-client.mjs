@@ -10,11 +10,18 @@ export function loadStaticApiConfig() {
 
 export function saveStaticApiConfig(payload) {
   const current = loadStaticApiConfig();
-  const providerKey = payload.provider === "openai" ? "openai" : "custom";
+  const providerKey = payload.provider === "openai" ? "openai" : payload.provider === "bfl-flux2" ? "bfl" : "custom";
+  const bflConfig = providerKey === "bfl" ? {
+    base_url: payload.baseUrl,
+    fast_model: payload.fastModel,
+    final_model: payload.finalModel || payload.model,
+    flex_model: payload.flexModel,
+    key_saved: Boolean(payload.apiKey || current.bfl?.key_saved),
+  } : null;
   const next = {
     ...current,
     static_demo: true,
-    [providerKey]: {
+    [providerKey]: bflConfig || {
       ...(current[providerKey] || {}),
       base_url: payload.baseUrl,
       model: payload.model,
@@ -36,6 +43,7 @@ export function staticApiConfigWithDefaults() {
     ...stored,
     openai: { base_url: "https://api.openai.com/v1", model: "gpt-image-1", ...(stored.openai || {}) },
     custom: { method: "POST", auth_header: "authorization", auth_scheme: "Bearer", ...(stored.custom || {}) },
+    bfl: { base_url: "https://api.bfl.ai", fast_model: "flux-2-klein-9b", final_model: "flux-2-pro", flex_model: "flux-2-flex", ...(stored.bfl || {}) },
   };
 }
 

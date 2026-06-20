@@ -7,16 +7,21 @@ import { join } from "node:path";
 import { callDirectCustomApi } from "./api-client.mjs";
 
 const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
-const mockPort = 9876;
-const appPort = 9877;
-const localAppPort = 9878;
-const b64AppPort = 9879;
-const missingImageAppPort = 9880;
-const openAiHtmlAppPort = 9881;
-const customMissingKeyAppPort = 9882;
+const mockPort = 21876;
+const appPort = 21877;
+const localAppPort = 21878;
+const b64AppPort = 21879;
+const missingImageAppPort = 21880;
+const openAiHtmlAppPort = 21881;
+const customMissingKeyAppPort = 21882;
+const bflMissingKeyAppPort = 21883;
 const received = [];
 const savedOpenAiModel = "nanobanana-2-c";
 const savedCustomModel = "pai-single-image-model";
+const savedBflKey = "test-bfl-key";
+const savedBflFastModel = "flux-2-klein-9b";
+const savedBflFinalModel = "flux-2-pro";
+const savedBflFlexModel = "flux-2-flex";
 
 const mockApi = http.createServer(async (req, res) => {
   let raw = "";
@@ -37,6 +42,50 @@ const mockApi = http.createServer(async (req, res) => {
   if (req.url === `/html-v1/models/${savedOpenAiModel}`) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end("<!doctype html><title>You need JS</title><main>You need JS</main>");
+    return;
+  }
+  if (req.method === "POST" && req.url?.startsWith("/v1/flux-2-")) {
+    if (payload.prompt === "submit failure") {
+      res.writeHead(503, { "content-type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ message: "bfl submit unavailable" }));
+      return;
+    }
+    const pollCase = payload.prompt === "poll failed"
+      ? "failed"
+      : payload.prompt === "missing sample"
+        ? "missing-sample"
+        : payload.prompt === "download failure"
+          ? "download-failure"
+          : "ready";
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ polling_url: `http://127.0.0.1:${mockPort}/bfl/poll/${pollCase}` }));
+    return;
+  }
+  if (req.method === "GET" && req.url?.startsWith("/bfl/poll/")) {
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    if (req.url.endsWith("/failed")) {
+      res.end(JSON.stringify({ status: "Failed", error: "render failed" }));
+      return;
+    }
+    if (req.url.endsWith("/missing-sample")) {
+      res.end(JSON.stringify({ status: "Ready", result: {} }));
+      return;
+    }
+    if (req.url.endsWith("/download-failure")) {
+      res.end(JSON.stringify({ status: "Ready", result: { sample: `http://127.0.0.1:${mockPort}/bfl/missing.png` } }));
+      return;
+    }
+    res.end(JSON.stringify({ status: "Ready", result: { sample: `http://127.0.0.1:${mockPort}/bfl/sample.png` } }));
+    return;
+  }
+  if (req.method === "GET" && req.url === "/bfl/sample.png") {
+    res.writeHead(200, { "content-type": "image/png" });
+    res.end(Buffer.from(stripDataUrl(transparentPixel), "base64"));
+    return;
+  }
+  if (req.method === "GET" && req.url === "/bfl/missing.png") {
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("missing sample");
     return;
   }
 
@@ -94,6 +143,9 @@ const customMissingKeyApp = startApp(customMissingKeyAppPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/render`,
   DCC_CUSTOM_API_METHOD: "POST"
 });
+const bflMissingKeyApp = startApp(bflMissingKeyAppPort, {
+  BFL_BASE_URL: `http://127.0.0.1:${mockPort}`
+});
 
 try {
   await waitForJson(`http://127.0.0.1:${appPort}/api/status`);
@@ -102,6 +154,7 @@ try {
   await waitForJson(`http://127.0.0.1:${missingImageAppPort}/api/status`);
   await waitForJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/status`);
   await waitForJson(`http://127.0.0.1:${customMissingKeyAppPort}/api/status`);
+  await waitForJson(`http://127.0.0.1:${bflMissingKeyAppPort}/api/status`);
 
   const status = await getJson(`http://127.0.0.1:${appPort}/api/status`);
   assert.equal(status.ok, true);
@@ -140,6 +193,9 @@ try {
   assert.equal(config.custom.base_url, `http://127.0.0.1:${mockPort}/render`);
   assert.equal(config.custom.method, "POST");
   assert.equal(config.custom.key_saved, true);
+  assert.equal(config.bfl.key_saved, false);
+  assert.equal("api_key" in config.bfl, false);
+  assert.equal("apiKey" in config.bfl, false);
 
   const test = await postJson(`http://127.0.0.1:${appPort}/api/test-provider`, { provider: "custom-http" });
   assert.equal(test.ok, true);
@@ -171,6 +227,88 @@ try {
   assert.equal(customMissingKeyRender.ok, false);
   assert.equal(customMissingKeyRender.provider, "custom-http-missing");
   assert.match(customMissingKeyRender.message_en, /DCC_CUSTOM_API_KEY/i);
+
+  const bflMissingKeyTest = await postJson(`http://127.0.0.1:${bflMissingKeyAppPort}/api/test-provider`, { provider: "bfl-flux2" });
+  assert.equal(bflMissingKeyTest.ok, false);
+  assert.equal(bflMissingKeyTest.provider, "bfl-flux2-missing");
+  assert.match(bflMissingKeyTest.message_en, /BFL_API_KEY/i);
+
+  const savedBflConfig = await postJson(`http://127.0.0.1:${localAppPort}/api/config`, {
+    provider: "bfl-flux2",
+    baseUrl: `http://127.0.0.1:${mockPort}`,
+    fastModel: savedBflFastModel,
+    finalModel: savedBflFinalModel,
+    flexModel: savedBflFlexModel,
+    apiKey: savedBflKey
+  });
+  assert.equal(savedBflConfig.ok, true);
+  assert.equal(savedBflConfig.config.bfl.base_url, `http://127.0.0.1:${mockPort}`);
+  assert.equal(savedBflConfig.config.bfl.fast_model, savedBflFastModel);
+  assert.equal(savedBflConfig.config.bfl.final_model, savedBflFinalModel);
+  assert.equal(savedBflConfig.config.bfl.flex_model, savedBflFlexModel);
+  assert.equal(savedBflConfig.config.bfl.key_saved, true);
+  assert.equal("api_key" in savedBflConfig.config.bfl, false);
+  assert.equal("apiKey" in savedBflConfig.config.bfl, false);
+
+  const bflConfig = await getJson(`http://127.0.0.1:${localAppPort}/api/config`);
+  assert.equal(bflConfig.bfl.key_saved, true);
+  assert.equal("api_key" in bflConfig.bfl, false);
+  assert.equal("apiKey" in bflConfig.bfl, false);
+
+  const beforeBflProviderTest = countBflGenerationRequests();
+  const bflProviderTest = await postJson(`http://127.0.0.1:${localAppPort}/api/test-provider`, { provider: "bfl-flux2" });
+  assert.equal(bflProviderTest.ok, true);
+  assert.equal(bflProviderTest.provider, "bfl-flux2");
+  assert.equal(countBflGenerationRequests(), beforeBflProviderTest);
+
+  const bflFastRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "bfl-flux2",
+    renderTier: "fast_preview"
+  });
+  assert.equal(bflFastRender.ok, true);
+  assert.equal(bflFastRender.provider, "bfl-flux2");
+  assert.equal(bflFastRender.imageDataUrl, transparentPixel);
+  assertValidPngDataUrl(bflFastRender.imageDataUrl);
+  assertBflRequest("/v1/flux-2-klein-9b", savedBflKey, "fast_preview");
+
+  const bflFinalRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "bfl-flux2",
+    renderTier: "final_render"
+  });
+  assert.equal(bflFinalRender.ok, true);
+  assert.equal(bflFinalRender.provider, "bfl-flux2");
+  assert.equal(bflFinalRender.imageDataUrl, transparentPixel);
+  assertBflRequest("/v1/flux-2-pro", savedBflKey, "final_render");
+
+  const bflFlexRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+    ...renderRequest(),
+    provider: "bfl-flux2",
+    renderTier: "flex"
+  });
+  assert.equal(bflFlexRender.ok, true);
+  assert.equal(bflFlexRender.provider, "bfl-flux2");
+  assert.equal(bflFlexRender.imageDataUrl, transparentPixel);
+  assertBflRequest("/v1/flux-2-flex", savedBflKey, "flex");
+
+  for (const [prompt, label] of [
+    ["submit failure", "submit"],
+    ["poll failed", "poll"],
+    ["missing sample", "sample"],
+    ["download failure", "download"]
+  ]) {
+    const failure = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
+      ...renderRequest(),
+      provider: "bfl-flux2",
+      renderTier: "fast_preview",
+      prompt
+    });
+    assert.equal(failure.ok, false, `expected ${label} failure`);
+    assert.equal(failure.provider, "bfl-flux2");
+    assert.notEqual(failure.provider, "mock-local");
+    assert.equal(failure.imageDataUrl || "", "");
+  }
 
   const render = await postJson(`http://127.0.0.1:${appPort}/api/realtime-render`, renderRequest());
   assert.equal(render.ok, true);
@@ -334,6 +472,7 @@ try {
   stopApp(missingImageApp);
   stopApp(openAiHtmlApp);
   stopApp(customMissingKeyApp);
+  stopApp(bflMissingKeyApp);
   await new Promise((resolve) => mockApi.close(resolve));
   restoreEnvFile();
 }
@@ -382,6 +521,18 @@ function assertPngDimensions(value, { minWidth, minHeight }) {
   assert.ok(height >= minHeight, `expected PNG height >= ${minHeight}, got ${height}`);
 }
 
+function countBflGenerationRequests() {
+  return received.filter((item) => item.method === "POST" && item.url?.startsWith("/v1/flux-2-")).length;
+}
+
+function assertBflRequest(url, key, renderTier) {
+  const request = received.find((item) => item.method === "POST" && item.url === url);
+  assert.ok(request, `expected BFL request ${url} for ${renderTier}`);
+  assert.equal(request.headers["x-key"], key);
+  assert.equal(request.payload.input_image, transparentPixel);
+  assert.equal("sourceImageDataUrl" in request.payload, false);
+}
+
 function installTestLocalStorage() {
   const items = new Map();
   globalThis.localStorage = {
@@ -399,6 +550,11 @@ function startApp(port, env = {}) {
       ...process.env,
       DCC_SKIP_DOTENV: "1",
       OPENAI_API_KEY: "",
+      BFL_API_KEY: "",
+      BFL_BASE_URL: "",
+      BFL_FAST_MODEL: "",
+      BFL_FINAL_MODEL: "",
+      BFL_FLEX_MODEL: "",
       DCC_CUSTOM_API_URL: "",
       DCC_CUSTOM_API_KEY: "",
       PORT: String(port),

@@ -62,6 +62,23 @@ function createTinyGlb() {
   return new Uint8Array(buffer);
 }
 
+function createTinyEmbeddedGltf() {
+  const positions = new Float32Array([
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0,
+  ]);
+  const bytes = new Uint8Array(positions.buffer);
+  const binary = Array.from(bytes, (value) => String.fromCharCode(value)).join("");
+  return JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ uri: `data:application/octet-stream;base64,${btoa(binary)}`, byteLength: bytes.length }],
+    bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: bytes.length }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+  });
+}
+
 const obj = await parseModelFile(new File(["v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"], "tiny.obj"));
 assert.equal(obj.format, "obj");
 assert.equal(obj.triangleCount, 1);
@@ -70,4 +87,36 @@ const glb = await parseModelFile(fileFromBytes("tiny.glb", createTinyGlb(), "mod
 assert.equal(glb.format, "glb");
 assert.equal(glb.triangleCount, 1);
 
-console.log(JSON.stringify({ model_import_ok: true, formats: ["obj", "glb"] }));
+const stlText = [
+  "solid tiny",
+  "facet normal 0 0 1",
+  "outer loop",
+  "vertex 0 0 0",
+  "vertex 1 0 0",
+  "vertex 0 1 0",
+  "endloop",
+  "endfacet",
+  "endsolid tiny",
+].join("\n");
+const stl = await parseModelFile(new File([stlText], "tiny.stl", { type: "model/stl" }));
+assert.equal(stl.format, "stl");
+assert.equal(stl.triangleCount, 1);
+
+const gltf = await parseModelFile(new File([createTinyEmbeddedGltf()], "tiny.gltf", { type: "model/gltf+json" }));
+assert.equal(gltf.format, "gltf");
+assert.equal(gltf.triangleCount, 1);
+
+await assert.rejects(
+  () => parseModelFile(new File([JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ uri: "tiny.bin", byteLength: 36 }],
+  })], "external.gltf")),
+  /embed buffers|external buffers/i
+);
+
+await assert.rejects(
+  () => parseModelFile(new File(["v 0 0 0\n"], "empty.obj")),
+  /No renderable triangles/i
+);
+
+console.log(JSON.stringify({ model_import_ok: true, formats: ["obj", "glb", "stl", "gltf"] }));
