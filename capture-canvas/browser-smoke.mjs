@@ -270,7 +270,7 @@ try {
       clientX: x,
       clientY: y,
       button,
-      buttons: type === "pointerup" ? 0 : 1,
+      buttons: type === "pointerup" ? 0 : (button === 2 ? 2 : 1),
     });
     const countCyanMaskPixels = (canvas, x, y, size = 80) => {
       const context = canvas.getContext("2d");
@@ -400,6 +400,8 @@ try {
     const redoMovedPixelCount = countCyanMaskPixels(canvas, 500, 365, 32);
     const redoOriginalPixelCount = countCyanMaskPixels(canvas, 315, 235, 32);
     const redoMoveRestoresMovedPixels = redoMovedPixelCount > 40 && redoOriginalPixelCount <= 40;
+    canvas.dispatchEvent(eventAt("pointerdown", rect.left + 80, rect.top + 80, 2));
+    canvas.dispatchEvent(eventAt("pointerup", rect.left + 80, rect.top + 80, 2));
     canvas.dispatchEvent(new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
@@ -409,6 +411,8 @@ try {
     }));
     await sleep(80);
     const emptyRightClickMenuOpen = document.querySelector("#layerMenu")?.classList.contains("open");
+    canvas.dispatchEvent(eventAt("pointerdown", rect.left + 430, rect.top + 320, 2));
+    canvas.dispatchEvent(eventAt("pointerup", rect.left + 430, rect.top + 320, 2));
     canvas.dispatchEvent(new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,

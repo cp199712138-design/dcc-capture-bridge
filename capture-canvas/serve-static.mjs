@@ -364,7 +364,7 @@ function writeEnvUpdates(updates) {
     }
   }
   for (const [key, value] of Object.entries(updates)) {
-    if (value !== "") current[key] = value;
+    if (value !== "") current[key] = sanitizeEnvValue(value);
   }
   const ordered = [
     "OPENAI_BASE_URL",
@@ -408,6 +408,10 @@ function chooseRuntimeProvider(body) {
     return config.apiKey ? "bfl-flux2" : "bfl-flux2-missing";
   }
   return "mock-local";
+}
+
+function sanitizeEnvValue(value) {
+  return String(value || "").replace(/[\r\n]+/g, " ").trim();
 }
 
 function missingOpenAiConfig() {
@@ -556,12 +560,15 @@ async function handleBflRender(body) {
 
 async function pollBflResult(pollingUrl, config, meta = {}) {
   let lastText = "";
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  const started = Date.now();
+  const timeoutMs = Math.max(1000, Number(process.env.BFL_POLL_TIMEOUT_MS || 90000));
+  let attempt = 0;
+  while (Date.now() - started < timeoutMs) {
     let response;
     try {
       response = await fetchWithTimeout(resolveBflUrl(pollingUrl, config.baseUrl), {
         headers: { "x-key": config.apiKey }
-      });
+      }, 20000);
     } catch (error) {
       return providerRequestException("bfl-flux2", error);
     }
@@ -570,18 +577,24 @@ async function pollBflResult(pollingUrl, config, meta = {}) {
     const data = parseJsonResponse(lastText);
     if (!response.ok) return bflError(response.status, lastText, "BFL FLUX.2 polling failed.");
 
-    const status = String(data.status || "").toLowerCase();
-    if (status === "failed" || status === "error") {
-      return bflError(response.status, lastText, "BFL FLUX.2 render failed.");
-    }
+    const status = normalizeBflStatus(data.status);
+    if (status === "error" || status === "failed") return bflError(response.status, lastText, "BFL FLUX.2 render failed.");
+    if (status === "request moderated") return bflError(response.status, lastText, "BFL FLUX.2 request was moderated.");
+    if (status === "content moderated") return bflError(response.status, lastText, "BFL FLUX.2 content was moderated.");
+    if (status === "task not found") return bflError(response.status, lastText, "BFL FLUX.2 task was not found.");
     if (status === "ready") {
       if (!data.result?.sample) return bflError(response.status, lastText, "BFL FLUX.2 returned no result.sample.");
       return downloadBflSample(data.result.sample, config, meta);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    attempt += 1;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(3000, 700 + attempt * 250)));
   }
-  return bflError(200, lastText, "BFL FLUX.2 polling timed out.");
+  return bflError(408, lastText, "BFL FLUX.2 is still pending after 90 seconds. Try again later or use Fast preview.");
+}
+
+function normalizeBflStatus(value) {
+  return String(value || "pending").trim().toLowerCase();
 }
 
 async function downloadBflSample(sampleUrl, config, meta = {}) {
@@ -750,7 +763,7 @@ function openAiCompatibleJsonError(status, text) {
 }
 
 function providerRequestException(provider, error) {
-  const text = String(error.message || error);
+  const text = redactSensitiveText(String(error.message || error));
   return {
     ok: false,
     provider,
@@ -762,7 +775,7 @@ function providerRequestException(provider, error) {
 }
 
 function bflError(status, text, fallback) {
-  const short = summarizeResponse(text) || fallback;
+  const short = redactSensitiveText(summarizeResponse(text) || fallback);
   return {
     ok: false,
     provider: "bfl-flux2",
@@ -779,10 +792,16 @@ function summarizeResponse(text) {
   if (!text) return "";
   try {
     const data = JSON.parse(text);
-    return data.error?.message || data.message || JSON.stringify(data).slice(0, 240);
+    return redactSensitiveText(data.error?.message || data.message || data.details?.message || JSON.stringify(data).slice(0, 240));
   } catch {
-    return summarizeHtmlText(text);
+    return redactSensitiveText(summarizeHtmlText(text));
   }
+}
+
+function redactSensitiveText(text) {
+  return String(text || "")
+    .replace(/sk-(?!\.{3})(?:proj-)?[A-Za-z0-9_-]{12,}/g, "sk-...[redacted]")
+    .replace(/(x-key|authorization|api[_-]?key)(\s*[:=]\s*)(Bearer\s+)?[^\s,"'}]+/gi, "$1$2[redacted]");
 }
 
 function parseJsonResponse(text) {

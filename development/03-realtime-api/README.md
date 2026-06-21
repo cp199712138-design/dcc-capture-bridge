@@ -17,6 +17,10 @@ providers without editing the frontend.
 - BFL FLUX.2 server-side provider exists as `bfl-flux2`; it uses
   `BFL_API_KEY`, `BFL_BASE_URL`, `BFL_FAST_MODEL`, `BFL_FINAL_MODEL`, and
   `BFL_FLEX_MODEL`. `/api/config` only reports `bfl.key_saved`, never the key.
+  The server submits to `/v1/{model}`, follows BFL `polling_url`, handles
+  `Pending`, `Ready`, `Error`, `Request Moderated`, `Content Moderated`, and
+  `Task not found`, then downloads `result.sample` server-side before returning
+  a data URL to the browser.
 - Custom HTTP JSON adapter exists.
 - Static demo can store customer Custom API settings in browser localStorage
   and call that endpoint directly when CORS allows it. This is browser-local

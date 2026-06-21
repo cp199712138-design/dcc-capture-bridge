@@ -16,23 +16,26 @@ node serve-static.mjs
 http://127.0.0.1:8765/capture-canvas/index.html
 ```
 
-默认是 `Mock` / 本地预览，不调用 OpenAI 或客户 API，不消耗额度。
+默认是 `Mock` / 本地预览，不调用 OpenAI、FLUX.2 或客户 API，不消耗额度。
 
 ## 选择远程 API
 
 只有明确选择远程提供方时才测试真实 API：
 
 1. 打开页面左侧 `Provider`。
-2. 选择 `OpenAI` 或 `Custom API`，不要停留在 `Auto` / `Mock`。
+2. 选择 `OpenAI`、`FLUX.2` 或 `Custom API`，不要停留在 `Auto` / `Mock`。
 3. 点击 `API Settings`。
 4. OpenAI：填写 Base URL、Image model、API Key，保存后点击 `Test API`。
-5. Custom API：切到 `Custom API`，填写 endpoint、method、model、auth header/scheme/API Key，保存后点击 `Test API`。
+5. FLUX.2：切到 `BFL FLUX.2`，填写 `BFL_API_KEY`，确认 Fast/Final/Flex 三档模型后保存并点击 `Test API`。
+6. Custom API：切到 `Custom API`，填写 endpoint、method、model、auth header/scheme/API Key，保存后点击 `Test API`。
+
+FLUX.2 是远程手动生成：画笔、矩形、选择、移动都只更新本地画布；只有点击 `Generate once` / `生成一次` 才会调用 BFL，避免每画一笔都消耗额度。
 
 Key 只应放在本机 `.env` 或客户自己的测试环境里，不要截图、提交或发到聊天里。
 
 ## 验证流程
 
-1. 导入：点击 `Import image` 导入图片，或点击 `Import model` 导入 OBJ/STL；也可以用示例素材开始。
+1. 导入：点击 `Import image` 导入图片，或点击 `Import model` 导入 OBJ/STL/GLB/embedded glTF；外链 `.gltf + .bin + textures` 本轮只提示不支持，不清空已有素材；也可以用示例素材开始。
 2. 画笔：选择 `Brush` 在左侧画布涂抹遮罩；调整 brush size 后再画一次。
 3. 形状和选择：用 rectangle/circle 创建区域，切到 Select 后移动或缩放区域。
 4. 生成：输入 prompt，确认 Provider 是本地预览或已配置的远程 API，点击 `Generate`。

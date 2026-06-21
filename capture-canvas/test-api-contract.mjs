@@ -52,11 +52,19 @@ const mockApi = http.createServer(async (req, res) => {
     }
     const pollCase = payload.prompt === "poll failed"
       ? "failed"
-      : payload.prompt === "missing sample"
-        ? "missing-sample"
-        : payload.prompt === "download failure"
-          ? "download-failure"
-          : "ready";
+      : payload.prompt === "moderated request"
+        ? "request-moderated"
+        : payload.prompt === "moderated content"
+          ? "content-moderated"
+          : payload.prompt === "task not found"
+            ? "task-not-found"
+            : payload.prompt === "pending timeout"
+              ? "pending"
+              : payload.prompt === "missing sample"
+                ? "missing-sample"
+                : payload.prompt === "download failure"
+                  ? "download-failure"
+                  : "ready";
     res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ polling_url: `http://127.0.0.1:${mockPort}/bfl/poll/${pollCase}` }));
     return;
@@ -65,6 +73,22 @@ const mockApi = http.createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
     if (req.url.endsWith("/failed")) {
       res.end(JSON.stringify({ status: "Failed", error: "render failed" }));
+      return;
+    }
+    if (req.url.endsWith("/request-moderated")) {
+      res.end(JSON.stringify({ status: "Request Moderated", details: { reason: "policy" } }));
+      return;
+    }
+    if (req.url.endsWith("/content-moderated")) {
+      res.end(JSON.stringify({ status: "Content Moderated", details: { reason: "policy" } }));
+      return;
+    }
+    if (req.url.endsWith("/task-not-found")) {
+      res.end(JSON.stringify({ status: "Task not found", details: { id: "missing" } }));
+      return;
+    }
+    if (req.url.endsWith("/pending")) {
+      res.end(JSON.stringify({ status: "Pending", progress: 0.25 }));
       return;
     }
     if (req.url.endsWith("/missing-sample")) {
@@ -295,6 +319,10 @@ try {
   for (const [prompt, label] of [
     ["submit failure", "submit"],
     ["poll failed", "poll"],
+    ["moderated request", "request moderated"],
+    ["moderated content", "content moderated"],
+    ["task not found", "task not found"],
+    ["pending timeout", "pending timeout"],
     ["missing sample", "sample"],
     ["download failure", "download"]
   ]) {
@@ -555,6 +583,7 @@ function startApp(port, env = {}) {
       BFL_FAST_MODEL: "",
       BFL_FINAL_MODEL: "",
       BFL_FLEX_MODEL: "",
+      BFL_POLL_TIMEOUT_MS: "1000",
       DCC_CUSTOM_API_URL: "",
       DCC_CUSTOM_API_KEY: "",
       PORT: String(port),

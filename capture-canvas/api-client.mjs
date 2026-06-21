@@ -123,7 +123,32 @@ export async function postRealtimeRender(requestBody, signal) {
     body: JSON.stringify(requestBody),
     signal,
   });
-  return response.json();
+  const text = await response.text();
+  const data = parseJson(text);
+  if (!response.ok) {
+    throw new Error(data.message || data.error?.message || summarizeText(text) || `HTTP ${response.status}`);
+  }
+  return data;
+}
+
+function parseJson(text) {
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function summarizeText(text) {
+  return String(text || "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 180);
 }
 
 function normalizeImageDataUrl(data = {}) {

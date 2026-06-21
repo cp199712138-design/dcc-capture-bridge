@@ -16,6 +16,7 @@ const copy = {
     importModel: "Import model",
     example: "Example",
     generate: "Generate",
+    generateOnce: "Generate once",
     controls: "Controls",
     provider: "Provider",
     providerAuto: "Auto",
@@ -37,6 +38,8 @@ const copy = {
     apiModel: "Image model",
     apiFastModel: "Fast model",
     apiFlexModel: "Flex model",
+    apiFinalModel: "Final model",
+    apiBflModelHelp: "Fast preview uses the fast model; Final render uses the final model; Text detail uses the flex model.",
     apiMethod: "Method",
     apiKey: "API Key",
     apiAuthHeader: "Auth header",
@@ -47,6 +50,7 @@ const copy = {
     keySaved: "Key saved. Leave blank to keep it.",
     noKeySaved: "No key saved.",
     saved: "Saved to local .env.",
+    staticConfigSaved: "Saved to browser demo config only. Start the local server to write .env.",
     saving: "Saving",
     apiTestOk: "API connection passed",
     apiTestFailed: "API connection failed",
@@ -70,6 +74,7 @@ const copy = {
     emptyTitle: "Drop evidence here",
     emptyBody: "Import an image/model or load the example, then paint the edit region.",
     outputCanvas: "Realtime output",
+    manualOutput: "Manual output",
     asset: "Current evidence",
     size: "size",
     ai: "AI",
@@ -170,6 +175,7 @@ const copy = {
     importModel: "\u5bfc\u5165\u6a21\u578b",
     example: "\u793a\u4f8b",
     generate: "\u751f\u6210",
+    generateOnce: "\u751f\u6210\u4e00\u6b21",
     controls: "\u63a7\u5236",
     provider: "\u63d0\u4f9b\u65b9",
     providerAuto: "\u81ea\u52a8",
@@ -191,6 +197,8 @@ const copy = {
     apiModel: "\u751f\u56fe\u6a21\u578b",
     apiFastModel: "\u5feb\u901f\u6a21\u578b",
     apiFlexModel: "\u6587\u5b57\u7ec6\u8282\u6a21\u578b",
+    apiFinalModel: "\u6700\u7ec8\u6a21\u578b",
+    apiBflModelHelp: "\u5feb\u901f\u9884\u89c8\u8d70\u5feb\u901f\u6a21\u578b\uff1b\u6700\u7ec8\u6e32\u67d3\u8d70\u6700\u7ec8\u6a21\u578b\uff1b\u6587\u5b57\u7ec6\u8282\u8d70 Flex \u6a21\u578b\u3002",
     apiMethod: "\u8bf7\u6c42\u65b9\u6cd5",
     apiKey: "API Key",
     apiAuthHeader: "\u9274\u6743\u5934",
@@ -201,6 +209,7 @@ const copy = {
     keySaved: "\u5df2\u4fdd\u5b58 Key\uff0c\u7559\u7a7a\u4fdd\u6301\u4e0d\u53d8\u3002",
     noKeySaved: "\u8fd8\u6ca1\u6709\u4fdd\u5b58 Key\u3002",
     saved: "\u5df2\u4fdd\u5b58\u5230\u672c\u5730 .env\u3002",
+    staticConfigSaved: "\u4ec5\u4fdd\u5b58\u5230\u6d4f\u89c8\u5668\u6f14\u793a\u914d\u7f6e\uff0c\u9700\u8981\u542f\u52a8\u672c\u5730\u670d\u52a1\u624d\u80fd\u5199\u5165 .env\u3002",
     saving: "\u4fdd\u5b58\u4e2d",
     apiTestOk: "API \u8fde\u63a5\u901a\u8fc7",
     apiTestFailed: "API \u8fde\u63a5\u5931\u8d25",
@@ -224,6 +233,7 @@ const copy = {
     emptyTitle: "\u628a\u8bc1\u636e\u653e\u5230\u8fd9\u91cc",
     emptyBody: "\u5bfc\u5165\u56fe\u7247/\u6a21\u578b\u6216\u52a0\u8f7d\u793a\u4f8b\uff0c\u7136\u540e\u6d82\u62b9\u8981\u4fee\u6539\u7684\u533a\u57df\u3002",
     outputCanvas: "\u5b9e\u65f6\u8f93\u51fa",
+    manualOutput: "\u624b\u52a8\u8f93\u51fa",
     asset: "\u5f53\u524d\u8bc1\u636e",
     size: "\u5927\u5c0f",
     ai: "AI",
@@ -394,6 +404,8 @@ const ui = {
   apiProviderSubtitle: $("apiProviderSubtitle"),
   apiBaseUrlInput: $("apiBaseUrlInput"),
   apiModelInput: $("apiModelInput"),
+  apiModelLabel: $("apiModelLabel"),
+  apiBflModelHelp: $("apiBflModelHelp"),
   apiFastModelInput: $("apiFastModelInput"),
   apiFlexModelInput: $("apiFlexModelInput"),
   apiMethodInput: $("apiMethodInput"),
@@ -458,9 +470,9 @@ function setRequestState(kind, labelKey) {
 
 function updatePreviewButton() {
   const canCancel = state.renderQueued || state.rendering;
-  ui.previewBtn.textContent = canCancel ? tr("cancel") : tr("generate");
+  ui.previewBtn.textContent = canCancel ? tr("cancel") : (isRemoteProvider() ? tr("generateOnce") : tr("generate"));
   ui.previewBtn.classList.toggle("danger", canCancel);
-  ui.previewBtn.title = canCancel ? tr("renderCancelledText") : tr("generate");
+  ui.previewBtn.title = canCancel ? tr("renderCancelledText") : (isRemoteProvider() ? tr("remoteManualText") : tr("generate"));
 }
 
 function activeAsset() {
@@ -525,6 +537,8 @@ function updateApiSummary(payload = {}) {
     ui.apiSummary.textContent = `${tr("apiCustomReady")}${payload.custom_api_host ? ` (${payload.custom_api_host})` : ""}`;
   } else if (selectedProvider === "openai" && payload.openai_configured) {
     ui.apiSummary.textContent = tr("apiOpenAiReady");
+  } else if (selectedProvider === "bfl-flux2" || selectedProvider === "custom-http" || selectedProvider === "openai") {
+    ui.apiSummary.textContent = tr("apiMissing");
   } else if (payload.openai_configured) {
     ui.apiSummary.textContent = tr("apiOpenAiReady");
   } else if (payload.custom_api_configured) {
@@ -589,11 +603,13 @@ function renderApiConfigForm() {
   ui.apiFlexModelInput.value = item.flex_model || "flux-2-flex";
   ui.apiMethodInput.value = item.method || "POST";
   ui.apiMethodInput.disabled = isOpenAi || isBfl;
+  ui.apiModelLabel.textContent = isBfl ? tr("apiFinalModel") : tr("apiModel");
   ui.apiAuthHeaderInput.value = item.auth_header || "authorization";
   ui.apiAuthSchemeInput.value = item.auth_scheme || "Bearer";
   ui.apiAuthHeaderInput.disabled = isOpenAi || isBfl;
   ui.apiAuthSchemeInput.disabled = isOpenAi || isBfl;
   ui.apiBflModelRow.hidden = !isBfl;
+  ui.apiBflModelHelp.hidden = !isBfl;
   ui.apiKeyInput.value = "";
   ui.apiKeySavedText.textContent = item.key_saved ? tr("keySaved") : tr("noKeySaved");
   ui.apiModalStatus.textContent = tr("ready");
@@ -651,6 +667,7 @@ function providerRequestConfig(provider) {
 async function saveApiSettings() {
   const payload = apiFormPayload(state.apiConfigTab);
   ui.apiModalStatus.textContent = `${tr("saving")}...`;
+  let savedToStaticDemo = false;
   try {
     const data = await postApiConfig(payload);
     state.apiConfig = data.config;
@@ -658,10 +675,11 @@ async function saveApiSettings() {
   } catch {
     state.apiConfig = saveStaticApiConfig(payload);
     enterStaticDemoMode();
+    savedToStaticDemo = true;
   }
   ui.apiKeyInput.value = "";
   renderApiConfigForm();
-  ui.apiModalStatus.textContent = tr("saved");
+  ui.apiModalStatus.textContent = tr(savedToStaticDemo ? "staticConfigSaved" : "saved");
 }
 
 async function testApiConnection(source = "panel") {
@@ -743,6 +761,8 @@ function updateChips() {
   ui.liveChip.textContent = remote ? tr("manual") : (state.liveEnabled ? tr("live") : tr("paused"));
   ui.liveChip.classList.toggle("active", state.liveEnabled && !remote);
   ui.liveChip.title = remote ? tr("remoteManualText") : "";
+  document.querySelector('[data-i18n="outputCanvas"]').textContent = remote ? tr("manualOutput") : tr("outputCanvas");
+  updatePreviewButton();
 }
 
 function handleRenderTierChange() {
@@ -809,6 +829,7 @@ function handleProviderChange() {
   updateChips();
   draw();
   scheduleRealtimeRender("provider");
+  checkApiStatus().catch(() => enterStaticDemoMode());
 }
 
 function cancelRealtimeRender() {
@@ -1628,6 +1649,15 @@ async function requestRealtimeRender(reason) {
     state.rendering = false;
     state.renderController = null;
     updatePreviewButton();
+    if (isRemoteProvider(ui.providerSelect.value)) {
+      const text = String(error.message || error);
+      state.resultError = { titleKey: "apiError", text };
+      draw();
+      setApiState("error", "apiError");
+      setRequestState("error", "apiError");
+      setStatus("apiError", "apiError", text);
+      return;
+    }
     enterStaticDemoMode();
   }
 }
@@ -1781,6 +1811,7 @@ function handleFile(file) {
 }
 
 function beginStroke(e) {
+  if (e.button !== 0) return;
   hideLayerMenu();
   updateBrushCursor(e);
   if (!activeAsset()) return;
@@ -1987,7 +2018,7 @@ function cycleAspectRatio() {
 }
 
 function downloadOutput() {
-  if (!state.generatedImage && !activeAsset()) {
+  if (!state.generatedImage) {
     setStatus("apiError", "apiError", tr("noOutputToDownload"));
     return;
   }
@@ -2091,7 +2122,10 @@ $("examplesChip").addEventListener("click", () => {
 });
 
 ui.imageInput.addEventListener("change", () => handleFile(ui.imageInput.files[0]));
-ui.modelInput.addEventListener("change", () => handleFile(ui.modelInput.files[0]));
+ui.modelInput.addEventListener("change", () => {
+  handleFile(ui.modelInput.files[0]);
+  ui.modelInput.value = "";
+});
 ui.renderTierSelect.addEventListener("change", handleRenderTierChange);
 
 document.addEventListener("dragover", (e) => e.preventDefault());

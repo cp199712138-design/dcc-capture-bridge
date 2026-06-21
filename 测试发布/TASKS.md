@@ -12,6 +12,7 @@ Primary files:
 - `development/06-testing-release/README.md`
 - `capture-canvas/check-page.mjs`
 - `capture-canvas/simulate-flow.mjs`
+- `capture-canvas/test-model-import.mjs`
 - `capture-canvas/test-api-contract.mjs`
 - `capture-canvas/browser-smoke.mjs`
 - `GITHUB_UPLOAD_CHECKLIST.md`
@@ -41,11 +42,12 @@ Run:
 ```powershell
 node capture-canvas/check-page.mjs
 node capture-canvas/simulate-flow.mjs
+node capture-canvas/test-model-import.mjs
 node capture-canvas/test-api-contract.mjs
 node capture-canvas/browser-smoke.mjs
 ```
 
-If a browser smoke failure is environmental, capture the exact error and classify it.
+If a browser smoke failure is environmental or reports `browser_smoke_skipped`, capture the exact error and complete a manual browser pass before customer release.
 
 ## Report Format
 
