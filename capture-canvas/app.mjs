@@ -45,6 +45,7 @@ const copy = {
     apiAuthHeader: "Auth header",
     apiAuthScheme: "Auth scheme",
     testApi: "Test API",
+    checkConfig: "Check config",
     save: "Save",
     close: "Close",
     keySaved: "Key saved. Leave blank to keep it.",
@@ -75,6 +76,7 @@ const copy = {
     emptyBody: "Import an image/model or load the example, then paint the edit region.",
     outputCanvas: "Realtime output",
     manualOutput: "Manual output",
+    bflReferenceMode: "Reference edit",
     asset: "Current evidence",
     size: "size",
     ai: "AI",
@@ -88,6 +90,7 @@ const copy = {
     queued: "Queued",
     cancelled: "Cancelled",
     cancel: "Cancel",
+    stopWaiting: "Stop waiting",
     download: "Download",
     noOutputToDownload: "No output to download yet.",
     noAssetToGenerate: "Import an image or model before generating.",
@@ -108,8 +111,10 @@ const copy = {
     previewQueued: "Preview queued",
     previewQueuedText: "Requesting output from the current canvas, mask, and prompt.",
     previewNoMaskText: "No mask is drawn, so Generate will treat the loaded image as the edit target.",
+    bflReferenceText: "FLUX.2 edits the loaded image as a reference. Mask and strength guide local preview or other providers, not precise BFL inpainting.",
+    bflSubmitNotice: "Submitting to BFL may create a remote job. Stop waiting only cancels this page's wait, not a job already accepted by BFL.",
     renderCancelled: "Render cancelled",
-    renderCancelledText: "The current queued or running request was stopped.",
+    renderCancelledText: "Local waiting stopped. If a cloud render was already submitted, the remote job may still finish or consume credits.",
     renderRestartedText: "Previous request was cancelled. Sending the latest canvas now.",
     outputUpdated: "Realtime output updated",
     outputUpdatedText: "The right canvas uses the API result.",
@@ -124,7 +129,7 @@ const copy = {
     liveOnText: "Canvas changes will request output automatically.",
     liveOffText: "Canvas remains editable but will not request output automatically.",
     remoteManual: "Remote provider uses manual Generate",
-    remoteManualText: "Cloud image APIs are single render calls here. Paint freely, then click Generate.",
+    remoteManualText: "Cloud image APIs are manual render calls here. Paint freely, then click Generate.",
     draw: "Draw",
     textOnly: "Text only",
     seed: "Seed ",
@@ -204,6 +209,7 @@ const copy = {
     apiAuthHeader: "\u9274\u6743\u5934",
     apiAuthScheme: "\u9274\u6743\u65b9\u5f0f",
     testApi: "\u6d4b\u8bd5 API",
+    checkConfig: "\u68c0\u67e5\u914d\u7f6e",
     save: "\u4fdd\u5b58",
     close: "\u5173\u95ed",
     keySaved: "\u5df2\u4fdd\u5b58 Key\uff0c\u7559\u7a7a\u4fdd\u6301\u4e0d\u53d8\u3002",
@@ -234,6 +240,7 @@ const copy = {
     emptyBody: "\u5bfc\u5165\u56fe\u7247/\u6a21\u578b\u6216\u52a0\u8f7d\u793a\u4f8b\uff0c\u7136\u540e\u6d82\u62b9\u8981\u4fee\u6539\u7684\u533a\u57df\u3002",
     outputCanvas: "\u5b9e\u65f6\u8f93\u51fa",
     manualOutput: "\u624b\u52a8\u8f93\u51fa",
+    bflReferenceMode: "\u53c2\u8003\u56fe\u7f16\u8f91",
     asset: "\u5f53\u524d\u8bc1\u636e",
     size: "\u5927\u5c0f",
     ai: "AI",
@@ -247,6 +254,7 @@ const copy = {
     queued: "\u5df2\u6392\u961f",
     cancelled: "\u5df2\u53d6\u6d88",
     cancel: "\u53d6\u6d88",
+    stopWaiting: "\u505c\u6b62\u7b49\u5f85",
     download: "\u4e0b\u8f7d",
     noOutputToDownload: "\u5f53\u524d\u8fd8\u6ca1\u6709\u53ef\u4e0b\u8f7d\u7684\u8f93\u51fa\u3002",
     noAssetToGenerate: "\u8bf7\u5148\u5bfc\u5165\u56fe\u7247\u6216\u6a21\u578b\uff0c\u518d\u70b9\u751f\u6210\u3002",
@@ -267,8 +275,10 @@ const copy = {
     previewQueued: "\u9884\u89c8\u5df2\u6392\u961f",
     previewQueuedText: "\u6b63\u5728\u6839\u636e\u5f53\u524d\u753b\u5e03\u3001\u906e\u7f69\u548c\u63d0\u793a\u8bcd\u8bf7\u6c42\u8f93\u51fa\u3002",
     previewNoMaskText: "\u5f53\u524d\u6ca1\u6709\u906e\u7f69\uff0c\u751f\u6210\u4f1a\u628a\u5df2\u52a0\u8f7d\u56fe\u7247\u4f5c\u4e3a\u6574\u5f20\u7f16\u8f91\u5bf9\u8c61\u3002",
+    bflReferenceText: "FLUX.2 \u6309\u5df2\u52a0\u8f7d\u56fe\u7247\u505a\u53c2\u8003\u56fe\u6574\u4f53\u7f16\u8f91\u3002\u906e\u7f69\u548c\u5f3a\u5ea6\u53ea\u7528\u4e8e\u672c\u5730\u9884\u89c8\u6216\u5176\u4ed6 provider\uff0c\u4e0d\u662f BFL \u7cbe\u786e\u5c40\u90e8\u91cd\u7ed8\u3002",
+    bflSubmitNotice: "\u63d0\u4ea4 BFL \u540e\u53ef\u80fd\u5df2\u521b\u5efa\u8fdc\u7a0b\u4efb\u52a1\u3002\u505c\u6b62\u7b49\u5f85\u53ea\u53d6\u6d88\u672c\u9875\u7b49\u5f85\uff0c\u4e0d\u4fdd\u8bc1\u64a4\u9500 BFL \u5df2\u63a5\u6536\u7684\u4efb\u52a1\u6216\u989d\u5ea6\u3002",
     renderCancelled: "\u751f\u6210\u5df2\u53d6\u6d88",
-    renderCancelledText: "\u5df2\u505c\u6b62\u5f53\u524d\u6392\u961f\u6216\u8fd0\u884c\u4e2d\u7684\u8bf7\u6c42\u3002",
+    renderCancelledText: "\u5df2\u505c\u6b62\u672c\u9875\u7b49\u5f85\u3002\u5982\u679c\u4e91\u7aef\u4efb\u52a1\u5df2\u63d0\u4ea4\uff0c\u4ecd\u53ef\u80fd\u5b8c\u6210\u6216\u6d88\u8017\u989d\u5ea6\u3002",
     renderRestartedText: "\u4e0a\u4e00\u6b21\u8bf7\u6c42\u5df2\u53d6\u6d88\uff0c\u6b63\u5728\u53d1\u9001\u6700\u65b0\u753b\u5e03\u3002",
     outputUpdated: "\u5b9e\u65f6\u8f93\u51fa\u5df2\u66f4\u65b0",
     outputUpdatedText: "\u53f3\u4fa7\u753b\u5e03\u6765\u81ea API \u8fd4\u56de\u7ed3\u679c\u3002",
@@ -283,7 +293,7 @@ const copy = {
     liveOnText: "\u753b\u5e03\u53d8\u5316\u4f1a\u81ea\u52a8\u8bf7\u6c42\u8f93\u51fa\u3002",
     liveOffText: "\u753b\u5e03\u4ecd\u53ef\u7f16\u8f91\uff0c\u4f46\u4e0d\u4f1a\u81ea\u52a8\u8bf7\u6c42\u8f93\u51fa\u3002",
     remoteManual: "\u8fdc\u7a0b\u63d0\u4f9b\u65b9\u4f7f\u7528\u624b\u52a8\u751f\u6210",
-    remoteManualText: "\u4e91\u7aef\u56fe\u50cf API \u5728\u6b64\u5904\u662f\u5355\u6b21\u751f\u6210\u8bf7\u6c42\u3002\u5148\u7f16\u8f91\u753b\u5e03\uff0c\u518d\u70b9\u751f\u6210\u3002",
+    remoteManualText: "\u4e91\u7aef\u56fe\u50cf API \u5728\u6b64\u5904\u662f\u624b\u52a8\u751f\u6210\u8bf7\u6c42\u3002\u5148\u7f16\u8f91\u753b\u5e03\uff0c\u518d\u70b9\u751f\u6210\u3002",
     draw: "\u7ed8\u5236",
     textOnly: "\u4ec5\u6587\u5b57",
     seed: "\u79cd\u5b50 ",
@@ -470,9 +480,16 @@ function setRequestState(kind, labelKey) {
 
 function updatePreviewButton() {
   const canCancel = state.renderQueued || state.rendering;
-  ui.previewBtn.textContent = canCancel ? tr("cancel") : (isRemoteProvider() ? tr("generateOnce") : tr("generate"));
+  ui.previewBtn.textContent = canCancel ? tr("stopWaiting") : (isRemoteProvider() ? tr("generateOnce") : tr("generate"));
   ui.previewBtn.classList.toggle("danger", canCancel);
   ui.previewBtn.title = canCancel ? tr("renderCancelledText") : (isRemoteProvider() ? tr("remoteManualText") : tr("generate"));
+}
+
+function updateApiActionLabels() {
+  const panelLabel = ui.providerSelect.value === "bfl-flux2" ? tr("checkConfig") : tr("testApi");
+  const modalLabel = state.apiConfigTab === "bfl-flux2" ? tr("checkConfig") : tr("testApi");
+  ui.testApiBtn.textContent = panelLabel;
+  ui.modalTestApiBtn.textContent = modalLabel;
 }
 
 function activeAsset() {
@@ -527,7 +544,8 @@ function updateApiSummary(payload = {}) {
   state.apiStatus = payload;
   if (payload.static_demo) {
     ui.apiSummary.textContent = tr("staticDemo");
-    ui.apiHelp.textContent = tr("staticDemoText");
+    ui.apiHelp.textContent = ui.providerSelect.value === "bfl-flux2" ? tr("bflReferenceText") : tr("staticDemoText");
+    updateApiActionLabels();
     return;
   }
   const selectedProvider = ui.providerSelect?.value || "";
@@ -548,7 +566,8 @@ function updateApiSummary(payload = {}) {
   } else {
     ui.apiSummary.textContent = tr("apiLocal");
   }
-  ui.apiHelp.textContent = tr("apiHelp");
+  ui.apiHelp.textContent = selectedProvider === "bfl-flux2" ? tr("bflReferenceText") : tr("apiHelp");
+  updateApiActionLabels();
 }
 
 function enterStaticDemoMode(text = tr("staticDemoText")) {
@@ -613,6 +632,7 @@ function renderApiConfigForm() {
   ui.apiKeyInput.value = "";
   ui.apiKeySavedText.textContent = item.key_saved ? tr("keySaved") : tr("noKeySaved");
   ui.apiModalStatus.textContent = tr("ready");
+  updateApiActionLabels();
 }
 
 function apiFormPayload(provider = state.apiConfigTab) {
@@ -701,10 +721,11 @@ async function testApiConnection(source = "panel") {
   try {
     const data = await postProviderTest(payload);
     const text = state.lang === "cn" ? data.message_cn || data.cn : data.message_en || data.en;
-    if (source === "modal") ui.apiModalStatus.textContent = text || (data.ok ? tr("apiTestOk") : tr("apiTestFailed"));
-    setApiState(data.ok ? "api" : "error", data.ok ? "apiTestOk" : "apiTestFailed");
-    setRequestState(data.ok ? "api" : "error", data.ok ? "apiTestOk" : "apiTestFailed");
-    setStatus(data.ok ? "apiTestOk" : "apiTestFailed", data.ok ? "apiTestOk" : "apiTestFailed", text || "");
+    const okLabel = provider === "bfl-flux2" ? "checkConfig" : "apiTestOk";
+    if (source === "modal") ui.apiModalStatus.textContent = text || (data.ok ? tr(okLabel) : tr("apiTestFailed"));
+    setApiState(data.ok ? "api" : "error", data.ok ? okLabel : "apiTestFailed");
+    setRequestState(data.ok ? "api" : "error", data.ok ? okLabel : "apiTestFailed");
+    setStatus(data.ok ? okLabel : "apiTestFailed", data.ok ? okLabel : "apiTestFailed", text || "");
   } catch (error) {
     if (provider === "custom-http") {
       try {
@@ -760,8 +781,9 @@ function updateChips() {
   ui.seedChip.textContent = `${tr("seed")}${state.seed}`;
   ui.liveChip.textContent = remote ? tr("manual") : (state.liveEnabled ? tr("live") : tr("paused"));
   ui.liveChip.classList.toggle("active", state.liveEnabled && !remote);
-  ui.liveChip.title = remote ? tr("remoteManualText") : "";
-  document.querySelector('[data-i18n="outputCanvas"]').textContent = remote ? tr("manualOutput") : tr("outputCanvas");
+  ui.liveChip.title = ui.providerSelect.value === "bfl-flux2" ? tr("bflReferenceText") : (remote ? tr("remoteManualText") : "");
+  document.querySelector('[data-i18n="outputCanvas"]').textContent = ui.providerSelect.value === "bfl-flux2" ? tr("bflReferenceMode") : (remote ? tr("manualOutput") : tr("outputCanvas"));
+  updateApiActionLabels();
   updatePreviewButton();
 }
 
@@ -1572,6 +1594,7 @@ async function requestRealtimeRender(reason) {
   setApiState("busy", "rendering");
   setRequestState("busy", "rendering");
   if (cancelledPrevious) setStatus("previewQueued", "renderRestartedText");
+  else if (ui.providerSelect.value === "bfl-flux2") setStatus("previewQueued", "bflSubmitNotice");
   updatePreviewButton();
   const requestBody = {
     ...state.lastRequest,

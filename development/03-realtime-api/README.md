@@ -21,10 +21,13 @@ providers without editing the frontend.
   `Pending`, `Ready`, `Error`, `Request Moderated`, `Content Moderated`, and
   `Task not found`, then downloads `result.sample` server-side before returning
   a data URL to the browser.
+- BFL FLUX.2 is treated as reference-image editing: the payload contains
+  `prompt`, `input_image`, `seed`, `output_format`, and safe `aspect_ratio`
+  only. It does not claim precise mask inpainting; `maskDataUrl` and `strength`
+  remain local-preview or other-provider inputs.
 - Custom HTTP JSON adapter exists.
-- Static demo can store customer Custom API settings in browser localStorage
-  and call that endpoint directly when CORS allows it. This is browser-local
-  customer testing, not production secret safety.
+- Static demo can store non-sensitive provider settings in browser localStorage.
+  Real OpenAI, BFL, or Custom API keys are not persisted in the static page.
 - `test-api-contract.mjs` validates custom API request/response shape, missing
   provider config, no-image custom responses, and OpenAI-compatible proxy error
   visibility.
@@ -33,11 +36,10 @@ providers without editing the frontend.
 
 - Add clearer provider presets without storing secrets in the page.
 - Add request log preview with secrets redacted.
-- Add timeout and cancellation controls for realtime mode.
 - Add better error messages for quota, invalid key, bad model, and proxy
   mistakes.
-- Keep static direct mode clearly labeled as customer testing, not production
-  secret handling.
+- Keep static direct mode clearly labeled as customer testing, with keys entered
+  per request only.
 
 ## Key Files
 
@@ -56,5 +58,7 @@ providers without editing the frontend.
   `assets`, `mask`, `output`, and `dcc_capture_bridge.contract`.
 - Provider test/config responses do not echo saved secrets.
 - OpenAI-compatible proxy failures return visible status/message summaries.
+- BFL configuration checks do not call generation endpoints and do not validate
+  credits or model access.
 - Static demo without a server stays usable in local preview mode.
 - `node capture-canvas/test-api-contract.mjs` passes.

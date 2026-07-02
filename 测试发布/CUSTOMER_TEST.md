@@ -26,10 +26,12 @@ http://127.0.0.1:8765/capture-canvas/index.html
 2. 选择 `OpenAI`、`FLUX.2` 或 `Custom API`，不要停留在 `Auto` / `Mock`。
 3. 点击 `API Settings`。
 4. OpenAI：填写 Base URL、Image model、API Key，保存后点击 `Test API`。
-5. FLUX.2：切到 `BFL FLUX.2`，填写 `BFL_API_KEY`，确认 Fast/Final/Flex 三档模型后保存并点击 `Test API`。
+5. FLUX.2：切到 `BFL FLUX.2`，填写 `BFL_API_KEY`，确认 Fast/Final/Flex 三档模型后保存并点击 `检查配置`。
 6. Custom API：切到 `Custom API`，填写 endpoint、method、model、auth header/scheme/API Key，保存后点击 `Test API`。
 
-FLUX.2 是远程手动生成：画笔、矩形、选择、移动都只更新本地画布；只有点击 `Generate once` / `生成一次` 才会调用 BFL，避免每画一笔都消耗额度。
+FLUX.2 是远程手动参考图编辑：画笔、矩形、选择、移动都只更新本地画布；只有点击 `Generate once` / `生成一次` 才会调用 BFL，避免每画一笔都消耗额度。`检查配置` 不调用生成端点，也不验证额度、模型权限或出图速度；如需真实试跑，只做一次 `Fast preview`。
+
+当前 FLUX.2 接入按整张参考图编辑处理，遮罩和强度只作为本地预览或其他 provider 的输入，不承诺 BFL 精确局部 inpainting。点击生成后如果已经提交到 BFL，页面里的 `停止等待` 只停止前端等待，不保证撤销远程任务或额度消耗。
 
 Key 只应放在本机 `.env` 或客户自己的测试环境里，不要截图、提交或发到聊天里。
 

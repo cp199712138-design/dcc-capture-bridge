@@ -1,10 +1,10 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { extname, isAbsolute, join, normalize, relative } from "node:path";
 import { createMockImageDataUrl, normalizeImageDataUrl } from "./API/task-api.mjs";
 
-const root = process.cwd();
+const root = normalize(process.cwd());
 const port = Number(process.env.PORT || 8765);
 const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-1";
 const BFL_BASE_URL_DEFAULT = "https://api.bfl.ai";
@@ -83,7 +83,7 @@ const server = http.createServer(async (req, res) => {
     if (!existsSync(file) && requestPath.startsWith("/capture-canvas/")) {
       file = normalize(join(root, requestPath.slice("/capture-canvas/".length)));
     }
-    if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
+    if (!isInsideRoot(file) || !existsSync(file) || !statSync(file).isFile()) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Not found");
       return;
@@ -107,6 +107,11 @@ server.listen(port, "127.0.0.1", () => {
 function sendJson(res, status, data) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(data));
+}
+
+function isInsideRoot(file) {
+  const pathFromRoot = relative(root, file);
+  return pathFromRoot === "" || (!pathFromRoot.startsWith("..") && !isAbsolute(pathFromRoot));
 }
 
 async function readJsonBody(req) {
@@ -287,8 +292,8 @@ async function handleProviderTest(body) {
       host: safeHost(config.bfl.baseUrl),
       cn: "BFL FLUX.2 \u914d\u7f6e\u5df2\u5c31\u7eea",
       en: "BFL FLUX.2 configured",
-      message_cn: "BFL API key \u5df2\u4fdd\u5b58\uff0c\u672a\u8c03\u7528\u751f\u6210\u7aef\u70b9\u3002",
-      message_en: "BFL API key is saved. Generation endpoints were not called."
+      message_cn: "BFL API key \u5df2\u4fdd\u5b58\u3002\u6b64\u68c0\u67e5\u4e0d\u8c03\u7528\u751f\u6210\u7aef\u70b9\uff0c\u4e5f\u4e0d\u9a8c\u8bc1\u989d\u5ea6\u3001\u6a21\u578b\u6216\u751f\u6210\u53ef\u7528\u6027\u3002",
+      message_en: "BFL API key is saved. Generation endpoints were not called, so this does not validate credits, model access, or render availability."
     };
   }
 
@@ -538,6 +543,8 @@ async function handleBflRender(body) {
     seed: Number.isFinite(Number(body.seed)) ? Number(body.seed) : undefined,
     output_format: "png"
   };
+  const aspectRatio = normalizeBflAspectRatio(body.output?.aspect_ratio || body.aspectRatio);
+  if (aspectRatio) payload.aspect_ratio = aspectRatio;
 
   let response;
   try {
@@ -602,6 +609,11 @@ async function pollBflResult(pollingUrl, config, meta = {}) {
 
 function normalizeBflStatus(value) {
   return String(value || "pending").trim().toLowerCase();
+}
+
+function normalizeBflAspectRatio(value) {
+  const text = String(value || "").trim();
+  return /^(?:[1-9]\d?):(?:[1-9]\d?)$/.test(text) ? text : "";
 }
 
 async function downloadBflSample(sampleUrl, config, meta = {}) {

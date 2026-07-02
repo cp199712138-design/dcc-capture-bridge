@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { callDirectCustomApi } from "./api-client.mjs";
+import { callDirectCustomApi, saveStaticApiConfig, loadStaticApiConfig } from "./api-client.mjs";
 
 const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 const mockPort = 21876;
@@ -15,6 +15,7 @@ const missingImageAppPort = 21880;
 const openAiHtmlAppPort = 21881;
 const customMissingKeyAppPort = 21882;
 const bflMissingKeyAppPort = 21883;
+const canvasStaticAppPort = 21884;
 const received = [];
 const savedOpenAiModel = "nanobanana-2-c";
 const savedCustomModel = "pai-single-image-model";
@@ -141,6 +142,9 @@ await new Promise((resolve) => mockApi.listen(mockPort, "127.0.0.1", resolve));
 const root = fileURLToPath(new URL("../", import.meta.url));
 const envPath = join(root, ".env");
 const envBackup = existsSync(envPath) ? readFileSync(envPath, "utf8") : null;
+const siblingLeakDir = `${root.replace(/[\\/]$/, "")}-sibling`;
+mkdirSync(siblingLeakDir, { recursive: true });
+writeFileSync(join(siblingLeakDir, "leak.txt"), "outside workspace", "utf8");
 const app = startApp(appPort, {
   DCC_CUSTOM_API_URL: `http://127.0.0.1:${mockPort}/render`,
   DCC_CUSTOM_API_KEY: "test-custom-key",
@@ -170,6 +174,7 @@ const customMissingKeyApp = startApp(customMissingKeyAppPort, {
 const bflMissingKeyApp = startApp(bflMissingKeyAppPort, {
   BFL_BASE_URL: `http://127.0.0.1:${mockPort}`
 });
+const canvasStaticApp = startCanvasApp(canvasStaticAppPort);
 
 try {
   await waitForJson(`http://127.0.0.1:${appPort}/api/status`);
@@ -179,6 +184,7 @@ try {
   await waitForJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/status`);
   await waitForJson(`http://127.0.0.1:${customMissingKeyAppPort}/api/status`);
   await waitForJson(`http://127.0.0.1:${bflMissingKeyAppPort}/api/status`);
+  await waitForJson(`http://127.0.0.1:${canvasStaticAppPort}/api/status`);
 
   const status = await getJson(`http://127.0.0.1:${appPort}/api/status`);
   assert.equal(status.ok, true);
@@ -192,6 +198,14 @@ try {
   assert.equal(localStatus.openai_configured, false);
   assert.equal(localStatus.custom_api_configured, false);
   assert.equal(localStatus.has_api_key, false);
+
+  const siblingName = siblingLeakDir.split(/[\\/]/).pop();
+  const traversal = await getRaw(`http://127.0.0.1:${localAppPort}/../${encodeURIComponent(siblingName)}/leak.txt`);
+  assert.equal(traversal.status, 404);
+  assert.notEqual(traversal.text, "outside workspace");
+  const canvasTraversal = await getRaw(`http://127.0.0.1:${canvasStaticAppPort}/../${encodeURIComponent(siblingName)}/leak.txt`);
+  assert.equal(canvasTraversal.status, 404);
+  assert.notEqual(canvasTraversal.text, "outside workspace");
 
   const openAiStatus = await getJson(`http://127.0.0.1:${openAiHtmlAppPort}/api/status`);
   assert.equal(openAiStatus.provider, "mock-local");
@@ -283,6 +297,7 @@ try {
   const bflProviderTest = await postJson(`http://127.0.0.1:${localAppPort}/api/test-provider`, { provider: "bfl-flux2" });
   assert.equal(bflProviderTest.ok, true);
   assert.equal(bflProviderTest.provider, "bfl-flux2");
+  assert.match(bflProviderTest.message_en, /not called|does not validate/i);
   assert.equal(countBflGenerationRequests(), beforeBflProviderTest);
 
   const bflFastRender = await postJson(`http://127.0.0.1:${localAppPort}/api/realtime-render`, {
@@ -353,6 +368,27 @@ try {
   assertValidPngDataUrl(b64Render.imageDataUrl);
 
   installTestLocalStorage();
+  saveStaticApiConfig({
+    provider: "custom-http",
+    baseUrl: `http://127.0.0.1:${mockPort}/render`,
+    model: savedCustomModel,
+    apiKey: "static-custom-key",
+    method: "POST",
+    authHeader: "authorization",
+    authScheme: "Bearer"
+  });
+  saveStaticApiConfig({
+    provider: "openai",
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-image-1",
+    apiKey: "sk-test-static-openai-key-should-not-persist"
+  });
+  const staticStored = loadStaticApiConfig();
+  assert.equal(staticStored.custom.api_key || "", "");
+  assert.equal(staticStored.custom.key_saved, false);
+  assert.equal(staticStored.openai.api_key || "", "");
+  assert.equal(staticStored.openai.key_saved, false);
+
   const directB64Render = await callDirectCustomApi(renderRequest(), {
     baseUrl: `http://127.0.0.1:${mockPort}/b64`,
     apiKey: "test-custom-key"
@@ -501,8 +537,10 @@ try {
   stopApp(openAiHtmlApp);
   stopApp(customMissingKeyApp);
   stopApp(bflMissingKeyApp);
+  stopApp(canvasStaticApp);
   await new Promise((resolve) => mockApi.close(resolve));
   restoreEnvFile();
+  rmSync(siblingLeakDir, { recursive: true, force: true });
 }
 
 function renderRequest() {
@@ -515,7 +553,7 @@ function renderRequest() {
     strength: 0.5,
     assets: [],
     mask: { type: "vector_strokes", strokes: [] },
-    output: { target: "preview", mode: "realtime_draft", type: "image" },
+    output: { target: "preview", mode: "realtime_draft", type: "image", aspect_ratio: "3:2" },
     sourceImageDataUrl: transparentPixel,
     maskDataUrl: transparentPixel,
     reason: "contract-test"
@@ -558,6 +596,10 @@ function assertBflRequest(url, key, renderTier) {
   assert.ok(request, `expected BFL request ${url} for ${renderTier}`);
   assert.equal(request.headers["x-key"], key);
   assert.equal(request.payload.input_image, transparentPixel);
+  assert.equal(request.payload.aspect_ratio, "3:2");
+  assert.equal("maskDataUrl" in request.payload, false);
+  assert.equal("mask" in request.payload, false);
+  assert.equal("strength" in request.payload, false);
   assert.equal("sourceImageDataUrl" in request.payload, false);
 }
 
@@ -593,6 +635,23 @@ function startApp(port, env = {}) {
   });
 }
 
+function startCanvasApp(port, env = {}) {
+  return spawn(process.execPath, ["serve-static.mjs"], {
+    cwd: join(root, "capture-canvas"),
+    env: {
+      ...process.env,
+      DCC_SKIP_DOTENV: "1",
+      OPENAI_API_KEY: "",
+      BFL_API_KEY: "",
+      DCC_CUSTOM_API_URL: "",
+      DCC_CUSTOM_API_KEY: "",
+      PORT: String(port),
+      ...env
+    },
+    stdio: "ignore"
+  });
+}
+
 function stopApp(appProcess) {
   if (!appProcess.killed) appProcess.kill();
 }
@@ -615,6 +674,14 @@ async function getJson(url) {
   const response = await fetch(url);
   assert.equal(response.ok, true);
   return response.json();
+}
+
+async function getRaw(url) {
+  const response = await fetch(url);
+  return {
+    status: response.status,
+    text: await response.text()
+  };
 }
 
 async function postJson(url, body) {

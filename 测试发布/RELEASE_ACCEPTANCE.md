@@ -16,7 +16,7 @@ node capture-canvas/check-page.mjs --all
 - `node capture-canvas/test-api-contract.mjs`
 - `node capture-canvas/browser-smoke.mjs`
 
-如果 `browser-smoke` 因 Chrome/Edge、CDP、websocket 或 headless 环境失败或被脚本标记 `browser_smoke_skipped`，记录原始错误，并补一轮人工浏览器验收；不要修改 UI/API/Canvas 代码来绕过环境问题。
+如果 `browser-smoke` 因 Chrome/Edge、CDP、websocket 或 headless 环境失败或被脚本标记 `browser_smoke_skipped`，`check-page --all` 应输出 `all_checks_requires_manual_browser=true`，记录原始错误，并补一轮人工浏览器验收；不要修改 UI/API/Canvas 代码来绕过环境问题。
 
 ## 单项复查
 
@@ -44,7 +44,7 @@ rg --pcre2 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_mod
 
 - 当前分支是客户测试分支。
 - PR 保持 Draft，除非负责人明确要求 Ready for review。
-- PR 描述包含：启动地址、mock 默认不耗额度、OpenAI/Custom/FLUX.2 选择方式、FLUX.2 手动生成说明、已跑验证命令、冻结范围。
+- PR 描述包含：启动地址、mock 默认不耗额度、OpenAI/Custom/FLUX.2 选择方式、FLUX.2 手动参考图编辑说明、遮罩非 BFL 精确局部编辑、已跑验证命令、冻结范围。
 - 没有提交 `.env`、客户素材、临时浏览器 profile、测试输出或大型二进制。
 
 ## 冻结范围说明

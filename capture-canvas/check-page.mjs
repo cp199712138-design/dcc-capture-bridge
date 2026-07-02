@@ -87,6 +87,7 @@ const report = {
   hasBflLongPolling: localServer.includes("BFL_POLL_TIMEOUT_MS") && packageServer.includes("BFL_POLL_TIMEOUT_MS") && localServer.includes("request moderated") && packageServer.includes("content moderated"),
   hasRenderTierUi: html.includes('id="renderTierSelect"') && app.includes("renderTier:") && app.includes("fast_preview") && app.includes("final_render"),
   hasRemoteManualUi: app.includes("manualOutput") && app.includes("generateOnce") && app.includes("remoteManualText"),
+  hasBflReferenceUi: app.includes("bflReferenceText") && app.includes("bflReferenceMode") && app.includes("checkConfig") && app.includes("stopWaiting"),
   hasEmptyGenerateGuard: app.includes("noAssetToGenerate") && app.includes("if (!activeAsset())") && app.includes("setRequestState(\"local\", \"idle\")"),
   hasLeftButtonStrokeGuard: app.includes("if (e.button !== 0) return;"),
   hasShapeCursorSplit: app.includes("const isShapeTool") && app.includes('ui.sourceCanvas.style.cursor = "crosshair"') && app.includes("!isShapeTool"),
@@ -96,6 +97,8 @@ const report = {
   hasApiTestUi: html.includes('id="apiSummary"') && html.includes('id="testApiBtn"') && app.includes('reason === "api-test"'),
   hasApiSettingsUi: html.includes('id="apiModal"') && app.includes("saveApiSettings") && browserCode.includes("/api/config") && app.includes("openApiSettings"),
   hasEnvLoader: localServer.includes("loadLocalEnv") && packageServer.includes("loadLocalEnv") && localServer.includes('join(root, ".env")'),
+  hasSafeStaticPathCheck: localServer.includes("relative(root, file)") && packageServer.includes("relative(root, file)") && localServer.includes("isInsideRoot(file)") && packageServer.includes("isInsideRoot(file)"),
+  hasNoStaticSecretPersistence: apiClient.includes("api_key: \"\"") && apiClient.includes("key_saved: false") && !apiClient.includes("payload.apiKey || current[providerKey]?.api_key"),
   hasExplicitMissingProvider: localServer.includes("openai-missing") && localServer.includes("custom-http-missing") && packageServer.includes("openai-missing"),
   hasMovableSelection: app.includes("findStrokeAt") && app.includes("translateStroke") && app.includes("movingSelection") && app.includes("drawSelectedOverlay"),
   hasLayerMenuActions: html.includes('data-layer-action="duplicate"') && html.includes('data-layer-action="flipX"') && app.includes("applyLayerAction") && app.includes("showLayerMenu"),
@@ -148,18 +151,31 @@ function runAllChecks() {
     ["node", ["capture-canvas/browser-smoke.mjs"]],
   ];
 
+  let browserSmokeSkipped = false;
+
   for (const [label, args] of commands) {
     const commandText = [label, ...args].join(" ");
     console.log(`\n> ${commandText}`);
+    const isBrowserSmoke = args[0] === "capture-canvas/browser-smoke.mjs";
     const result = spawnSync(process.execPath, args, {
       cwd: root,
-      stdio: "inherit",
+      stdio: isBrowserSmoke ? "pipe" : "inherit",
+      encoding: isBrowserSmoke ? "utf8" : undefined,
       env: process.env,
     });
+    if (isBrowserSmoke) {
+      if (result.stdout) process.stdout.write(result.stdout);
+      if (result.stderr) process.stderr.write(result.stderr);
+      browserSmokeSkipped = /"browser_smoke_skipped"\s*:\s*true/.test(result.stdout || "");
+    }
     if (result.status !== 0) {
       process.exit(result.status || 1);
     }
   }
 
+  if (browserSmokeSkipped) {
+    console.log(JSON.stringify({ all_checks_requires_manual_browser: true, commands: commands.length }));
+    return;
+  }
   console.log(JSON.stringify({ all_checks_ok: true, commands: commands.length }));
 }

@@ -16,7 +16,7 @@ export function saveStaticApiConfig(payload) {
     fast_model: payload.fastModel,
     final_model: payload.finalModel || payload.model,
     flex_model: payload.flexModel,
-    key_saved: Boolean(payload.apiKey || current.bfl?.key_saved),
+    key_saved: false,
   } : null;
   const next = {
     ...current,
@@ -28,8 +28,8 @@ export function saveStaticApiConfig(payload) {
       method: payload.method,
       auth_header: payload.authHeader,
       auth_scheme: payload.authScheme,
-      key_saved: Boolean(payload.apiKey || current[providerKey]?.api_key),
-      api_key: payload.apiKey || current[providerKey]?.api_key || "",
+      key_saved: false,
+      api_key: "",
     },
   };
   localStorage.setItem(STATIC_API_CONFIG_KEY, JSON.stringify(next));

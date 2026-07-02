@@ -13,6 +13,9 @@ sync, privacy checks, and release notes.
 - Headless Chrome browser smoke test exists.
 - GitHub push has been validated once.
 - `node capture-canvas/check-page.mjs --all` can run the full pass in order.
+- When `browser-smoke.mjs` is skipped for local Chrome/CDP/GPU-cache reasons,
+  the full pass reports `all_checks_requires_manual_browser=true` instead of
+  a clean `all_checks_ok`.
 
 ## Smoke Commands
 
@@ -32,9 +35,9 @@ node capture-canvas/check-page.mjs --all
 ```
 
 `browser-smoke.mjs` requires local Chrome or Edge. If it fails with a CDP,
-Chrome target, or websocket error while the other checks pass, record the exact
-error and classify it as environment-sensitive until reproduced in another
-browser profile or machine.
+Chrome target, websocket, or GPU-cache error while the other checks pass, record
+the exact error and complete the manual browser checklist before customer
+handoff.
 
 ## Secret Scan
 
@@ -91,6 +94,8 @@ Rollback / previous build:
 - `node capture-canvas/simulate-flow.mjs` passes.
 - `node capture-canvas/test-api-contract.mjs` passes.
 - `node capture-canvas/browser-smoke.mjs` passes.
-- `node capture-canvas/check-page.mjs --all` passes before customer handoff.
+- `node capture-canvas/check-page.mjs --all` passes, or reports
+  `all_checks_requires_manual_browser=true` with manual Chrome verification
+  completed before customer handoff.
 - Real-key scan finds no committed API keys while allowing placeholders.
 
