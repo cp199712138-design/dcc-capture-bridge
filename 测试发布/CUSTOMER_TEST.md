@@ -1,5 +1,7 @@
 # 客户测试说明
 
+Instant Canvas 本测试版由小陈同学开发。
+
 本轮客户测试只覆盖 Instant Canvas 网页原型。3ds Max、Blender 本轮冻结，ComfyUI 不在本轮开发范围内。
 
 ## 启动

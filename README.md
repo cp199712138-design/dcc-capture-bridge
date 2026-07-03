@@ -2,6 +2,8 @@
 
 Realtime DCC-to-AI capture canvas for 3ds Max / Blender evidence.
 
+Developed by 小陈同学.
+
 The project started as a 3ds Max capture plugin, but the active direction is now a Krea-style realtime edit loop:
 
 ```text

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Instant Canvas</title>
+  <title>Instant Canvas · 小陈同学</title>
   <style>
     :root {
       color-scheme: dark;
@@ -67,6 +67,17 @@
     .brand { display: grid; gap: 5px; padding: 4px 4px 8px; }
     .brand strong { font-size: 15px; letter-spacing: 0; }
     .brand span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .brand .credit {
+      width: max-content;
+      max-width: 100%;
+      padding: 4px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--accent-2);
+      background: rgba(136,212,192,.08);
+      font-size: 11px;
+      font-weight: 700;
+    }
     .section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
     .section-title { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
     .tool-grid { display: grid; gap: 7px; }
@@ -561,6 +572,7 @@
       <div class="brand">
         <strong>Instant Canvas</strong>
         <span data-i18n="tagline">面向区域生成的实时 AI 画布。</span>
+        <span class="credit" data-i18n="developerCredit">小陈同学开发</span>
       </div>
 
       <section class="section">

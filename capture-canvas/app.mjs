@@ -5,6 +5,7 @@ import { createModelViewer, parseModelFile } from "./model-viewer.mjs";
 const copy = {
   en: {
     tagline: "Realtime evidence canvas for AI product generation.",
+    developerCredit: "Developed by \u5c0f\u9648\u540c\u5b66",
     tools: "Tools",
     select: "Select",
     brush: "Brush",
@@ -169,6 +170,7 @@ const copy = {
   },
   cn: {
     tagline: "\u9762\u5411 AI \u4ea7\u54c1\u751f\u6210\u7684\u5373\u65f6\u8bc1\u636e\u753b\u5e03\u3002",
+    developerCredit: "\u5c0f\u9648\u540c\u5b66\u5f00\u53d1",
     tools: "\u5de5\u5177",
     select: "\u9009\u62e9",
     brush: "\u753b\u7b14",
