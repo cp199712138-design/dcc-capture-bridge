@@ -1,11 +1,16 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { extname, isAbsolute, join, normalize, relative } from "node:path";
+import { createMockImageDataUrl, normalizeImageDataUrl } from "../API/task-api.mjs";
 
-const root = process.cwd();
+const root = normalize(process.cwd());
 const port = Number(process.env.PORT || 8765);
-const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-2";
+const OPENAI_IMAGE_MODEL_DEFAULT = "gpt-image-1";
+const BFL_BASE_URL_DEFAULT = "https://api.bfl.ai";
+const BFL_FAST_MODEL_DEFAULT = "flux-2-klein-9b";
+const BFL_FINAL_MODEL_DEFAULT = "flux-2-pro";
+const BFL_FLEX_MODEL_DEFAULT = "flux-2-flex";
 const TRANSPARENT_PIXEL_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 loadLocalEnv();
 const types = {
@@ -30,9 +35,11 @@ const server = http.createServer(async (req, res) => {
         provider,
         openai_configured: Boolean(process.env.OPENAI_API_KEY),
         openai_host: safeHost(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"),
-        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL),
+        bfl_configured: Boolean(process.env.BFL_API_KEY),
+        bfl_host: safeHost(process.env.BFL_BASE_URL || BFL_BASE_URL_DEFAULT),
+        custom_api_configured: Boolean(process.env.DCC_CUSTOM_API_URL && process.env.DCC_CUSTOM_API_KEY),
         custom_api_host: safeHost(process.env.DCC_CUSTOM_API_URL),
-        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY)
+        has_api_key: Boolean(process.env.OPENAI_API_KEY || process.env.DCC_CUSTOM_API_KEY || process.env.BFL_API_KEY)
       });
       return;
     }
@@ -63,11 +70,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    let path = decodeURIComponent(url.pathname);
-    if (path.startsWith("/capture-canvas/")) path = path.slice("/capture-canvas".length) || "/index.html";
-    if (path === "/") path = "/index.html";
-    const file = normalize(join(root, path));
-    if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
+    const requestPath = decodeURIComponent(url.pathname);
+    const relativePath = requestPath === "/" ? "capture-canvas/index.html" : requestPath.replace(/^\/+/, "");
+    let file = normalize(join(root, relativePath));
+    if (!existsSync(file) && relativePath.startsWith("capture-canvas/")) {
+      file = normalize(join(root, relativePath.slice("capture-canvas/".length)));
+    }
+    if (!isInsideRoot(file) || !existsSync(file) || !statSync(file).isFile()) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       res.end("Not found");
       return;
@@ -93,6 +102,11 @@ function sendJson(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
+function isInsideRoot(file) {
+  const pathFromRoot = relative(root, file);
+  return pathFromRoot === "" || (!pathFromRoot.startsWith("..") && !isAbsolute(pathFromRoot));
+}
+
 async function readJsonBody(req) {
   let raw = "";
   for await (const chunk of req) {
@@ -106,11 +120,15 @@ async function handleRealtimeRender(body) {
   const provider = chooseRuntimeProvider(body);
   if (provider === "openai-missing") return missingOpenAiConfig();
   if (provider === "custom-http-missing") return missingCustomConfig();
+  if (provider === "bfl-flux2-missing") return missingBflConfig();
   if (provider === "custom-http") return handleCustomRender(body);
+  if (provider === "bfl-flux2") return handleBflRender(body);
   if (provider !== "openai") {
+    const imageDataUrl = createMockImageDataUrl(body);
     return {
       ok: true,
       provider: "mock-local",
+      imageDataUrl,
       cn: "\u672c\u5730\u9884\u89c8",
       en: "Local Preview",
       message_cn: "\u6ca1\u6709\u68c0\u6d4b\u5230 OPENAI_API_KEY\uff0c\u6240\u4ee5\u53f3\u4fa7\u4f7f\u7528\u672c\u5730\u5b9e\u65f6\u9884\u89c8\u3002\u914d\u7f6e key \u540e\u4f1a\u8d70 API\u3002",
@@ -132,44 +150,54 @@ async function handleRealtimeRender(body) {
     };
   }
 
+  const config = providerConfigFromRequest(body).openai;
   const form = new FormData();
-  form.set("model", process.env.OPENAI_IMAGE_MODEL || OPENAI_IMAGE_MODEL_DEFAULT);
+  form.set("model", config.model || OPENAI_IMAGE_MODEL_DEFAULT);
   form.set("prompt", prompt || "Render the selected region as a clean product scene while preserving the source structure.");
   form.set("size", chooseApiSize(body.aspectRatio));
   form.set("quality", "low");
   form.append("image[]", new Blob([Buffer.from(source, "base64")], { type: "image/png" }), "source.png");
   form.set("mask", new Blob([Buffer.from(mask, "base64")], { type: "image/png" }), "mask.png");
 
-  const openAiBase = String(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
-  const response = await fetch(`${openAiBase}/images/edits`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: form
-  });
+  const openAiBase = normalizeBaseUrl(config.baseUrl || "https://api.openai.com/v1");
+  let response;
+  try {
+    response = await fetch(`${openAiBase}/images/edits`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${config.apiKey}`
+      },
+      body: form
+    });
+  } catch (error) {
+    return providerRequestException("openai", error);
+  }
 
-  const data = await response.json();
+  const text = await response.text();
+  const data = parseJsonResponse(text);
   if (!response.ok) {
+    const short = summarizeResponse(text) || "OpenAI API request failed.";
     return {
       ok: false,
       provider: "openai",
+      status: response.status,
       cn: "API \u9519\u8bef",
       en: "API Error",
-      message_cn: data.error?.message || "OpenAI API \u8bf7\u6c42\u5931\u8d25\u3002",
-      message_en: data.error?.message || "OpenAI API request failed."
+      message_cn: `API \u8fd4\u56de ${response.status}: ${short}`,
+      message_en: `API returned ${response.status}: ${short}`
     };
   }
 
-  const b64 = data.data?.[0]?.b64_json;
+  const imageDataUrl = extractImageDataUrl(data);
+  const short = imageDataUrl ? "" : summarizeResponse(text);
   return {
-    ok: Boolean(b64),
+    ok: Boolean(imageDataUrl),
     provider: "openai",
-    imageDataUrl: b64 ? `data:image/png;base64,${b64}` : "",
-    cn: b64 ? "API \u8f93\u51fa" : "\u6ca1\u6709\u56fe\u50cf",
-    en: b64 ? "API Output" : "No Image",
-    message_cn: b64 ? "API \u5df2\u8fd4\u56de\u56fe\u50cf\u3002" : "API \u6ca1\u6709\u8fd4\u56de\u56fe\u50cf\u6570\u636e\u3002",
-    message_en: b64 ? "API returned an image." : "API did not return image data."
+    imageDataUrl,
+    cn: imageDataUrl ? "API \u8f93\u51fa" : "\u6ca1\u6709\u56fe\u50cf",
+    en: imageDataUrl ? "API Output" : "No Image",
+    message_cn: imageDataUrl ? "API \u5df2\u8fd4\u56de\u56fe\u50cf\u3002" : `API \u6ca1\u6709\u8fd4\u56de\u56fe\u50cf\u6570\u636e\u3002${short ? ` ${short}` : ""}`,
+    message_en: imageDataUrl ? "API returned an image." : `API did not return image data.${short ? ` ${short}` : ""}`
   };
 }
 
@@ -189,6 +217,13 @@ async function handleProviderTest(body) {
       if (!response.ok) {
         return providerTestError("openai", response.status, text, "OpenAI API key or model check failed.");
       }
+      const data = parseJsonStrict(text);
+      if (!data) {
+        return openAiCompatibleJsonError(response.status, text);
+      }
+      if (!data.id && !data.object) {
+        return openAiCompatibleJsonError(response.status, text);
+      }
       return {
         ok: true,
         provider: "openai",
@@ -206,6 +241,7 @@ async function handleProviderTest(body) {
 
   if (provider === "custom-http") {
     if (!config.custom.url) return missingCustomConfig();
+    if (!config.custom.apiKey) return missingCustomKeyConfig();
     try {
       const response = await callCustomEndpoint({
         config: config.custom,
@@ -241,6 +277,19 @@ async function handleProviderTest(body) {
     }
   }
 
+  if (provider === "bfl-flux2") {
+    if (!config.bfl.apiKey) return missingBflConfig();
+    return {
+      ok: true,
+      provider: "bfl-flux2",
+      host: safeHost(config.bfl.baseUrl),
+      cn: "BFL FLUX.2 \u914d\u7f6e\u5df2\u5c31\u7eea",
+      en: "BFL FLUX.2 configured",
+      message_cn: "BFL API key \u5df2\u4fdd\u5b58\u3002\u6b64\u68c0\u67e5\u4e0d\u8c03\u7528\u751f\u6210\u7aef\u70b9\uff0c\u4e5f\u4e0d\u9a8c\u8bc1\u989d\u5ea6\u3001\u6a21\u578b\u6216\u751f\u6210\u53ef\u7528\u6027\u3002",
+      message_en: "BFL API key is saved. Generation endpoints were not called, so this does not validate credits, model access, or render availability."
+    };
+  }
+
   return {
     ok: false,
     provider: "mock-local",
@@ -266,13 +315,20 @@ function getProviderConfig() {
       auth_scheme: process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer",
       method: process.env.DCC_CUSTOM_API_METHOD || "POST",
       key_saved: Boolean(process.env.DCC_CUSTOM_API_KEY)
+    },
+    bfl: {
+      base_url: process.env.BFL_BASE_URL || BFL_BASE_URL_DEFAULT,
+      fast_model: process.env.BFL_FAST_MODEL || BFL_FAST_MODEL_DEFAULT,
+      final_model: process.env.BFL_FINAL_MODEL || BFL_FINAL_MODEL_DEFAULT,
+      flex_model: process.env.BFL_FLEX_MODEL || BFL_FLEX_MODEL_DEFAULT,
+      key_saved: Boolean(process.env.BFL_API_KEY)
     }
   };
 }
 
 function saveProviderConfig(body) {
   const provider = String(body.provider || "");
-  if (provider !== "openai" && provider !== "custom-http") {
+  if (provider !== "openai" && provider !== "custom-http" && provider !== "bfl-flux2") {
     return { ok: false, message: "Unsupported provider" };
   }
 
@@ -281,13 +337,19 @@ function saveProviderConfig(body) {
     updates.OPENAI_BASE_URL = String(body.baseUrl || "https://api.openai.com/v1").trim();
     updates.OPENAI_IMAGE_MODEL = String(body.model || OPENAI_IMAGE_MODEL_DEFAULT).trim();
     if (String(body.apiKey || "").trim()) updates.OPENAI_API_KEY = String(body.apiKey).trim();
-  } else {
+  } else if (provider === "custom-http") {
     updates.DCC_CUSTOM_API_URL = String(body.baseUrl || "").trim();
     updates.DCC_CUSTOM_API_MODEL = String(body.model || "").trim();
     updates.DCC_CUSTOM_API_AUTH_HEADER = String(body.authHeader || "authorization").trim();
     updates.DCC_CUSTOM_API_AUTH_SCHEME = String(body.authScheme || "Bearer").trim();
     updates.DCC_CUSTOM_API_METHOD = String(body.method || "POST").trim();
     if (String(body.apiKey || "").trim()) updates.DCC_CUSTOM_API_KEY = String(body.apiKey).trim();
+  } else if (provider === "bfl-flux2") {
+    updates.BFL_BASE_URL = String(body.baseUrl || BFL_BASE_URL_DEFAULT).trim();
+    updates.BFL_FAST_MODEL = String(body.fastModel || BFL_FAST_MODEL_DEFAULT).trim();
+    updates.BFL_FINAL_MODEL = String(body.finalModel || BFL_FINAL_MODEL_DEFAULT).trim();
+    updates.BFL_FLEX_MODEL = String(body.flexModel || BFL_FLEX_MODEL_DEFAULT).trim();
+    if (String(body.apiKey || "").trim()) updates.BFL_API_KEY = String(body.apiKey).trim();
   }
 
   writeEnvUpdates(updates);
@@ -307,12 +369,17 @@ function writeEnvUpdates(updates) {
     }
   }
   for (const [key, value] of Object.entries(updates)) {
-    if (value !== "") current[key] = value;
+    if (value !== "") current[key] = sanitizeEnvValue(value);
   }
   const ordered = [
     "OPENAI_BASE_URL",
     "OPENAI_API_KEY",
     "OPENAI_IMAGE_MODEL",
+    "BFL_BASE_URL",
+    "BFL_API_KEY",
+    "BFL_FAST_MODEL",
+    "BFL_FINAL_MODEL",
+    "BFL_FLEX_MODEL",
     "DCC_CUSTOM_API_URL",
     "DCC_CUSTOM_API_KEY",
     "DCC_CUSTOM_API_MODEL",
@@ -333,11 +400,23 @@ function writeEnvUpdates(updates) {
 function chooseRuntimeProvider(body) {
   const requested = String(body.provider || "auto");
   if (requested === "mock-local") return "mock-local";
-  if (requested === "custom-http") return process.env.DCC_CUSTOM_API_URL ? "custom-http" : "custom-http-missing";
-  if (requested === "openai") return process.env.OPENAI_API_KEY ? "openai" : "openai-missing";
-  if (process.env.DCC_CUSTOM_API_URL) return "custom-http";
-  if (process.env.OPENAI_API_KEY) return "openai";
+  if (requested === "custom-http") {
+    const config = providerConfigFromRequest(body).custom;
+    return config.url && config.apiKey ? "custom-http" : "custom-http-missing";
+  }
+  if (requested === "openai") {
+    const config = providerConfigFromRequest(body).openai;
+    return config.apiKey ? "openai" : "openai-missing";
+  }
+  if (requested === "bfl-flux2") {
+    const config = providerConfigFromRequest(body).bfl;
+    return config.apiKey ? "bfl-flux2" : "bfl-flux2-missing";
+  }
   return "mock-local";
+}
+
+function sanitizeEnvValue(value) {
+  return String(value || "").replace(/[\r\n]+/g, " ").trim();
 }
 
 function missingOpenAiConfig() {
@@ -346,8 +425,8 @@ function missingOpenAiConfig() {
     provider: "openai-missing",
     cn: "OpenAI \u672a\u914d\u7f6e",
     en: "OpenAI Not Configured",
-    message_cn: "\u8bf7\u5728 .env \u6216\u547d\u4ee4\u884c\u8bbe\u7f6e OPENAI_API_KEY\uff0c\u7136\u540e\u91cd\u542f node serve-static.mjs\u3002",
-    message_en: "Set OPENAI_API_KEY in .env or your shell, then restart node serve-static.mjs."
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 OPENAI_API_KEY\uff0c\u6216\u5728 .env / \u547d\u4ee4\u884c\u8bbe\u7f6e\u3002",
+    message_en: "Save OPENAI_API_KEY in API Settings, or set it in .env / your shell."
   };
 }
 
@@ -357,8 +436,30 @@ function missingCustomConfig() {
     provider: "custom-http-missing",
     cn: "\u81ea\u5b9a\u4e49 API \u672a\u914d\u7f6e",
     en: "Custom API Not Configured",
-    message_cn: "\u8bf7\u5728 .env \u8bbe\u7f6e DCC_CUSTOM_API_URL\uff0c\u53ef\u9009\u8bbe\u7f6e DCC_CUSTOM_API_KEY\uff0c\u7136\u540e\u91cd\u542f\u670d\u52a1\u3002",
-    message_en: "Set DCC_CUSTOM_API_URL in .env, optionally DCC_CUSTOM_API_KEY, then restart the server."
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 DCC_CUSTOM_API_URL \u548c DCC_CUSTOM_API_KEY\uff0c\u6216\u5728 .env \u8bbe\u7f6e\u3002",
+    message_en: "Save DCC_CUSTOM_API_URL and DCC_CUSTOM_API_KEY in API Settings, or set them in .env."
+  };
+}
+
+function missingCustomKeyConfig() {
+  return {
+    ok: false,
+    provider: "custom-http-missing",
+    cn: "\u81ea\u5b9a\u4e49 API Key \u672a\u914d\u7f6e",
+    en: "Custom API Key Not Configured",
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 DCC_CUSTOM_API_KEY\uff0c\u6216\u5728 .env \u8bbe\u7f6e\u3002",
+    message_en: "Save DCC_CUSTOM_API_KEY in API Settings, or set it in .env."
+  };
+}
+
+function missingBflConfig() {
+  return {
+    ok: false,
+    provider: "bfl-flux2-missing",
+    cn: "BFL FLUX.2 \u672a\u914d\u7f6e",
+    en: "BFL FLUX.2 Not Configured",
+    message_cn: "\u8bf7\u5728 API Settings \u4fdd\u5b58 BFL_API_KEY\uff0c\u6216\u5728 .env / \u547d\u4ee4\u884c\u8bbe\u7f6e\u3002",
+    message_en: "Save BFL_API_KEY in API Settings, or set it in .env / your shell."
   };
 }
 
@@ -374,19 +475,19 @@ async function handleCustomRender(body) {
     };
   }
 
-  const config = providerConfigFromRequest({ provider: "custom-http" }).custom;
-  const response = await callCustomEndpoint({
-    config,
-    payload: customRequestPayload(body)
-  });
+  const config = providerConfigFromRequest({ ...body, provider: "custom-http" }).custom;
+  let response;
+  try {
+    response = await callCustomEndpoint({
+      config,
+      payload: customRequestPayload({ ...body, model: body.model || config.model })
+    });
+  } catch (error) {
+    return providerRequestException("custom-http", error);
+  }
 
   const text = await response.text();
-  let data = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { message: text };
-  }
+  const data = parseJsonResponse(text);
 
   if (!response.ok) {
     return {
@@ -400,14 +501,143 @@ async function handleCustomRender(body) {
   }
 
   const imageDataUrl = extractImageDataUrl(data);
+  if (!imageDataUrl) {
+    const short = summarizeResponse(text) || "Custom API returned no image data.";
+    return {
+      ok: false,
+      provider: "custom-http",
+      imageDataUrl: "",
+      cn: "\u81ea\u5b9a\u4e49 API \u6ca1\u6709\u56fe\u50cf",
+      en: "Custom API returned no image",
+      message_cn: `\u5ba2\u6237 API \u5df2\u54cd\u5e94\uff0c\u4f46\u6ca1\u6709\u8fd4\u56de imageDataUrl \u6216 b64_json: ${short}`,
+      message_en: `Customer API responded but did not return imageDataUrl or b64_json: ${short}`
+    };
+  }
   return {
     ok: true,
     provider: "custom-http",
     imageDataUrl,
-    cn: imageDataUrl ? "\u81ea\u5b9a\u4e49 API \u8f93\u51fa" : "\u81ea\u5b9a\u4e49 API \u5df2\u54cd\u5e94",
-    en: imageDataUrl ? "Custom API Output" : "Custom API Response",
+    cn: "\u81ea\u5b9a\u4e49 API \u8f93\u51fa",
+    en: "Custom API Output",
     message_cn: data.message_cn || data.message || "\u5ba2\u6237 API \u5df2\u8fd4\u56de\u3002",
     message_en: data.message_en || data.message || "Customer API returned a response."
+  };
+}
+
+async function handleBflRender(body) {
+  const config = providerConfigFromRequest(body).bfl;
+  if (!config.apiKey) return missingBflConfig();
+
+  const renderTier = String(body.renderTier || "fast_preview");
+  const model = chooseBflModel(config, renderTier);
+  const payload = {
+    prompt: String(body.prompt || "").trim(),
+    input_image: body.sourceImageDataUrl || undefined,
+    seed: Number.isFinite(Number(body.seed)) ? Number(body.seed) : undefined,
+    output_format: "png"
+  };
+  const aspectRatio = normalizeBflAspectRatio(body.output?.aspect_ratio || body.aspectRatio);
+  if (aspectRatio) payload.aspect_ratio = aspectRatio;
+
+  let response;
+  try {
+    response = await fetchWithTimeout(`${normalizeBaseUrl(config.baseUrl)}/v1/${encodeURIComponent(model)}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-key": config.apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    return providerRequestException("bfl-flux2", error);
+  }
+
+  const text = await response.text();
+  const data = parseJsonResponse(text);
+  if (!response.ok) {
+    return bflError(response.status, text, "BFL FLUX.2 submit failed.");
+  }
+  if (!data.polling_url) {
+    return bflError(response.status, text, "BFL FLUX.2 did not return polling_url.");
+  }
+
+  return pollBflResult(data.polling_url, config, { renderTier, model, submit: data });
+}
+
+async function pollBflResult(pollingUrl, config, meta = {}) {
+  let lastText = "";
+  const started = Date.now();
+  const timeoutMs = Math.max(1000, Number(process.env.BFL_POLL_TIMEOUT_MS || 90000));
+  let attempt = 0;
+  while (Date.now() - started < timeoutMs) {
+    let response;
+    try {
+      response = await fetchWithTimeout(resolveBflUrl(pollingUrl, config.baseUrl), {
+        headers: { "x-key": config.apiKey }
+      }, 20000);
+    } catch (error) {
+      return providerRequestException("bfl-flux2", error);
+    }
+
+    lastText = await response.text();
+    const data = parseJsonResponse(lastText);
+    if (!response.ok) return bflError(response.status, lastText, "BFL FLUX.2 polling failed.");
+
+    const status = normalizeBflStatus(data.status);
+    if (status === "error" || status === "failed") return bflError(response.status, lastText, "BFL FLUX.2 render failed.");
+    if (status === "request moderated") return bflError(response.status, lastText, "BFL FLUX.2 request was moderated.");
+    if (status === "content moderated") return bflError(response.status, lastText, "BFL FLUX.2 content was moderated.");
+    if (status === "task not found") return bflError(response.status, lastText, "BFL FLUX.2 task was not found.");
+    if (status === "ready") {
+      if (!data.result?.sample) return bflError(response.status, lastText, "BFL FLUX.2 returned no result.sample.");
+      return downloadBflSample(data.result.sample, config, meta);
+    }
+
+    attempt += 1;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(3000, 700 + attempt * 250)));
+  }
+  return bflError(408, lastText, "BFL FLUX.2 is still pending after 90 seconds. Try again later or use Fast preview.");
+}
+
+function normalizeBflStatus(value) {
+  return String(value || "pending").trim().toLowerCase();
+}
+
+function normalizeBflAspectRatio(value) {
+  const text = String(value || "").trim();
+  return /^(?:[1-9]\d?):(?:[1-9]\d?)$/.test(text) ? text : "";
+}
+
+async function downloadBflSample(sampleUrl, config, meta = {}) {
+  let response;
+  try {
+    response = await fetchWithTimeout(resolveBflUrl(sampleUrl, config.baseUrl), {
+      headers: { "x-key": config.apiKey }
+    });
+  } catch (error) {
+    return providerRequestException("bfl-flux2", error);
+  }
+  if (!response.ok) {
+    const text = await response.text();
+    return bflError(response.status, text, "BFL FLUX.2 sample download failed.");
+  }
+  const contentType = response.headers.get("content-type")?.split(";")[0] || "image/png";
+  const bytes = Buffer.from(await response.arrayBuffer());
+  return {
+    ok: true,
+    provider: "bfl-flux2",
+    renderTier: meta.renderTier || "fast_preview",
+    model: meta.model || "",
+    id: meta.submit?.id || "",
+    cost: meta.submit?.cost ?? null,
+    input_mp: meta.submit?.input_mp ?? null,
+    output_mp: meta.submit?.output_mp ?? null,
+    imageDataUrl: `data:${contentType};base64,${bytes.toString("base64")}`,
+    cn: "BFL FLUX.2 \u8f93\u51fa",
+    en: "BFL FLUX.2 Output",
+    message_cn: "BFL FLUX.2 \u5df2\u8fd4\u56de\u56fe\u50cf\u3002",
+    message_en: "BFL FLUX.2 returned an image."
   };
 }
 
@@ -426,6 +656,13 @@ function providerConfigFromRequest(body = {}) {
       authScheme: String(body.authScheme || process.env.DCC_CUSTOM_API_AUTH_SCHEME || "Bearer").trim(),
       method: String(body.method || process.env.DCC_CUSTOM_API_METHOD || "POST").trim().toUpperCase(),
       headers: parseJsonEnv("DCC_CUSTOM_API_HEADERS")
+    },
+    bfl: {
+      baseUrl: String(body.baseUrl || process.env.BFL_BASE_URL || BFL_BASE_URL_DEFAULT).trim(),
+      apiKey: String(body.apiKey || process.env.BFL_API_KEY || "").trim(),
+      fastModel: String(body.fastModel || process.env.BFL_FAST_MODEL || BFL_FAST_MODEL_DEFAULT).trim(),
+      finalModel: String(body.finalModel || process.env.BFL_FINAL_MODEL || BFL_FINAL_MODEL_DEFAULT).trim(),
+      flexModel: String(body.flexModel || process.env.BFL_FLEX_MODEL || BFL_FLEX_MODEL_DEFAULT).trim()
     }
   };
 }
@@ -434,10 +671,21 @@ function normalizeBaseUrl(value) {
   return String(value || "https://api.openai.com/v1").replace(/\/+$/, "");
 }
 
+function chooseBflModel(config, renderTier) {
+  if (renderTier === "final_render") return config.finalModel;
+  if (renderTier === "flex") return config.flexModel;
+  return config.fastModel;
+}
+
+function resolveBflUrl(value, baseUrl) {
+  return new URL(value, `${normalizeBaseUrl(baseUrl)}/`).toString();
+}
+
 function customRequestPayload(body, isTest = false) {
   return {
     schema_version: body.schema_version,
     session_id: body.session_id,
+    model: body.model || "",
     task: body.task || "regional_scene_generation",
     prompt: body.prompt || "",
     strength: body.strength,
@@ -513,14 +761,89 @@ function providerTestException(provider, error) {
   };
 }
 
+function openAiCompatibleJsonError(status, text) {
+  const short = summarizeResponse(text) || "No response body.";
+  return {
+    ok: false,
+    provider: "openai",
+    status,
+    cn: "API \u7aef\u70b9\u4e0d\u517c\u5bb9",
+    en: "API endpoint is not compatible",
+    message_cn: `API \u8fd4\u56de ${status}\uff0c\u4f46 /models \u7aef\u70b9\u8fd4\u56de\u7684\u662f HTML \u6216\u975e OpenAI-compatible JSON model metadata\u3002\u6458\u8981: ${short}`,
+    message_en: `API returned ${status}, but the /models endpoint returned HTML or non OpenAI-compatible JSON model metadata. Summary: ${short}`
+  };
+}
+
+function providerRequestException(provider, error) {
+  const text = redactSensitiveText(String(error.message || error));
+  return {
+    ok: false,
+    provider,
+    cn: "API \u8bf7\u6c42\u5931\u8d25",
+    en: "API request failed",
+    message_cn: text,
+    message_en: text
+  };
+}
+
+function bflError(status, text, fallback) {
+  const short = redactSensitiveText(summarizeResponse(text) || fallback);
+  return {
+    ok: false,
+    provider: "bfl-flux2",
+    status,
+    imageDataUrl: "",
+    cn: "BFL FLUX.2 \u9519\u8bef",
+    en: "BFL FLUX.2 Error",
+    message_cn: `BFL FLUX.2 \u8fd4\u56de ${status}: ${short}`,
+    message_en: `BFL FLUX.2 returned ${status}: ${short}`
+  };
+}
+
 function summarizeResponse(text) {
   if (!text) return "";
   try {
     const data = JSON.parse(text);
-    return data.error?.message || data.message || JSON.stringify(data).slice(0, 240);
+    return redactSensitiveText(data.error?.message || data.message || data.details?.message || JSON.stringify(data).slice(0, 240));
   } catch {
-    return String(text).slice(0, 240);
+    return redactSensitiveText(summarizeHtmlText(text));
   }
+}
+
+function redactSensitiveText(text) {
+  return String(text || "")
+    .replace(/sk-(?!\.{3})(?:proj-)?[A-Za-z0-9_-]{12,}/g, "sk-...[redacted]")
+    .replace(/(x-key|authorization|api[_-]?key)(\s*[:=]\s*)(Bearer\s+)?[^\s,"'}]+/gi, "$1$2[redacted]");
+}
+
+function parseJsonResponse(text) {
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return { message: summarizeHtmlText(text) };
+  }
+}
+
+function parseJsonStrict(text) {
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function summarizeHtmlText(text) {
+  return String(text)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
 }
 
 function parseJsonEnv(name) {
@@ -534,13 +857,11 @@ function parseJsonEnv(name) {
 }
 
 function extractImageDataUrl(data) {
-  const value = data.imageDataUrl || data.image_data_url || data.output_image || data.image_url || data.url;
-  if (typeof value === "string" && value.startsWith("data:image/")) return value;
-  const b64 = data.b64_json || data.image_base64 || data.data?.[0]?.b64_json;
-  return b64 ? `data:image/png;base64,${b64}` : "";
+  return normalizeImageDataUrl(data);
 }
 
 function loadLocalEnv() {
+  if (process.env.DCC_SKIP_DOTENV === "1") return;
   loadEnvFile(join(root, ".env"));
 }
 
@@ -578,8 +899,8 @@ function stripDataUrl(value) {
 }
 
 function chooseApiSize(ratio) {
-  if (ratio === "16:9") return "1536x1024";
-  if (ratio === "4:5") return "1024x1536";
+  if (ratio === "3:2") return "1536x1024";
+  if (ratio === "2:3") return "1024x1536";
   return "1024x1024";
 }
 

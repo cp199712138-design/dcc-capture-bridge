@@ -12,13 +12,72 @@ sync, privacy checks, and release notes.
 - Simulated generation flow exists.
 - Headless Chrome browser smoke test exists.
 - GitHub push has been validated once.
+- `node capture-canvas/check-page.mjs --all` can run the full pass in order.
+- When `browser-smoke.mjs` is skipped for local Chrome/CDP/GPU-cache reasons,
+  the full pass reports `all_checks_requires_manual_browser=true` instead of
+  a clean `all_checks_ok`.
+
+## Smoke Commands
+
+Run individual checks when isolating failures:
+
+```powershell
+node capture-canvas/check-page.mjs
+node capture-canvas/simulate-flow.mjs
+node capture-canvas/test-api-contract.mjs
+node capture-canvas/browser-smoke.mjs
+```
+
+Run the full release pass:
+
+```powershell
+node capture-canvas/check-page.mjs --all
+```
+
+`browser-smoke.mjs` requires local Chrome or Edge. If it fails with a CDP,
+Chrome target, websocket, or GPU-cache error while the other checks pass, record
+the exact error and complete the manual browser checklist before customer
+handoff.
+
+## Secret Scan
+
+Use a real-key pattern, not a plain `sk-` search:
+
+```powershell
+rg --pcre2 'sk-(?!\.\.\.)(?!test\b)(?:proj-)?[A-Za-z0-9_-]{20,}' . -g '!node_modules' -g '!.git' -g '!.env' -g '!.env.*'
+```
+
+Allowed placeholders include `sk-...`, `test-key`, empty `.env.example` values,
+and documentation that explains key setup. Real customer or developer secrets
+must never be committed.
+
+## Customer-Test Release Notes
+
+This repair round is browser-only. Mark 3ds Max and Blender as frozen follow-up
+areas unless a repository safety check or customer-test note requires mentioning
+their current preview files.
+
+Use this structure for each customer-test handoff:
+
+```text
+Build:
+Commit:
+URL:
+What is ready:
+What is preview-only:
+Provider/API setup required:
+Known limits:
+Verification run:
+Customer test steps:
+Rollback / previous build:
+```
 
 ## Next Work
 
-- Add a single `npm` or PowerShell command that runs all tests.
 - Save release notes per customer-test build.
 - Add a small pre-push checklist for secrets and large assets.
 - Keep temporary clone/test output outside committed source.
+- Revisit 3ds Max and Blender only after the browser Instant Canvas pass is stable.
 
 ## Key Files
 
@@ -35,5 +94,8 @@ sync, privacy checks, and release notes.
 - `node capture-canvas/simulate-flow.mjs` passes.
 - `node capture-canvas/test-api-contract.mjs` passes.
 - `node capture-canvas/browser-smoke.mjs` passes.
-- `rg 'sk-' .` finds no real API keys.
+- `node capture-canvas/check-page.mjs --all` passes, or reports
+  `all_checks_requires_manual_browser=true` with manual Chrome verification
+  completed before customer handoff.
+- Real-key scan finds no committed API keys while allowing placeholders.
 

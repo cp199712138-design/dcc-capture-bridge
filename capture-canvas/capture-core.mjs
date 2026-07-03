@@ -20,6 +20,9 @@ export function registerAsset(state, asset) {
     height: Number(asset.height || 0),
     source: asset.source || "browser",
   };
+  for (const key of ["format", "triangleCount", "bounds", "center", "span"]) {
+    if (asset[key] !== undefined) normalized[key] = asset[key];
+  }
 
   return {
     ...state,

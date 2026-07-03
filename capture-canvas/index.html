@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Instant Canvas</title>
+  <title>Instant Canvas · 小陈同学</title>
   <style>
     :root {
       color-scheme: dark;
@@ -44,7 +44,7 @@
     .app {
       height: 100dvh;
       display: grid;
-      grid-template-columns: 208px minmax(0,1fr);
+      grid-template-columns: 224px minmax(0,1fr);
       background:
         linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
         linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px),
@@ -67,6 +67,17 @@
     .brand { display: grid; gap: 5px; padding: 4px 4px 8px; }
     .brand strong { font-size: 15px; letter-spacing: 0; }
     .brand span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .brand .credit {
+      width: max-content;
+      max-width: 100%;
+      padding: 4px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--accent-2);
+      background: rgba(136,212,192,.08);
+      font-size: 11px;
+      font-weight: 700;
+    }
     .section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
     .section-title { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
     .tool-grid { display: grid; gap: 7px; }
@@ -143,21 +154,21 @@
     }
     .modal.open { display: grid; }
     .api-panel {
-      width: min(1040px, 100%);
+      width: min(980px, 100%);
       max-height: min(760px, calc(100vh - 56px));
       display: grid;
       grid-template-columns: 260px minmax(0,1fr);
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 18px;
-      background: #f4f6f9;
-      color: #101827;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 14px;
+      background: #11151d;
+      color: var(--text);
       box-shadow: 0 30px 90px rgba(0,0,0,.5);
     }
     .api-side {
       padding: 20px;
-      border-right: 1px solid #dfe5ee;
-      background: #eef2f7;
+      border-right: 1px solid rgba(255,255,255,.1);
+      background: #0c0f14;
     }
     .api-main {
       min-width: 0;
@@ -165,7 +176,7 @@
       padding: 22px 24px 24px;
     }
     .api-panel h2 { margin: 0; font-size: 26px; letter-spacing: 0; }
-    .api-panel p { margin: 6px 0 0; color: #65758b; font-size: 13px; line-height: 1.5; }
+    .api-panel p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
     .api-platform {
       width: 100%;
       min-height: 58px;
@@ -174,28 +185,30 @@
       grid-template-columns: 34px 1fr;
       align-items: center;
       gap: 10px;
-      border: 1px solid #dfe5ee;
-      border-radius: 12px;
-      background: #fff;
-      color: #101827;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 11px;
+      background: rgba(255,255,255,.045);
+      color: var(--soft);
       padding: 8px 10px;
       text-align: left;
     }
-    .api-platform.active { border-color: #7aa897; background: #e7f5ef; }
+    .api-platform.active { color: var(--text); border-color: rgba(136,212,192,.55); background: rgba(136,212,192,.12); }
+    .api-platform small { color: var(--muted); }
     .api-platform b {
       width: 30px;
       height: 30px;
       display: grid;
       place-items: center;
-      border-radius: 9px;
-      background: #e9edf3;
+      border-radius: 8px;
+      color: #07100d;
+      background: var(--accent-2);
     }
     .api-form-card {
       margin-top: 18px;
       padding: 20px;
-      border: 1px solid #dfe5ee;
-      border-radius: 16px;
-      background: #fff;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 13px;
+      background: #151a23;
     }
     .api-row {
       display: grid;
@@ -203,18 +216,19 @@
       gap: 14px;
     }
     .api-field { display: grid; gap: 7px; margin-top: 14px; }
-    .api-field label { color: #65758b; font-size: 12px; font-weight: 800; }
+    .api-field label { color: var(--muted); font-size: 12px; font-weight: 800; }
     .api-field input, .api-field select {
       width: 100%;
       min-height: 44px;
-      border: 1px solid #dbe3ee;
-      border-radius: 11px;
-      color: #101827;
-      background: #f3f6fa;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      color: var(--text);
+      background: #0d1118;
       padding: 0 12px;
       font-weight: 700;
     }
-    .api-field small { color: #7d8ca3; }
+    .api-field select option { color: var(--text); background: #0d1118; }
+    .api-field small { color: var(--muted); }
     .api-buttons {
       margin-top: 18px;
       display: flex;
@@ -226,17 +240,17 @@
     .api-buttons div { display: flex; gap: 10px; flex-wrap: wrap; }
     .api-btn {
       min-height: 42px;
-      border: 1px solid #dbe3ee;
-      border-radius: 11px;
-      background: #fff;
-      color: #101827;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      background: rgba(255,255,255,.055);
+      color: var(--text);
       padding: 0 14px;
       font-weight: 900;
     }
-    .api-btn.primary { color: #fff; background: #101827; border-color: #101827; }
+    .api-btn.primary { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); }
     .api-status-line {
       margin-top: 12px;
-      color: #65758b;
+      color: var(--muted);
       font-size: 13px;
       font-weight: 700;
     }
@@ -265,7 +279,7 @@
     .title { min-width: 0; display: flex; align-items: baseline; gap: 10px; }
     .title strong { font-size: 14px; white-space: nowrap; }
     .title span { min-width: 0; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
     .pill, .lang button {
       min-height: 28px;
       display: inline-flex;
@@ -280,6 +294,7 @@
       white-space: nowrap;
     }
     .pill.busy { color: #07100d; background: var(--warn); border-color: var(--warn); font-weight: 800; }
+    .pill.queued { color: #07100d; background: #d8c991; border-color: #d8c991; font-weight: 800; }
     .pill.api { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
     .pill.error { color: #fff; background: rgba(215,121,128,.24); border-color: rgba(215,121,128,.48); }
     .lang { display: flex; gap: 6px; }
@@ -291,12 +306,30 @@
       min-height: 0;
       display: grid;
       grid-template-columns: minmax(0,1fr) minmax(0,1fr);
-      gap: 2px;
+      gap: 10px;
       background: #050608;
-      padding-bottom: 126px;
+      padding: 10px 10px 132px;
+      border-top: 1px solid rgba(255,255,255,.04);
     }
-    .pane { position: relative; overflow: hidden; background: var(--canvas); }
-    .pane.output { background: var(--canvas-2); }
+    .pane {
+      position: relative;
+      overflow: hidden;
+      background: var(--canvas);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.16);
+    }
+    .pane.output {
+      background: var(--canvas-2);
+    }
+    .pane::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      box-shadow: inset 0 0 80px rgba(0,0,0,.08);
+    }
     canvas { display: block; width: 100%; height: 100%; touch-action: none; }
     #sourceCanvas { cursor: none; }
     .badge {
@@ -346,8 +379,8 @@
 
     .floating {
       position: fixed;
-      left: calc(208px + (100vw - 208px) / 2);
-      bottom: 178px;
+      left: calc(224px + (100vw - 224px) / 2);
+      bottom: 136px;
       z-index: 13;
       transform: translateX(-50%);
       display: flex;
@@ -426,32 +459,34 @@
 
     .footer {
       position: fixed;
-      left: 208px;
+      left: 224px;
       right: 0;
       bottom: 0;
       z-index: 12;
       display: grid;
       place-items: start center;
-      padding: 10px 18px 16px;
+      padding: 8px 18px 12px;
       border-top: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(8,9,11,.2), rgba(8,9,11,.96) 20%, rgba(8,9,11,.98));
+      background: linear-gradient(180deg, rgba(8,9,11,0), rgba(8,9,11,.86) 38%, rgba(8,9,11,.96));
       pointer-events: none;
     }
     .prompt {
-      width: min(680px, calc(100vw - 36px));
+      width: min(980px, calc(100vw - 260px));
       display: grid;
-      gap: 9px;
-      padding: 11px 12px;
+      grid-template-columns: minmax(280px,1fr) max-content;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
       border: 1px solid var(--line-2);
-      border-radius: 16px;
+      border-radius: 13px;
       background: rgba(30,34,42,.94);
       box-shadow: var(--shadow);
       pointer-events: auto;
     }
     textarea {
       width: 100%;
-      min-height: 42px;
-      max-height: 72px;
+      min-height: 38px;
+      max-height: 54px;
       resize: none;
       border: 0;
       outline: none;
@@ -459,8 +494,8 @@
       background: transparent;
       line-height: 1.45;
     }
-    .prompt-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .chips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .prompt-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
+    .chips { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; min-width: 0; max-width: 470px; }
     .chip {
       min-height: 28px;
       border: 1px solid rgba(255,255,255,.09);
@@ -472,6 +507,12 @@
       pointer-events: auto;
     }
     .chip.active { color: #07100d; background: var(--accent-2); border-color: var(--accent-2); font-weight: 800; }
+    select.chip {
+      height: 28px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+    }
     .primary {
       min-height: 38px;
       border: 0;
@@ -482,9 +523,13 @@
       font-weight: 900;
       white-space: nowrap;
     }
+    .primary.danger {
+      color: #fff;
+      background: rgba(215,121,128,.86);
+    }
     .status {
-      width: min(680px, calc(100vw - 36px));
-      margin-top: 7px;
+      width: min(980px, calc(100vw - 260px));
+      margin-top: 6px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -495,6 +540,13 @@
     .status strong { color: var(--text); }
     input[type="file"] { display: none; }
 
+    @media (max-width: 1100px) {
+      .prompt { grid-template-columns: 1fr; }
+      .prompt-actions { align-items: stretch; flex-direction: column; }
+      .chips { justify-content: flex-start; max-width: none; }
+      .primary { width: 100%; }
+      .floating { flex-wrap: wrap; justify-content: center; }
+    }
     @media (max-width: 980px) {
       body { overflow: auto; }
       .app { height: auto; min-height: 100vh; grid-template-columns: 1fr; }
@@ -503,15 +555,14 @@
       .main { min-height: 820px; }
       .footer { left: 0; }
       .floating { left: 50%; max-width: calc(100vw - 28px); }
+      .prompt, .status { width: min(760px, calc(100vw - 28px)); }
     }
     @media (max-width: 720px) {
       .rail { grid-template-columns: 1fr; }
       .main { grid-template-rows: auto minmax(640px,1fr) auto; }
       .top { align-items: flex-start; flex-direction: column; padding: 12px; }
-      .workspace { grid-template-columns: 1fr; }
-      .floating { bottom: 220px; flex-wrap: wrap; justify-content: center; }
-      .prompt-actions { align-items: stretch; flex-direction: column; }
-      .primary { width: 100%; }
+      .workspace { grid-template-columns: 1fr; padding-bottom: 260px; }
+      .floating { bottom: 258px; }
     }
   </style>
 </head>
@@ -520,58 +571,59 @@
     <aside class="rail">
       <div class="brand">
         <strong>Instant Canvas</strong>
-        <span data-i18n="tagline">Realtime evidence canvas for AI product generation.</span>
+        <span data-i18n="tagline">面向区域生成的实时 AI 画布。</span>
+        <span class="credit" data-i18n="developerCredit">小陈同学开发</span>
       </div>
 
       <section class="section">
-        <div class="section-title" data-i18n="tools">Tools</div>
+        <div class="section-title" data-i18n="tools">工具</div>
         <div class="tool-grid">
-          <button class="tool" id="selectTool" data-tool="select"><b>V</b><span data-i18n="select">Select</span></button>
-          <button class="tool active" id="brushChip" data-tool="brush"><b>B</b><span data-i18n="brush">Brush</span></button>
-          <button class="tool" id="eraserChip" data-tool="erase"><b>E</b><span data-i18n="eraser">Eraser</span></button>
-          <button class="tool" id="rectTool" data-tool="rect"><b>R</b><span data-i18n="rect">Rectangle</span></button>
-          <button class="tool" id="circleTool" data-tool="circle"><b>C</b><span data-i18n="circle">Circle</span></button>
+          <button class="tool" id="selectTool" data-tool="select"><b>V</b><span data-i18n="select">选择</span></button>
+          <button class="tool active" id="brushChip" data-tool="brush"><b>B</b><span data-i18n="brush">画笔</span></button>
+          <button class="tool" id="eraserChip" data-tool="erase"><b>E</b><span data-i18n="eraser">橡皮擦</span></button>
+          <button class="tool" id="rectTool" data-tool="rect"><b>R</b><span data-i18n="rect">矩形</span></button>
+          <button class="tool" id="circleTool" data-tool="circle"><b>C</b><span data-i18n="circle">圆形</span></button>
         </div>
       </section>
 
       <section class="section">
-        <div class="section-title" data-i18n="input">Input</div>
-        <button class="tool" id="importImageNav"><b>IMG</b><span data-i18n="importImage">Import image</span></button>
-        <button class="tool" id="importModelNav"><b>3D</b><span data-i18n="importModel">Import model</span></button>
-        <button class="tool" id="exampleNav"><b>EX</b><span data-i18n="example">Example</span></button>
+        <div class="section-title" data-i18n="input">输入</div>
+        <button class="tool" id="importImageNav"><b>图</b><span data-i18n="importImage">导入图片</span></button>
+        <button class="tool" id="importModelNav"><b>3D</b><span data-i18n="importModel">导入模型</span></button>
+        <button class="tool" id="exampleNav"><b>例</b><span data-i18n="example">示例</span></button>
       </section>
 
       <section class="section">
-        <div class="section-title" data-i18n="controls">Controls</div>
-        <label class="field"><span data-i18n="provider">Provider</span><select id="providerSelect"><option value="auto" data-i18n="providerAuto">Auto</option><option value="mock-local" data-i18n="providerMock">Mock</option><option value="openai">OpenAI</option><option value="custom-http" data-i18n="providerCustom">Custom API</option></select></label>
-        <label class="field"><span data-i18n="brushSize">Brush size</span><input id="brushSize" type="range" min="8" max="120" value="42"></label>
-        <label class="field"><span data-i18n="strength">Strength</span><input id="strength" type="range" min="0" max="100" value="62"></label>
+        <div class="section-title" data-i18n="controls">控制</div>
+        <label class="field"><span data-i18n="provider">提供方</span><select id="providerSelect"><option value="auto" data-i18n="providerAuto">自动</option><option value="mock-local" data-i18n="providerMock">本地预览</option><option value="openai">OpenAI</option><option value="custom-http" data-i18n="providerCustom">自定义 API</option><option value="bfl-flux2" data-i18n="providerBfl">FLUX.2</option></select></label>
+        <label class="field"><span data-i18n="brushSize">画笔大小</span><input id="brushSize" type="range" min="8" max="120" value="42"></label>
+        <label class="field"><span data-i18n="strength">强度</span><input id="strength" type="range" min="0" max="100" value="62"></label>
       </section>
 
       <section class="section">
         <div class="section-title">API</div>
         <div class="api-box">
-          <strong id="apiSummary">Local preview</strong>
-          <span id="apiHelp" data-i18n="apiHelp">Set .env, restart the server, then test the provider.</span>
+          <strong id="apiSummary">仅本地预览</strong>
+          <span id="apiHelp" data-i18n="apiHelp">填好 .env 并重启服务后，再测试提供方。</span>
           <div class="api-actions">
-            <button class="tool" id="openApiSettingsBtn"><span data-i18n="apiSettings">API Settings</span></button>
-            <button class="tool" id="testApiBtn"><span data-i18n="testApi">Test API</span></button>
+            <button class="tool" id="openApiSettingsBtn"><span data-i18n="apiSettings">API 设置</span></button>
+            <button class="tool" id="testApiBtn"><span data-i18n="testApi">测试 API</span></button>
           </div>
         </div>
       </section>
 
-      <div class="note" id="safetyNote" data-i18n="safety">Keys stay on the local server. The browser only sends canvas and mask data.</div>
+      <div class="note" id="safetyNote" data-i18n="safety">密钥只留在本地服务端，浏览器只发送画布和遮罩数据。</div>
     </aside>
 
     <main class="main">
       <header class="top">
         <div class="title">
           <strong>Instant Canvas</strong>
-          <span data-i18n="subtitle">realtime AI edit canvas</span>
+          <span data-i18n="subtitle">实时区域 AI 编辑画布</span>
         </div>
         <div class="top-actions">
-          <span class="pill" id="apiState">checking...</span>
-          <span class="pill" id="requestState">idle</span>
+          <span class="pill" id="apiState" aria-live="polite">检查中</span>
+          <span class="pill" id="requestState" aria-live="polite">生成：空闲</span>
           <div class="lang">
             <button data-lang="en">EN</button>
             <button class="active" data-lang="cn">CN</button>
@@ -581,121 +633,135 @@
 
       <section class="workspace" id="board">
         <div class="pane input">
-          <div class="badge" data-i18n="inputCanvas">Input canvas</div>
+          <div class="badge" data-i18n="inputCanvas">输入画布</div>
           <canvas id="sourceCanvas"></canvas>
-          <div class="badge bottom" id="inputBadge" data-i18n="editable">editable</div>
-          <div class="empty" id="sourceEmpty"><div><strong data-i18n="emptyTitle">Drop evidence here</strong><span data-i18n="emptyBody">Import an image/model or load the example, then paint the edit region.</span></div></div>
+          <div class="badge bottom" id="inputBadge" data-i18n="editable">可编辑</div>
+          <div class="empty" id="sourceEmpty"><div><strong data-i18n="emptyTitle">把参考素材放到这里</strong><span data-i18n="emptyBody">导入图片/模型或载入示例，然后涂抹要生成的区域。</span></div></div>
         </div>
         <div class="pane output">
-          <div class="badge" data-i18n="outputCanvas">Realtime output</div>
+          <div class="badge" data-i18n="outputCanvas">实时输出</div>
           <canvas id="resultCanvas"></canvas>
-          <div class="badge bottom" id="outputBadge">local preview</div>
-          <div class="asset"><strong data-i18n="asset">Current evidence</strong><span id="assetInfo">Waiting.</span></div>
+          <div class="badge bottom" id="outputBadge">本地预览</div>
+          <div class="asset"><strong data-i18n="asset">当前素材</strong><span id="assetInfo">等待导入。</span></div>
         </div>
 
         <div class="floating">
-          <button class="icon active" id="brushBtn" data-tool="brush" title="Brush">B</button>
-          <button class="icon" id="eraseBtn" data-tool="erase" title="Eraser">E</button>
-          <button class="icon" id="rectBtn" data-tool="rect" title="Rectangle">R</button>
-          <button class="icon" id="circleBtn" data-tool="circle" title="Circle">C</button>
-          <button class="icon" id="undoBtn" title="Undo">UN</button>
-          <button class="icon" id="redoBtn" title="Redo">RE</button>
-          <button class="icon danger" id="clearBtn" title="Clear">CLR</button>
+          <button class="icon active" id="brushBtn" data-tool="brush" title="画笔">画</button>
+          <button class="icon" id="eraseBtn" data-tool="erase" title="橡皮擦">擦</button>
+          <button class="icon" id="rectBtn" data-tool="rect" title="矩形遮罩">矩</button>
+          <button class="icon" id="circleBtn" data-tool="circle" title="圆形遮罩">圆</button>
+          <button class="icon" id="undoBtn" title="撤销">撤</button>
+          <button class="icon" id="redoBtn" title="重做">重</button>
+          <button class="icon danger" id="clearBtn" title="清空遮罩">清遮</button>
           <span class="sep"></span>
-          <button class="icon" id="importImageBtn" title="Import image">IMG</button>
-          <button class="icon" id="importModelBtn" title="Import model">3D</button>
-          <label class="mini"><span data-i18n="size">size</span><input id="brushSizeDock" type="range" min="8" max="120" value="42"></label>
+          <button class="icon" id="importImageBtn" title="导入图片">图</button>
+          <button class="icon" id="importModelBtn" title="导入模型">3D</button>
+          <label class="mini"><span data-i18n="size">大小</span><input id="brushSizeDock" type="range" min="8" max="120" value="42"></label>
           <label class="mini"><span data-i18n="ai">AI</span><input id="strengthDock" type="range" min="0" max="100" value="62"></label>
-          <div class="readout"><strong id="toolModeText">Brush</strong><span id="brushSizeText">42 px</span></div>
+          <div class="readout"><strong id="toolModeText">画笔</strong><span id="brushSizeText">42 px</span></div>
         </div>
         <div class="brush-cursor" id="brushCursor"></div>
         <div class="layer-menu" id="layerMenu" aria-hidden="true">
-          <button data-layer-action="lock"><span>□</span><span data-i18n="lockLayer">Lock</span></button>
+          <button data-layer-action="lock"><span>□</span><span data-i18n="lockLayer">锁定</span></button>
           <div class="rule"></div>
-          <button data-layer-action="front"><span>⇧</span><span data-i18n="bringToFront">Bring to front</span></button>
-          <button data-layer-action="forward"><span>⌃</span><span data-i18n="bringForward">Bring forward</span></button>
-          <button data-layer-action="backward"><span>⌄</span><span data-i18n="sendBackward">Send backward</span></button>
-          <button data-layer-action="back"><span>⇩</span><span data-i18n="sendToBack">Send to back</span></button>
+          <button data-layer-action="front"><span>⇧</span><span data-i18n="bringToFront">置于顶层</span></button>
+          <button data-layer-action="forward"><span>⌃</span><span data-i18n="bringForward">上移一层</span></button>
+          <button data-layer-action="backward"><span>⌄</span><span data-i18n="sendBackward">下移一层</span></button>
+          <button data-layer-action="back"><span>⇩</span><span data-i18n="sendToBack">置于底层</span></button>
           <div class="rule"></div>
-          <button data-layer-action="duplicate"><span>⧉</span><span data-i18n="duplicateLayer">Duplicate</span></button>
-          <button data-layer-action="delete"><span>⌫</span><span data-i18n="deleteLayer">Delete</span></button>
-          <button data-layer-action="flipX"><span>⇄</span><span data-i18n="flipHorizontal">Flip Horizontal</span></button>
-          <button data-layer-action="flipY"><span>⇅</span><span data-i18n="flipVertical">Flip Vertical</span></button>
-          <button data-layer-action="fit"><span>▣</span><span data-i18n="fitScreen">Fit to screen</span></button>
-          <button data-layer-action="fill"><span>▣</span><span data-i18n="fillScreen">Fill screen</span></button>
+          <button data-layer-action="duplicate"><span>⧉</span><span data-i18n="duplicateLayer">复制</span></button>
+          <button data-layer-action="delete"><span>⌫</span><span data-i18n="deleteLayer">删除</span></button>
+          <button data-layer-action="flipX"><span>⇄</span><span data-i18n="flipHorizontal">水平翻转</span></button>
+          <button data-layer-action="flipY"><span>⇅</span><span data-i18n="flipVertical">垂直翻转</span></button>
+          <button data-layer-action="fit"><span>▣</span><span data-i18n="fitScreen">适应画布</span></button>
+          <button data-layer-action="fill"><span>▣</span><span data-i18n="fillScreen">填满画布</span></button>
         </div>
       </section>
 
       <section class="footer">
         <div class="prompt">
-          <textarea id="prompt">Render the selected region as an HD photorealistic product image while preserving shape, camera angle, and material boundaries.</textarea>
+          <textarea id="prompt">把选中区域生成高清写实产品图，保留原始轮廓、镜头角度和材质边界。</textarea>
           <div class="prompt-actions">
             <div class="chips">
-              <button class="chip active" id="drawModeChip">Draw</button>
+              <button class="chip active" id="drawModeChip">绘制</button>
+              <select class="chip" id="renderTierSelect" title="渲染档位"><option value="fast_preview" data-i18n="tierFast">快速预览</option><option value="final_render" data-i18n="tierFinal">最终渲染</option><option value="flex" data-i18n="tierFlex">文字细节</option></select>
               <button class="chip" id="aspectRatioChip">1:1</button>
-              <button class="chip" id="seedChip">Seed 1284</button>
-              <button class="chip active" id="liveChip">Live</button>
-              <button class="chip" id="examplesChip" data-i18n="example">Example</button>
+              <button class="chip" id="seedChip">种子 1284</button>
+              <button class="chip active" id="liveChip">实时</button>
+              <button class="chip" id="downloadBtn" data-i18n="download">下载</button>
+              <button class="chip" id="examplesChip" data-i18n="example">示例</button>
             </div>
-            <button class="primary" id="previewBtn" data-i18n="generate">Generate</button>
+            <button class="primary" id="previewBtn" data-i18n="generate">生成</button>
           </div>
         </div>
-        <div class="status"><span class="dot"></span><strong id="statusTitle">Ready</strong><span id="statusText">Load evidence and paint a region.</span></div>
+        <div class="status"><span class="dot"></span><strong id="statusTitle">准备就绪</strong><span id="statusText">加载素材并涂抹区域。</span></div>
       </section>
     </main>
   </div>
 
   <input id="imageInput" type="file" accept="image/*">
-  <input id="modelInput" type="file" accept=".glb,.gltf,.obj,.fbx,.stl,.usdz">
+  <input id="modelInput" type="file" accept=".obj,.stl,.glb,.gltf">
   <div class="modal" id="apiModal" aria-hidden="true">
     <section class="api-panel" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
       <aside class="api-side">
-        <h2 id="apiModalTitle" data-i18n="apiSettingsTitle">API Settings</h2>
-        <p data-i18n="apiSettingsSubtitle">Save provider URL, model, and key to local .env. Keys are never shown after saving.</p>
-        <button class="api-platform active" id="apiOpenAiTab" data-api-tab="openai"><b>OA</b><span><strong>OpenAI</strong><br><small>Images API</small></span></button>
-        <button class="api-platform" id="apiCustomTab" data-api-tab="custom-http"><b>LT</b><span><strong>Custom API</strong><br><small>Compatible endpoint</small></span></button>
+        <h2 id="apiModalTitle" data-i18n="apiSettingsTitle">API 设置</h2>
+        <p data-i18n="apiSettingsSubtitle">保存平台地址、模型和 Key 到本地 .env。Key 保存后不会回显。</p>
+        <button class="api-platform active" id="apiOpenAiTab" data-api-tab="openai"><b>OA</b><span><strong data-i18n="apiOpenAiTitle">OpenAI</strong><br><small data-i18n="apiOpenAiMeta">图像接口</small></span></button>
+        <button class="api-platform" id="apiCustomTab" data-api-tab="custom-http"><b>自</b><span><strong data-i18n="apiCustomTitle">自定义 API</strong><br><small data-i18n="apiCustomMeta">兼容端点</small></span></button>
+        <button class="api-platform" id="apiBflTab" data-api-tab="bfl-flux2"><b>F2</b><span><strong data-i18n="apiBflTitle">BFL FLUX.2</strong><br><small data-i18n="apiBflMeta">快速/最终渲染</small></span></button>
       </aside>
       <div class="api-main">
         <div class="api-form-card">
           <h2 id="apiProviderTitle">OpenAI</h2>
-          <p id="apiProviderSubtitle">Configure base URL, API key, and image model.</p>
+          <p id="apiProviderSubtitle">配置请求地址、API Key 和生图模型。</p>
           <div class="api-field">
-            <label data-i18n="apiBaseUrl">Base URL</label>
+            <label data-i18n="apiBaseUrl">请求地址</label>
             <input id="apiBaseUrlInput" autocomplete="off" spellcheck="false">
           </div>
           <div class="api-row">
             <div class="api-field">
-              <label data-i18n="apiModel">Image model</label>
+              <label id="apiModelLabel" data-i18n="apiModel">生图模型</label>
               <input id="apiModelInput" autocomplete="off" spellcheck="false">
             </div>
             <div class="api-field">
-              <label data-i18n="apiMethod">Method</label>
+              <label data-i18n="apiMethod">请求方法</label>
               <select id="apiMethodInput"><option value="POST">POST</option><option value="GET">GET</option></select>
             </div>
           </div>
+          <div class="api-row" id="apiBflModelRow" hidden>
+            <div class="api-field">
+              <label data-i18n="apiFastModel">快速模型</label>
+              <input id="apiFastModelInput" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="api-field">
+              <label data-i18n="apiFlexModel">文字细节模型</label>
+              <input id="apiFlexModelInput" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <small id="apiBflModelHelp" data-i18n="apiBflModelHelp" hidden>快速预览走快速模型；最终渲染走最终模型；文字细节走 Flex 模型。</small>
           <div class="api-field">
             <label data-i18n="apiKey">API Key</label>
             <input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-...">
-            <small id="apiKeySavedText">No key saved.</small>
+            <small id="apiKeySavedText">未保存 Key。</small>
           </div>
           <div class="api-row">
             <div class="api-field">
-              <label data-i18n="apiAuthHeader">Auth header</label>
+              <label data-i18n="apiAuthHeader">认证请求头</label>
               <input id="apiAuthHeaderInput" autocomplete="off" spellcheck="false">
             </div>
             <div class="api-field">
-              <label data-i18n="apiAuthScheme">Auth scheme</label>
+              <label data-i18n="apiAuthScheme">认证方案</label>
               <input id="apiAuthSchemeInput" autocomplete="off" spellcheck="false">
             </div>
           </div>
           <div class="api-buttons">
-            <button class="api-btn" id="closeApiSettingsBtn" data-i18n="close">Close</button>
+            <button class="api-btn" id="closeApiSettingsBtn" data-i18n="close">关闭</button>
             <div>
-              <button class="api-btn" id="modalTestApiBtn" data-i18n="testApi">Test API</button>
-              <button class="api-btn primary" id="saveApiSettingsBtn" data-i18n="save">Save</button>
+              <button class="api-btn" id="modalTestApiBtn" data-i18n="testApi">测试 API</button>
+              <button class="api-btn primary" id="saveApiSettingsBtn" data-i18n="save">保存</button>
             </div>
           </div>
-          <div class="api-status-line" id="apiModalStatus">Ready.</div>
+          <div class="api-status-line" id="apiModalStatus" data-i18n="ready">准备就绪</div>
         </div>
       </div>
     </section>

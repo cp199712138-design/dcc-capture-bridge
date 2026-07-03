@@ -2,6 +2,8 @@
 
 Realtime DCC-to-AI capture canvas for 3ds Max / Blender evidence.
 
+Developed by 小陈同学.
+
 The project started as a 3ds Max capture plugin, but the active direction is now a Krea-style realtime edit loop:
 
 ```text
@@ -39,6 +41,11 @@ Open:
 http://127.0.0.1:8765/capture-canvas/index.html
 ```
 
+客户测试入口和发布前验收清单：
+
+- `测试发布/CUSTOMER_TEST.md`
+- `测试发布/RELEASE_ACCEPTANCE.md`
+
 ## Realtime API
 
 The browser never stores an API key. The local Node server exposes:
@@ -60,11 +67,13 @@ Enable OpenAI image editing by starting the server with:
 ```powershell
 $env:OPENAI_API_KEY="YOUR_KEY"
 $env:OPENAI_BASE_URL="https://api.openai.com/v1"
-$env:OPENAI_IMAGE_MODEL="gpt-image-2"
+$env:OPENAI_IMAGE_MODEL="gpt-image-1"
 node serve-static.mjs
 ```
 
 Without `OPENAI_API_KEY`, the UI stays in local preview mode and clearly says so.
+For OpenAI-compatible proxies, `OPENAI_BASE_URL` must point at the API root,
+for example `https://your-host/v1`, not the browser website root.
 
 Keep real keys in the shell or a local `.env` file only. Do not commit `.env`,
 customer images, model files, renders, captures, or generated materials.
@@ -148,6 +157,30 @@ Work is split by module so each coding pass can load only the relevant context:
 - `development/05-ai-backends/`
 - `development/06-testing-release/`
 
+## Local Handoff Split
+
+This checkout also includes the responsibility folders requested for local handoff:
+
+- `UI`: front-end interface and interaction notes
+- `Canvas`: preview canvas and image processing notes
+- `API`: shared parameter and adapter contract notes
+- `3ds Max`: 3ds Max-side package work
+- `Blender`: Blender-side package notes
+- `测试发布`: install, uninstall, test, packaging, and release scripts
+
+The first local 3ds Max package is under:
+
+```text
+3ds Max/HDViewportCapture.bundle
+```
+
+Install or remove it with:
+
+```powershell
+.\测试发布\install-3dsmax.ps1
+.\测试发布\uninstall-3dsmax.ps1
+```
+
 ## 3ds Max MVP
 
 The older drag-and-drop 3ds Max MVP still exists under:
@@ -157,4 +190,3 @@ dist/PerfectHDScreenshotPro_MVP.ms
 ```
 
 That path remains useful for capture-pack testing, but the main product direction is now the realtime Instant Canvas.
-

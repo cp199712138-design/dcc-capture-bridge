@@ -7,21 +7,38 @@ local Node server, and the local server calls the configured provider.
 
 ```text
 GET  /api/status
+GET  /api/config
+POST /api/config
 POST /api/test-provider
 POST /api/realtime-render
 ```
 
 ## Configure Providers
 
-Copy `.env.example` to `.env`, then restart the server.
+Copy `.env.example` to `.env`, then restart the server. Settings saved through
+`POST /api/config` are also applied to the current Node process immediately, so
+the next render uses the saved base URL, model, key, method, and auth headers
+without requiring another restart.
+
+`mock-local` is the zero-cost preview provider used when no real provider is
+configured, or when it is selected directly. It returns a deterministic local
+placeholder image so the UI and API contract can be demonstrated without
+spending credits or calling a cloud service. It is not a real AI renderer and
+should not be presented as final generation quality.
 
 OpenAI:
 
 ```text
 OPENAI_API_KEY=your_key
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_MODEL=gpt-image-1
 ```
+
+For OpenAI-compatible providers, `POST /api/test-provider` checks
+`/models/{model}`. A 2xx response is accepted only when it is JSON model
+metadata, such as an object with `id` or `object`. A 2xx HTML page or other
+non-compatible JSON returns `ok:false` with an explicit JSON/HTML/compatible
+message and a short response summary.
 
 Custom customer API:
 
@@ -72,7 +89,24 @@ The local server sends the same JSON shape for render requests and a smaller
 }
 ```
 
+`POST /api/test-provider` uses the same contract marker and includes transparent
+test image/mask data, but it is identified with `task: "connection_test"` and
+`dcc_capture_bridge.test: true`.
+
 ## Custom API Response
+
+`POST /api/test-provider` checks connection only. A custom API may return any
+2xx JSON response for that connection test, even if it does not include an
+image.
+
+The local server only calls `custom-http` after both `DCC_CUSTOM_API_URL` and
+`DCC_CUSTOM_API_KEY` are configured. Missing URL or key returns an explicit
+configuration error instead of a simulated success.
+
+`POST /api/realtime-render` is render-ready only when the response includes an
+image. The local server and static direct mode normalize either supported shape
+to `imageDataUrl`; a 2xx render response with no image is treated as a clear
+render contract error.
 
 Return one of these:
 
@@ -107,7 +141,9 @@ contract. Requirements:
 
 - the endpoint must allow browser CORS requests from the static demo domain
 - the customer accepts that their key is stored in their own browser localStorage
+- the Custom API URL and key must both be set before direct render calls are sent
 - OpenAI-compatible keys should use the local/hosted server proxy instead of
   static direct mode
 
-This mode is intended for customer testing, not final production security.
+This mode is browser-local customer testing, not production secret safety. Do
+not use static direct mode for keys that must remain server-side.

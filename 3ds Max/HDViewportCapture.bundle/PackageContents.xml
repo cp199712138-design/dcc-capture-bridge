@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage
+  SchemaVersion="1.0"
+  AutodeskProduct="3ds Max"
+  Name="HD Viewport Capture"
+  Description="Save high-resolution screenshots from the active 3ds Max viewport."
+  AppVersion="1.0.0"
+  ProductCode="{8AFABAB2-39C8-4D37-8E44-44D3781C44C0}"
+  UpgradeCode="{31D6BB84-A4BB-4748-B908-F7B3CC942D20}">
+  <CompanyDetails Name="Local Tools" />
+  <Components Description="MAXScript macro">
+    <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2025" SeriesMax="2026" />
+    <ComponentEntry ModuleName="./Contents/scripts/HDViewportCapture.mcr" />
+  </Components>
+</ApplicationPackage>

@@ -35,10 +35,10 @@
 
 ## 已确认的信息
 
-本机存在：
+本地测试环境曾确认存在 ComfyUI 工作区，具体路径不要写入公开仓库：
 
 ```text
-C:\Users\Administrator\Documents\ComfyUI
+<local ComfyUI workspace>
 ```
 
 本机 ComfyUI 有这些目录：

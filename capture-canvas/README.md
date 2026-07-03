@@ -29,11 +29,13 @@ Set an API key before starting the server:
 
 ```powershell
 $env:OPENAI_API_KEY="YOUR_KEY"
-$env:OPENAI_IMAGE_MODEL="gpt-image-2"
+$env:OPENAI_IMAGE_MODEL="gpt-image-1"
 node serve-static.mjs
 ```
 
 Without `OPENAI_API_KEY`, the page stays honest and uses local preview mode.
+For OpenAI-compatible proxies, set `OPENAI_BASE_URL` to the API root such as
+`https://your-host/v1`; a website root can return HTML and will fail validation.
 
 The API contract is intentionally simple for client testing:
 
